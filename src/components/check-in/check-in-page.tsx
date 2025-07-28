@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -8,6 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,42 +20,185 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, UserX } from 'lucide-react';
+import jsQR from 'jsqr';
 
-const QRCheckinTab = () => {
+const ScanTab = () => {
+    const { toast } = useToast();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [scanResult, setScanResult] = useState<string | null>(null);
+
+    useEffect(() => {
+        const getCameraPermission = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+                setHasCameraPermission(true);
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                setHasCameraPermission(false);
+                toast({
+                    variant: 'destructive',
+                    title: 'Camera Access Denied',
+                    description: 'Please enable camera permissions in your browser settings.',
+                });
+            }
+        };
+        getCameraPermission();
+
+        return () => {
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [toast]);
+
+    useEffect(() => {
+        let animationFrameId: number;
+
+        const tick = () => {
+            if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
+                const video = videoRef.current;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+
+                if (ctx) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert',
+                    });
+
+                    if (code) {
+                        setScanResult(code.data);
+                        handleCheckIn(code.data);
+                        // Stop scanning after a successful scan
+                        return;
+                    }
+                }
+            }
+            animationFrameId = requestAnimationFrame(tick);
+        };
+
+        if (hasCameraPermission) {
+            animationFrameId = requestAnimationFrame(tick);
+        }
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [hasCameraPermission]);
+
+    const handleCheckIn = (qrData: string) => {
+        toast({
+            title: 'QR Code Scanned!',
+            description: `Data: ${qrData}. Simulating check-in...`,
+        });
+
+        setTimeout(() => {
+            toast({
+                title: 'Check-in Successful',
+                description: `Member with QR data "${qrData}" has been checked in.`,
+                variant: 'default',
+            });
+        }, 1500);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                <canvas ref={canvasRef} className="hidden" />
+                {hasCameraPermission === false && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                         <Camera className="h-16 w-16 text-muted-foreground" />
+                         <p className="mt-2 text-muted-foreground">Camera not available</p>
+                    </div>
+                )}
+            </div>
+             {hasCameraPermission === false && (
+                <Alert variant="destructive">
+                    <AlertTitle>Camera Access Required</AlertTitle>
+                    <AlertDescription>
+                        Please allow camera access in your browser settings to use this feature.
+                    </AlertDescription>
+                </Alert>
+            )}
+            <div className="space-y-2">
+                <Label>Registration Type</Label>
+                <RadioGroup defaultValue="actual" className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="pre-reg" id="scan-pre-reg" />
+                        <Label htmlFor="scan-pre-reg">Pre-registration</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="actual" id="scan-actual" />
+                        <Label htmlFor="scan-actual">Actual Registration</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+        </div>
+    );
+};
+
+
+const UploadTab = () => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
-            setFileName(event.target.files[0].name);
+            const file = event.target.files[0];
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code) {
+                            handleCheckIn(code.data);
+                        } else {
+                             toast({
+                                title: 'Check-in Failed',
+                                description: 'Could not decode QR code from the uploaded image.',
+                                variant: 'destructive',
+                            });
+                        }
+                    }
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
         }
-    }
-
-    const handleCheckIn = () => {
-        // In a real app, you would use a library like jsQR to decode the uploaded image.
-        // Here we simulate the process.
+    };
+    
+    const handleCheckIn = (qrData: string) => {
         toast({
-            title: 'Simulating QR Scan...',
-            description: 'Decoding uploaded QR code.',
+            title: 'QR Code Decoded!',
+            description: `Data: ${qrData}. Simulating check-in...`,
         });
 
         setTimeout(() => {
-            const isSuccess = Math.random() > 0.3; // 70% success rate
-            if (isSuccess) {
-                toast({
-                    title: 'Check-in Successful',
-                    description: 'Member "Jane Doe" has been checked in.',
-                    variant: 'default',
-                });
-            } else {
-                toast({
-                    title: 'Check-in Failed',
-                    description: 'Could not decode QR code or member not found.',
-                    variant: 'destructive',
-                });
-            }
-            setFileName('');
+            toast({
+                title: 'Check-in Successful',
+                description: `Member with QR data "${qrData}" has been checked in.`,
+                variant: 'default',
+            });
+             setFileName('');
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
@@ -58,37 +206,56 @@ const QRCheckinTab = () => {
     };
 
     return (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="qr-upload">Upload QR Code Image</Label>
+                <div className="flex items-center gap-2">
+                    <Input id="qr-upload" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Choose File
+                    </Button>
+                    {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label>Registration Type</Label>
+                <RadioGroup defaultValue="actual" className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="pre-reg" id="upload-pre-reg" />
+                        <Label htmlFor="upload-pre-reg">Pre-registration</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="actual" id="upload-actual" />
+                        <Label htmlFor="upload-actual">Actual Registration</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+        </div>
+    );
+};
+
+
+const QRCheckinTab = () => {
+    return (
         <Card>
             <CardHeader>
                 <CardTitle>QR Code Check-in</CardTitle>
-                <CardDescription>Upload a member's QR code to check them in.</CardDescription>
+                <CardDescription>Scan or upload a member's QR code to check them in.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="qr-upload">Upload QR Code</Label>
-                    <div className="flex items-center gap-2">
-                        <Input id="qr-upload" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                            <Upload className="mr-2 h-4 w-4" />
-                            Choose File
-                        </Button>
-                        {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <Label>Registration Type</Label>
-                    <RadioGroup defaultValue="actual" className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="pre-reg" id="pre-reg" />
-                            <Label htmlFor="pre-reg">Pre-registration</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="actual" id="actual" />
-                            <Label htmlFor="actual">Actual Registration</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
-                <Button onClick={handleCheckIn} className="w-full">Perform Check-in</Button>
+            <CardContent>
+                <Tabs defaultValue="scan">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="scan">Scan with Camera</TabsTrigger>
+                        <TabsTrigger value="upload">Upload File</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="scan" className="pt-6">
+                        <ScanTab />
+                    </TabsContent>
+                    <TabsContent value="upload" className="pt-6">
+                        <UploadTab />
+                    </TabsContent>
+                </Tabs>
             </CardContent>
         </Card>
     );
