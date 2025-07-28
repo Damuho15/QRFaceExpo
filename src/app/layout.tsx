@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'QRCodeMonkey',
+  title: 'ExpAttendance',
   description: 'Event attendance management with QR codes and face recognition.',
 };
 

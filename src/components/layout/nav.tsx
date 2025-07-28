@@ -51,23 +51,20 @@ export default function Nav() {
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b p-4">
         <MonkeyIcon className="h-8 w-8 text-primary" />
-        <h1 className="text-xl font-bold font-headline">QRCodeMonkey</h1>
+        <h1 className="text-xl font-bold font-headline">ExpAttendance</h1>
       </div>
       <SidebarMenu className="p-4 space-y-2">
         {navItems.map((item) => (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-                tooltip={item.label}
-              >
-                <div>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </div>
-              </SidebarMenuButton>
-            </Link>
+            <SidebarMenuButton
+              as={Link}
+              href={item.href}
+              isActive={pathname === item.href}
+              tooltip={item.label}
+            >
+              <item.icon />
+              <span>{item.label}</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
