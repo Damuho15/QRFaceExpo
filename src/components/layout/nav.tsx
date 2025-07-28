@@ -11,7 +11,6 @@ import {
   Users,
   QrCode,
   MessageSquareHeart,
-  Monkey,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,13 +21,36 @@ const navItems = [
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },
 ];
 
+const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="24" 
+        height="24" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        {...props}
+    >
+        <path d="M14 16c-2.5-2.5-2.5-7 0-9.5"/>
+        <path d="M10 16c2.5-2.5 2.5-7 0-9.5"/>
+        <path d="M6 13.5c-2-2-2-5.5 0-7.5"/>
+        <path d="M18 13.5c2-2 2-5.5 0-7.5"/>
+        <path d="M12 18.5c-4-4-4-10.5 0-14.5-5 5-5 11.5 0 16.5-2.5-2.5-2.5-7 0-9.5"/>
+        <path d="M12 18.5c4-4 4-10.5 0-14.5 5 5 5 11.5 0 16.5 2.5-2.5 2.5-7 0-9.5"/>
+        <path d="M2.5 10.5a9.5 9.5 0 1 0 19 0"/>
+    </svg>
+)
+
 export default function Nav() {
   const pathname = usePathname();
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b p-4">
-        <Monkey className="h-8 w-8 text-primary" />
+        <MonkeyIcon className="h-8 w-8 text-primary" />
         <h1 className="text-xl font-bold font-headline">QRCodeMonkey</h1>
       </div>
       <SidebarMenu className="p-4 space-y-2">

@@ -30,7 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Member } from '@/lib/types';
@@ -50,13 +50,15 @@ const memberSchema = z.object({
 type MemberFormValues = z.infer<typeof memberSchema>;
 
 interface MemberDialogProps {
-  children: React.ReactNode;
+  trigger: React.ReactNode;
   memberToEdit?: Member;
+  onSuccess?: () => void;
 }
 
 export default function MemberDialog({
-  children,
+  trigger,
   memberToEdit,
+  onSuccess,
 }: MemberDialogProps) {
   const [open, setOpen] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -101,9 +103,11 @@ export default function MemberDialog({
         isEditMode ? 'updated' : 'added'
       }.`,
     });
+    
+    onSuccess?.();
 
     if (isEditMode) {
-      setOpen(false);
+      handleCloseDialog();
     } else {
       setNewMember(memberData);
       setShowQr(true);
@@ -112,18 +116,27 @@ export default function MemberDialog({
   
   const handleCloseDialog = () => {
     setOpen(false);
-    // Reset form and QR state after a delay to allow animation to finish
-    setTimeout(() => {
-      form.reset();
-      setShowQr(false);
-      setNewMember(null);
-    }, 300);
+  }
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+       setTimeout(() => {
+        form.reset();
+        setShowQr(false);
+        setNewMember(null);
+      }, 300);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" onInteractOutside={handleCloseDialog}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
+          if (showQr) {
+            e.preventDefault();
+          }
+      }}>
         {!showQr ? (
           <>
             <DialogHeader>

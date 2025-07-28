@@ -36,11 +36,13 @@ import MemberDialog from './member-dialog';
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onAction: () => void;
 }
 
 export default function MembersDataTable<TData, TValue>({
   columns,
   data,
+  onAction
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -64,6 +66,9 @@ export default function MembersDataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
     },
+     meta: {
+      onAction: onAction
+    }
   });
 
   return (
@@ -78,12 +83,15 @@ export default function MembersDataTable<TData, TValue>({
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
-            <MemberDialog>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Member
-                </Button>
-            </MemberDialog>
+            <MemberDialog 
+                onSuccess={onAction} 
+                trigger={
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Member
+                    </Button>
+                }
+            />
         </div>
       </div>
       <div className="rounded-md border">

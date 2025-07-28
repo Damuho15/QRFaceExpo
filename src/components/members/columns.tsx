@@ -1,6 +1,6 @@
 'use client';
 
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, TableMeta } from '@tanstack/react-table';
 import type { Member } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +14,12 @@ import {
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
+
+declare module '@tanstack/react-table' {
+  interface TableMeta<TData> {
+    onAction: () => void
+  }
+}
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -66,16 +72,20 @@ export const columns: ColumnDef<Member>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const member = row.original;
 
       return (
         <div className="text-right">
-            <MemberDialog memberToEdit={member}>
+          <MemberDialog
+            memberToEdit={member}
+            onSuccess={() => table.options.meta?.onAction()}
+            trigger={
               <Button variant="ghost" size="icon">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </MemberDialog>
+            }
+          />
         </div>
       );
     },
