@@ -49,9 +49,10 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
     const eventStartTime = new Date(eventDate);
     eventStartTime.setHours(9, 0, 0, 0);
+    
+    const preRegEndTime = new Date(eventStartTime);
+    preRegEndTime.setMilliseconds(preRegEndTime.getMilliseconds() - 1);
 
-    const preRegEndTime = new Date(eventDate);
-    preRegEndTime.setHours(8, 59, 59, 999);
 
     if (scanDate.getTime() >= preRegStart.getTime() && scanDate.getTime() <= preRegEndTime.getTime()) {
         return 'Pre-registration';
