@@ -1,5 +1,7 @@
+
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { AttendanceLog } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -7,6 +9,15 @@ import { ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
+  const [localizedTimestamp, setLocalizedTimestamp] = useState('');
+
+  useEffect(() => {
+    setLocalizedTimestamp(new Date(timestamp).toLocaleString());
+  }, [timestamp]);
+
+  return <div>{localizedTimestamp}</div>;
+};
 
 export const columns: ColumnDef<AttendanceLog>[] = [
   {
@@ -38,8 +49,8 @@ export const columns: ColumnDef<AttendanceLog>[] = [
         );
     },
     cell: ({ row }) => {
-        const date = new Date(row.getValue('timestamp'));
-        return <div>{date.toLocaleString()}</div>
+        const timestamp = row.getValue('timestamp') as string;
+        return <TimestampCell timestamp={timestamp} />;
     }
   },
   {
