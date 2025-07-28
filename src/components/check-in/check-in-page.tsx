@@ -364,10 +364,6 @@ export default function CheckInPage() {
   const [eventDate, setEventDate] = useState<Date>(getNextSunday());
   const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
 
-  useEffect(() => {
-      setPreRegStartDate(getPreviousTuesday(eventDate));
-  }, [eventDate]);
-
   return (
     <div className="space-y-6">
       <div>
