@@ -18,14 +18,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, UserX } from 'lucide-react';
+import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon } from 'lucide-react';
 import jsQR from 'jsqr';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-const EVENT_DATE = new Date();
-EVENT_DATE.setHours(9, 0, 0, 0); // Event starts at 9:00 AM
+const getNextSunday = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const nextSunday = new Date(today);
+    nextSunday.setDate(today.getDate() + (day === 0 ? 7 : 7 - day));
+    nextSunday.setHours(9,0,0,0);
+    return nextSunday;
+}
 
-const getRegistrationType = (scanDate: Date): 'Pre-registration' | 'Actual' | null => {
-    const eventDay = new Date(EVENT_DATE);
+const getRegistrationType = (scanDate: Date, eventDate: Date): 'Pre-registration' | 'Actual' | null => {
+    const eventDay = new Date(eventDate);
     eventDay.setHours(0, 0, 0, 0);
 
     const fiveDaysBefore = new Date(eventDay);
@@ -38,14 +48,17 @@ const getRegistrationType = (scanDate: Date): 'Pre-registration' | 'Actual' | nu
         return 'Pre-registration';
     }
     
-    if (scanDay.getTime() === eventDay.getTime() && scanDate.getTime() >= EVENT_DATE.getTime()) {
+    const eventStartTime = new Date(eventDate);
+    eventStartTime.setHours(9,0,0,0);
+    
+    if (scanDay.getTime() === eventDay.getTime() && scanDate.getTime() >= eventStartTime.getTime()) {
         return 'Actual';
     }
 
     return null;
 }
 
-const ScanTab = () => {
+const ScanTab = ({ eventDate }: { eventDate: Date }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -120,7 +133,7 @@ const ScanTab = () => {
     }, [hasCameraPermission, isScanning]);
 
     const handleCheckIn = (qrData: string) => {
-        const registrationType = getRegistrationType(new Date());
+        const registrationType = getRegistrationType(new Date(), eventDate);
 
         if (!registrationType) {
             toast({
@@ -179,7 +192,7 @@ const ScanTab = () => {
 };
 
 
-const UploadTab = () => {
+const UploadTab = ({ eventDate }: { eventDate: Date }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
@@ -218,7 +231,7 @@ const UploadTab = () => {
     };
     
     const handleCheckIn = (qrData: string) => {
-        const registrationType = getRegistrationType(new Date());
+        const registrationType = getRegistrationType(new Date(), eventDate);
 
         if (!registrationType) {
             toast({
@@ -268,7 +281,7 @@ const UploadTab = () => {
 };
 
 
-const QRCheckinTab = () => {
+const QRCheckinTab = ({ eventDate }: { eventDate: Date }) => {
     return (
         <Card>
             <CardHeader>
@@ -282,10 +295,10 @@ const QRCheckinTab = () => {
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab />
+                        <ScanTab eventDate={eventDate} />
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab />
+                        <UploadTab eventDate={eventDate} />
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -341,6 +354,7 @@ const FaceCheckinTab = () => {
 };
 
 export default function CheckInPage() {
+  const [eventDate, setEventDate] = useState<Date>(getNextSunday());
   return (
     <div className="space-y-6">
       <div>
@@ -349,13 +363,53 @@ export default function CheckInPage() {
           Select a method to record member attendance.
         </p>
       </div>
+
+       <Card>
+            <CardHeader>
+                <CardTitle>Event Configuration</CardTitle>
+                <CardDescription>
+                    The event is scheduled for the selected date at 9:00 AM.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-[280px] justify-start text-left font-normal",
+                                !eventDate && "text-muted-foreground"
+                            )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {eventDate ? format(eventDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                            mode="single"
+                            selected={eventDate}
+                            onSelect={(date) => {
+                                if (date) {
+                                    const newDate = new Date(date);
+                                    newDate.setHours(9,0,0,0);
+                                    setEventDate(newDate);
+                                }
+                            }}
+                            initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+            </CardContent>
+        </Card>
+
       <Tabs defaultValue="qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="qr">QR Code</TabsTrigger>
           <TabsTrigger value="face">Face Recognition</TabsTrigger>
         </TabsList>
         <TabsContent value="qr">
-            <QRCheckinTab />
+            <QRCheckinTab eventDate={eventDate} />
         </TabsContent>
         <TabsContent value="face">
             <FaceCheckinTab />
