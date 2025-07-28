@@ -385,37 +385,6 @@ export default function CheckInPage() {
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col space-y-2">
-                     <Label>Event Date (Sunday @ 9:00 AM)</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !eventDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {eventDate ? format(eventDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={eventDate}
-                                onSelect={(date) => {
-                                    if (date) {
-                                        const newDate = new Date(date);
-                                        newDate.setHours(9,0,0,0);
-                                        setEventDate(newDate);
-                                    }
-                                }}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                 <div className="flex flex-col space-y-2">
                      <Label>Pre-registration Start Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
@@ -442,6 +411,37 @@ export default function CheckInPage() {
                                     }
                                 }}
                                 disabled={(date) => date > eventDate}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                <div className="flex flex-col space-y-2">
+                     <Label>Event Date (Sunday @ 9:00 AM)</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !eventDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {eventDate ? format(eventDate, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={eventDate}
+                                onSelect={(date) => {
+                                    if (date) {
+                                        const newDate = new Date(date);
+                                        newDate.setHours(9,0,0,0);
+                                        setEventDate(newDate);
+                                    }
+                                }}
                                 initialFocus
                             />
                         </PopoverContent>
