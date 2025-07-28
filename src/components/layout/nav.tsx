@@ -56,15 +56,16 @@ export default function Nav() {
       <SidebarMenu className="p-4 space-y-2">
         {navItems.map((item) => (
           <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton
-              as={Link}
-              href={item.href}
-              isActive={pathname === item.href}
-              tooltip={item.label}
-            >
-              <item.icon />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
+            <Link href={item.href} passHref>
+                <SidebarMenuButton
+                as="a"
+                isActive={pathname === item.href}
+                tooltip={item.label}
+                >
+                <item.icon />
+                <span>{item.label}</span>
+                </SidebarMenuButton>
+            </Link>
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
