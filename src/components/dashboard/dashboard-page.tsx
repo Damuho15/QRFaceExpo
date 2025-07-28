@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint } from 'lucide-react';
 import { mockMembers, mockAttendanceLogs } from '@/lib/data';
@@ -8,6 +8,25 @@ import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
 import { columns } from './columns';
+import type { AttendanceLog } from '@/lib/types';
+
+const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
+  const [timeString, setTimeString] = useState('');
+
+  useEffect(() => {
+    setTimeString(log.timestamp.toLocaleTimeString());
+  }, [log.timestamp]);
+
+  return (
+    <div className="flex items-center">
+      <div className="flex-1 space-y-1">
+        <p className="text-sm font-medium leading-none">{log.memberName}</p>
+        <p className="text-sm text-muted-foreground">{log.method} check-in ({log.type})</p>
+      </div>
+      <div className="text-sm text-muted-foreground">{timeString}</div>
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const totalMembers = mockMembers.length;
@@ -55,13 +74,7 @@ export default function DashboardPage() {
             <CardContent>
                 <div className="space-y-4">
                 {mockAttendanceLogs.slice(-5).reverse().map(log => (
-                    <div key={log.id} className="flex items-center">
-                        <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium leading-none">{log.memberName}</p>
-                            <p className="text-sm text-muted-foreground">{log.method} check-in ({log.type})</p>
-                        </div>
-                        <div className="text-sm text-muted-foreground">{log.timestamp.toLocaleTimeString()}</div>
-                    </div>
+                    <RecentActivityItem key={log.id} log={log} />
                 ))}
                 </div>
             </CardContent>
