@@ -30,7 +30,7 @@ const getNextSunday = () => {
     const today = new Date();
     const day = today.getDay();
     const nextSunday = new Date(today);
-    nextSunday.setDate(today.getDate() + (day === 0 ? 7 : 7 - day));
+    nextSunday.setDate(today.getDate() + (7 - day) % 7);
     nextSunday.setHours(9,0,0,0);
     return nextSunday;
 }
@@ -363,8 +363,9 @@ const FaceCheckinTab = () => {
 
 export default function CheckInPage() {
     const [isMounted, setIsMounted] = useState(false);
-    const [eventDate, setEventDate] = useState<Date>(getNextSunday());
-    const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
+    
+    const [eventDate, setEventDate] = useState<Date>(() => getNextSunday());
+    const [preRegStartDate, setPreRegStartDate] = useState<Date>(() => getPreviousTuesday(getNextSunday()));
     const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
 
     const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
@@ -375,30 +376,33 @@ export default function CheckInPage() {
 
     useEffect(() => {
         setIsMounted(true);
-        try {
-            const storedEventDate = localStorage.getItem('eventDate');
-            const storedPreRegDate = localStorage.getItem('preRegStartDate');
-            const storedManualSet = localStorage.getItem('isPreRegDateManuallySet');
+        const storedEventDate = localStorage.getItem('eventDate');
+        const storedPreRegDate = localStorage.getItem('preRegStartDate');
+        const storedManualSet = localStorage.getItem('isPreRegDateManuallySet');
+        
+        const initialEventDate = storedEventDate ? new Date(storedEventDate) : getNextSunday();
+        setEventDate(initialEventDate);
 
-            if (storedEventDate) {
-                setEventDate(new Date(storedEventDate));
-            }
-            if (storedPreRegDate) {
-                setPreRegStartDate(new Date(storedPreRegDate));
-            }
-            if (storedManualSet) {
-                setIsPreRegDateManuallySet(JSON.parse(storedManualSet));
-            }
-        } catch (error) {
-            console.error("Failed to parse dates from localStorage", error)
+        const manualSet = storedManualSet ? JSON.parse(storedManualSet) : false;
+        setIsPreRegDateManuallySet(manualSet);
+
+        if (manualSet && storedPreRegDate) {
+            setPreRegStartDate(new Date(storedPreRegDate));
+        } else {
+            setPreRegStartDate(getPreviousTuesday(initialEventDate));
         }
+
     }, []);
 
     useEffect(() => {
         if (isMounted) {
             localStorage.setItem('eventDate', eventDate.toISOString());
+            if (!isPreRegDateManuallySet) {
+                 const newPreRegDate = getPreviousTuesday(eventDate);
+                 setPreRegStartDate(newPreRegDate);
+            }
         }
-    }, [eventDate, isMounted]);
+    }, [eventDate, isMounted, isPreRegDateManuallySet]);
 
     useEffect(() => {
         if (isMounted) {
@@ -428,18 +432,12 @@ export default function CheckInPage() {
     }
 
     useEffect(() => {
-        if (!isPreRegDateManuallySet) {
-            setPreRegStartDate(getPreviousTuesday(eventDate));
-        }
-    }, [eventDate, isPreRegDateManuallySet]);
-
-    useEffect(() => {
         setTempPreRegDate(preRegStartDate);
-    }, [preRegStartDate]);
+    }, [preRegStartDate, preRegPopoverOpen]);
 
     useEffect(() => {
         setTempEventDate(eventDate);
-    }, [eventDate]);
+    }, [eventDate, eventPopoverOpen]);
 
     if (!isMounted) {
         return null;
@@ -528,6 +526,7 @@ export default function CheckInPage() {
                             />
                              <CardFooter className="flex justify-end gap-2 pt-4">
                                 <Button variant="ghost" onClick={() => setEventPopoverOpen(false)}>Cancel</Button>
+
                                 <Button onClick={handleEventDateApply}>Apply</Button>
                             </CardFooter>
                         </PopoverContent>
