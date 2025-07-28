@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -364,6 +365,34 @@ export default function CheckInPage() {
   const [eventDate, setEventDate] = useState<Date>(getNextSunday());
   const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
 
+  const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
+  const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
+
+  const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
+  const [tempEventDate, setTempEventDate] = useState<Date | undefined>(eventDate);
+  
+  const handlePreRegApply = () => {
+    if (tempPreRegDate) {
+        setPreRegStartDate(tempPreRegDate);
+    }
+    setPreRegPopoverOpen(false);
+  }
+
+  const handleEventDateApply = () => {
+      if (tempEventDate) {
+          setEventDate(tempEventDate);
+      }
+      setEventPopoverOpen(false);
+  }
+
+  useEffect(() => {
+    setTempPreRegDate(preRegStartDate);
+  }, [preRegStartDate]);
+
+  useEffect(() => {
+    setTempEventDate(eventDate);
+  }, [eventDate]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -383,7 +412,7 @@ export default function CheckInPage() {
             <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col space-y-2">
                      <Label>Pre-registration Start Date</Label>
-                    <Popover>
+                    <Popover open={preRegPopoverOpen} onOpenChange={setPreRegPopoverOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant={"outline"}
@@ -399,23 +428,27 @@ export default function CheckInPage() {
                         <PopoverContent className="w-auto p-0">
                             <Calendar
                                 mode="single"
-                                selected={preRegStartDate}
+                                selected={tempPreRegDate}
                                 onSelect={(date) => {
                                     if (date) {
                                         const newDate = new Date(date);
                                         newDate.setHours(0,0,0,0);
-                                        setPreRegStartDate(newDate);
+                                        setTempPreRegDate(newDate);
                                     }
                                 }}
                                 disabled={(date) => date > eventDate}
                                 initialFocus
                             />
+                            <CardFooter className="flex justify-end gap-2 pt-4">
+                                <Button variant="ghost" onClick={() => setPreRegPopoverOpen(false)}>Cancel</Button>
+                                <Button onClick={handlePreRegApply}>Apply</Button>
+                            </CardFooter>
                         </PopoverContent>
                     </Popover>
                 </div>
                 <div className="flex flex-col space-y-2">
                      <Label>Event Date (Sunday @ 9:00 AM)</Label>
-                    <Popover>
+                    <Popover open={eventPopoverOpen} onOpenChange={setEventPopoverOpen}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant={"outline"}
@@ -431,16 +464,20 @@ export default function CheckInPage() {
                         <PopoverContent className="w-auto p-0">
                             <Calendar
                                 mode="single"
-                                selected={eventDate}
+                                selected={tempEventDate}
                                 onSelect={(date) => {
                                     if (date) {
                                         const newDate = new Date(date);
                                         newDate.setHours(9,0,0,0);
-                                        setEventDate(newDate);
+                                        setTempEventDate(newDate);
                                     }
                                 }}
                                 initialFocus
                             />
+                             <CardFooter className="flex justify-end gap-2 pt-4">
+                                <Button variant="ghost" onClick={() => setEventPopoverOpen(false)}>Cancel</Button>
+                                <Button onClick={handleEventDateApply}>Apply</Button>
+                            </CardFooter>
                         </PopoverContent>
                     </Popover>
                 </div>
