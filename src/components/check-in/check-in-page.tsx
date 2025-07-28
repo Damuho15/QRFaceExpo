@@ -54,11 +54,11 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     preRegEndTime.setMilliseconds(preRegEndTime.getMilliseconds() - 1);
 
 
-    if (scanDate.getTime() >= preRegStart.getTime() && scanDate.getTime() <= preRegEndTime.getTime()) {
+    if (scanDate >= preRegStart && scanDate < preRegEndTime) {
         return 'Pre-registration';
     }
     
-    if (scanDate.getTime() >= eventStartTime.getTime()) {
+    if (scanDate >= eventStartTime) {
         return 'Actual';
     }
 
@@ -181,7 +181,7 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
                  {!isScanning && scanResult && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90">
                         <UserCheck className="h-16 w-16 text-green-500" />
-                        <p className="mt-4 text-lg font-semibold">Check-in Complete</p>
+                        <p className="mt-4 text-lg font-semibold">Scan Successful!</p>
                         <p className="text-sm text-muted-foreground">Ready for next scan...</p>
                     </div>
                 )}
