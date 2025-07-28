@@ -14,6 +14,7 @@ import {
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
+import Image from 'next/image';
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -37,6 +38,24 @@ export const columns: ColumnDef<Member>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+  },
+  {
+    accessorKey: 'qrCodePayload',
+    header: 'QR Code',
+    cell: ({ row }) => {
+        const member = row.original;
+        if (!member.qrCodePayload) return null;
+        return (
+            <Image
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=${encodeURIComponent(member.qrCodePayload)}`}
+                alt={`QR Code for ${member.fullName}`}
+                width={50}
+                height={50}
+                data-ai-hint="qr code"
+            />
+        )
+    },
+    enableSorting: false,
   },
   {
     accessorKey: 'fullName',
@@ -80,11 +99,15 @@ export const columns: ColumnDef<Member>[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <MemberDialog 
-                mode="edit" 
-                memberToEdit={member} 
-                onSuccess={() => table.options.meta?.onAction()}
-              />
+              <DropdownMenuItem asChild>
+                <MemberDialog
+                    mode="edit"
+                    memberToEdit={member}
+                    onSuccess={() => table.options.meta?.onAction()}
+                >
+                    <button className="w-full text-left">Edit</button>
+                </MemberDialog>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>View QR Code</DropdownMenuItem>
               <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
