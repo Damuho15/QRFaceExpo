@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
@@ -50,13 +51,13 @@ const memberSchema = z.object({
 type MemberFormValues = z.infer<typeof memberSchema>;
 
 interface MemberDialogProps {
-  trigger: React.ReactNode;
+  mode: 'add' | 'edit';
   memberToEdit?: Member;
   onSuccess?: () => void;
 }
 
 export default function MemberDialog({
-  trigger,
+  mode,
   memberToEdit,
   onSuccess,
 }: MemberDialogProps) {
@@ -64,11 +65,11 @@ export default function MemberDialog({
   const [showQr, setShowQr] = useState(false);
   const [newMember, setNewMember] = useState<Member | null>(null);
   const { toast } = useToast();
-  const isEditMode = !!memberToEdit;
+  const isEditMode = mode === 'edit';
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
-    defaultValues: isEditMode
+    defaultValues: isEditMode && memberToEdit
       ? {
           fullName: memberToEdit.fullName,
           nickname: memberToEdit.nickname,
@@ -85,10 +86,23 @@ export default function MemberDialog({
         },
   });
 
+  React.useEffect(() => {
+    if (open && isEditMode && memberToEdit) {
+      form.reset(memberToEdit)
+    }
+    if (!open) {
+      setTimeout(() => {
+        form.reset();
+        setShowQr(false);
+        setNewMember(null);
+      }, 300);
+    }
+  }, [open, isEditMode, memberToEdit, form]);
+
   const onSubmit = (data: MemberFormValues) => {
     // In a real app, you would send this to your backend API.
     const memberData: Member = {
-      id: isEditMode ? memberToEdit.id : `mem_${Date.now()}`,
+      id: isEditMode && memberToEdit ? memberToEdit.id : `mem_${Date.now()}`,
       ...data,
       nickname: data.nickname || '',
       qrCodePayload: data.fullName,
@@ -107,31 +121,29 @@ export default function MemberDialog({
     onSuccess?.();
 
     if (isEditMode) {
-      handleCloseDialog();
+      setOpen(false);
     } else {
       setNewMember(memberData);
       setShowQr(true);
     }
   };
-  
-  const handleCloseDialog = () => {
-    setOpen(false);
-  }
 
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-       setTimeout(() => {
-        form.reset();
-        setShowQr(false);
-        setNewMember(null);
-      }, 300);
-    }
-  }
+  const TriggerComponent = isEditMode ? (
+    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpen(true); }}>
+      Edit
+    </DropdownMenuItem>
+  ) : (
+    <DialogTrigger asChild>
+      <Button>
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Add Member
+      </Button>
+    </DialogTrigger>
+  );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {TriggerComponent}
       <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
           if (showQr) {
             e.preventDefault();
@@ -268,7 +280,7 @@ export default function MemberDialog({
               <p className="text-lg font-medium">{newMember?.fullName}</p>
             </div>
             <DialogFooter>
-                <Button onClick={handleCloseDialog}>Close</Button>
+                <Button onClick={() => setOpen(false)}>Close</Button>
             </DialogFooter>
           </>
         )}

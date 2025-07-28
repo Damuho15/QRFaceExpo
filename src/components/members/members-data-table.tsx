@@ -30,7 +30,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { PlusCircle, ChevronDown } from 'lucide-react';
 import MemberDialog from './member-dialog';
 
 interface DataTableProps<TData, TValue> {
@@ -84,13 +83,8 @@ export default function MembersDataTable<TData, TValue>({
         />
         <div className="flex items-center gap-2">
             <MemberDialog 
+                mode="add"
                 onSuccess={onAction} 
-                trigger={
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Member
-                    </Button>
-                }
             />
         </div>
       </div>
