@@ -17,10 +17,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, UserX } from 'lucide-react';
 import jsQR from 'jsqr';
+
+const EVENT_DATE = new Date();
+EVENT_DATE.setHours(9, 0, 0, 0); // Event starts at 9:00 AM
+
+const getRegistrationType = (scanDate: Date): 'Pre-registration' | 'Actual' | null => {
+    const eventDay = new Date(EVENT_DATE);
+    eventDay.setHours(0, 0, 0, 0);
+
+    const fiveDaysBefore = new Date(eventDay);
+    fiveDaysBefore.setDate(fiveDaysBefore.getDate() - 5);
+
+    const scanDay = new Date(scanDate);
+    scanDay.setHours(0, 0, 0, 0);
+
+    if (scanDay.getTime() >= fiveDaysBefore.getTime() && scanDay.getTime() < eventDay.getTime()) {
+        return 'Pre-registration';
+    }
+    
+    if (scanDay.getTime() === eventDay.getTime() && scanDate.getTime() >= EVENT_DATE.getTime()) {
+        return 'Actual';
+    }
+
+    return null;
+}
 
 const ScanTab = () => {
     const { toast } = useToast();
@@ -28,6 +51,7 @@ const ScanTab = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const [scanResult, setScanResult] = useState<string | null>(null);
+    const [isScanning, setIsScanning] = useState(true);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -61,7 +85,7 @@ const ScanTab = () => {
         let animationFrameId: number;
 
         const tick = () => {
-            if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
+            if (isScanning && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
                 const video = videoRef.current;
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
@@ -78,7 +102,7 @@ const ScanTab = () => {
                     if (code) {
                         setScanResult(code.data);
                         handleCheckIn(code.data);
-                        // Stop scanning after a successful scan
+                        setIsScanning(false);
                         return;
                     }
                 }
@@ -93,20 +117,33 @@ const ScanTab = () => {
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [hasCameraPermission]);
+    }, [hasCameraPermission, isScanning]);
 
     const handleCheckIn = (qrData: string) => {
+        const registrationType = getRegistrationType(new Date());
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            setTimeout(() => setIsScanning(true), 2000);
+            return;
+        }
+
         toast({
-            title: 'QR Code Scanned!',
+            title: `QR Code Scanned for ${registrationType}!`,
             description: `Data: ${qrData}. Simulating check-in...`,
         });
 
         setTimeout(() => {
             toast({
                 title: 'Check-in Successful',
-                description: `Member with QR data "${qrData}" has been checked in.`,
+                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
                 variant: 'default',
             });
+            setTimeout(() => setIsScanning(true), 2000); // Allow scanning again
         }, 1500);
     };
 
@@ -121,6 +158,13 @@ const ScanTab = () => {
                          <p className="mt-2 text-muted-foreground">Camera not available</p>
                     </div>
                 )}
+                 {!isScanning && scanResult && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90">
+                        <UserCheck className="h-16 w-16 text-green-500" />
+                        <p className="mt-4 text-lg font-semibold">Check-in Complete</p>
+                        <p className="text-sm text-muted-foreground">Ready for next scan...</p>
+                    </div>
+                )}
             </div>
              {hasCameraPermission === false && (
                 <Alert variant="destructive">
@@ -130,19 +174,6 @@ const ScanTab = () => {
                     </AlertDescription>
                 </Alert>
             )}
-            <div className="space-y-2">
-                <Label>Registration Type</Label>
-                <RadioGroup defaultValue="actual" className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="pre-reg" id="scan-pre-reg" />
-                        <Label htmlFor="scan-pre-reg">Pre-registration</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="actual" id="scan-actual" />
-                        <Label htmlFor="scan-actual">Actual Registration</Label>
-                    </div>
-                </RadioGroup>
-            </div>
         </div>
     );
 };
@@ -187,15 +218,26 @@ const UploadTab = () => {
     };
     
     const handleCheckIn = (qrData: string) => {
+        const registrationType = getRegistrationType(new Date());
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         toast({
-            title: 'QR Code Decoded!',
+            title: `QR Code Decoded for ${registrationType}!`,
             description: `Data: ${qrData}. Simulating check-in...`,
         });
 
         setTimeout(() => {
             toast({
                 title: 'Check-in Successful',
-                description: `Member with QR data "${qrData}" has been checked in.`,
+                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
                 variant: 'default',
             });
              setFileName('');
@@ -217,19 +259,9 @@ const UploadTab = () => {
                     </Button>
                     {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
                 </div>
-            </div>
-             <div className="space-y-2">
-                <Label>Registration Type</Label>
-                <RadioGroup defaultValue="actual" className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="pre-reg" id="upload-pre-reg" />
-                        <Label htmlFor="upload-pre-reg">Pre-registration</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="actual" id="upload-actual" />
-                        <Label htmlFor="upload-actual">Actual Registration</Label>
-                    </div>
-                </RadioGroup>
+                 <p className="text-xs text-muted-foreground pt-2">
+                    Registration type will be automatically determined based on the upload time.
+                </p>
             </div>
         </div>
     );
