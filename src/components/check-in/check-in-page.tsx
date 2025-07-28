@@ -362,44 +362,88 @@ const FaceCheckinTab = () => {
 };
 
 export default function CheckInPage() {
-  const [eventDate, setEventDate] = useState<Date>(getNextSunday());
-  const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
-  const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const [eventDate, setEventDate] = useState<Date>(getNextSunday());
+    const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
+    const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
 
-  const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
-  const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
+    const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
+    const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
 
-  const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
-  const [tempEventDate, setTempEventDate] = useState<Date | undefined>(eventDate);
-  
-  const handlePreRegApply = () => {
-    if (tempPreRegDate) {
-        setPreRegStartDate(tempPreRegDate);
-        setIsPreRegDateManuallySet(true);
+    const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
+    const [tempEventDate, setTempEventDate] = useState<Date | undefined>(eventDate);
+
+    useEffect(() => {
+        setIsMounted(true);
+        try {
+            const storedEventDate = localStorage.getItem('eventDate');
+            const storedPreRegDate = localStorage.getItem('preRegStartDate');
+            const storedManualSet = localStorage.getItem('isPreRegDateManuallySet');
+
+            if (storedEventDate) {
+                setEventDate(new Date(storedEventDate));
+            }
+            if (storedPreRegDate) {
+                setPreRegStartDate(new Date(storedPreRegDate));
+            }
+            if (storedManualSet) {
+                setIsPreRegDateManuallySet(JSON.parse(storedManualSet));
+            }
+        } catch (error) {
+            console.error("Failed to parse dates from localStorage", error)
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isMounted) {
+            localStorage.setItem('eventDate', eventDate.toISOString());
+        }
+    }, [eventDate, isMounted]);
+
+    useEffect(() => {
+        if (isMounted) {
+            localStorage.setItem('preRegStartDate', preRegStartDate.toISOString());
+        }
+    }, [preRegStartDate, isMounted]);
+    
+    useEffect(() => {
+        if (isMounted) {
+            localStorage.setItem('isPreRegDateManuallySet', JSON.stringify(isPreRegDateManuallySet));
+        }
+    }, [isPreRegDateManuallySet, isMounted]);
+    
+    const handlePreRegApply = () => {
+        if (tempPreRegDate) {
+            setPreRegStartDate(tempPreRegDate);
+            setIsPreRegDateManuallySet(true);
+        }
+        setPreRegPopoverOpen(false);
     }
-    setPreRegPopoverOpen(false);
-  }
 
-  const handleEventDateApply = () => {
-      if (tempEventDate) {
-          setEventDate(tempEventDate);
-      }
-      setEventPopoverOpen(false);
-  }
-
-  useEffect(() => {
-    if (!isPreRegDateManuallySet) {
-      setPreRegStartDate(getPreviousTuesday(eventDate));
+    const handleEventDateApply = () => {
+        if (tempEventDate) {
+            setEventDate(tempEventDate);
+        }
+        setEventPopoverOpen(false);
     }
-  }, [eventDate, isPreRegDateManuallySet]);
 
-  useEffect(() => {
-    setTempPreRegDate(preRegStartDate);
-  }, [preRegStartDate]);
+    useEffect(() => {
+        if (!isPreRegDateManuallySet) {
+            setPreRegStartDate(getPreviousTuesday(eventDate));
+        }
+    }, [eventDate, isPreRegDateManuallySet]);
 
-  useEffect(() => {
-    setTempEventDate(eventDate);
-  }, [eventDate]);
+    useEffect(() => {
+        setTempPreRegDate(preRegStartDate);
+    }, [preRegStartDate]);
+
+    useEffect(() => {
+        setTempEventDate(eventDate);
+    }, [eventDate]);
+
+    if (!isMounted) {
+        return null;
+    }
 
   return (
     <div className="space-y-6">
