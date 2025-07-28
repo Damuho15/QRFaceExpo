@@ -364,6 +364,7 @@ const FaceCheckinTab = () => {
 export default function CheckInPage() {
   const [eventDate, setEventDate] = useState<Date>(getNextSunday());
   const [preRegStartDate, setPreRegStartDate] = useState<Date>(getPreviousTuesday(getNextSunday()));
+  const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
 
   const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
   const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
@@ -374,6 +375,7 @@ export default function CheckInPage() {
   const handlePreRegApply = () => {
     if (tempPreRegDate) {
         setPreRegStartDate(tempPreRegDate);
+        setIsPreRegDateManuallySet(true);
     }
     setPreRegPopoverOpen(false);
   }
@@ -384,6 +386,12 @@ export default function CheckInPage() {
       }
       setEventPopoverOpen(false);
   }
+
+  useEffect(() => {
+    if (!isPreRegDateManuallySet) {
+      setPreRegStartDate(getPreviousTuesday(eventDate));
+    }
+  }, [eventDate, isPreRegDateManuallySet]);
 
   useEffect(() => {
     setTempPreRegDate(preRegStartDate);
