@@ -179,7 +179,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
-            Upload an Excel file (.xlsx, .xls, .csv). Use the template for the correct format. `FullName` and `Birthday` are required.
+            Upload an Excel file (.xlsx, .xls, .csv). Use the template for the correct format. `FullName` is required.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -221,13 +221,13 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                     </p>
                 </div>
             )}
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting || parsedData.length === 0}>
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</> : `Import ${parsedData.length > 0 ? parsedData.length : ''} Members`}
+              </Button>
+            </DialogFooter>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || parsedData.length === 0}>
-            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</> : `Import ${parsedData.length > 0 ? parsedData.length : ''} Members`}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
