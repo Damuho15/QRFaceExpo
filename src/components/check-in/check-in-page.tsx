@@ -28,22 +28,18 @@ import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 
 const getNextSunday = (from: Date): Date => {
-    const date = new Date(from.getTime());
+    const date = new Date(from);
+    date.setUTCDate(date.getUTCDate() + ((7 - date.getUTCDay()) % 7));
     date.setUTCHours(0, 0, 0, 0);
-    const day = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
-    const diff = day === 0 ? 7 : 7 - day; // If today is Sunday, add 7 days, else find next Sunday
-    date.setUTCDate(date.getUTCDate() + diff);
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
-    const date = new Date(from.getTime());
-    date.setUTCHours(0, 0, 0, 0);
-    const day = date.getUTCDay(); // 0 = Sunday, ..., 2 = Tuesday
-    // From a given Sunday (day 0), Tuesday is 5 days before. (0 - 5 + 7) % 7 = 2
-    // From any other day, calculate days to subtract to get to the previous Tuesday.
-    const daysToSubtract = (day - 2 + 7) % 7;
+    const date = new Date(from);
+    // Sunday is 0, Tuesday is 2. (0 - 2 + 7) % 7 = 5 days to subtract from Sunday.
+    const daysToSubtract = (date.getUTCDay() - 2 + 7) % 7;
     date.setUTCDate(date.getUTCDate() - daysToSubtract);
+    date.setUTCHours(0, 0, 0, 0);
     return date;
 };
 
@@ -677,5 +673,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
