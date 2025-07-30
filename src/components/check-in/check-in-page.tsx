@@ -89,6 +89,10 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
     
         if (matchedMember) {
+            alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
+            setScanResult({ memberName: matchedMember.fullName, found: true });
+            onCheckInSuccess();
+            /*
             try {
                 await addAttendanceLog({
                     member_id: matchedMember.id,
@@ -110,6 +114,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
                     variant: 'destructive',
                 });
             }
+            */
         } else {
              setScanResult({ memberName: 'Not Found', found: false });
              toast({
@@ -262,6 +267,9 @@ const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { 
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
+            alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
+            onCheckInSuccess();
+            /*
             try {
                  await addAttendanceLog({
                     member_id: matchedMember.id,
@@ -282,6 +290,7 @@ const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { 
                     variant: 'destructive',
                 });
             }
+            */
         } else {
              toast({
                 title: 'Check-in Failed',
@@ -451,6 +460,7 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
         try {
             const result = await recognizeFace({ imageDataUri });
             if (result.matchFound && result.member) {
+                 /*
                 await addAttendanceLog({
                     member_id: result.member.id,
                     member_name: result.member.fullName,
@@ -458,6 +468,9 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
                     method: 'Face',
                     timestamp: scanTime,
                 });
+                */
+                alert(`Face Recognized!\n\nMember: ${result.member.fullName}`);
+
                 toast({
                     title: 'Check-in Successful',
                     description: `Welcome, ${result.member.fullName}! You've been checked in for ${registrationType}.`,
@@ -777,5 +790,7 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
 
     
