@@ -479,7 +479,7 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                const today = new Date();
+                const today = new Date('2026-01-01');
                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
@@ -664,10 +664,12 @@ export default function CheckInPage() {
                 </div>
             </CardContent>
              <CardFooter>
-                <Button onClick={onApplyChanges} disabled={!areDatesChanged || isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                    Apply Changes
-                </Button>
+                {areDatesChanged && (
+                    <Button onClick={onApplyChanges} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                        Apply Changes
+                    </Button>
+                )}
             </CardFooter>
         </Card>
 
@@ -686,3 +688,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
