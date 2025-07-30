@@ -42,8 +42,16 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
         return 'Pre-registration';
     }
     
-    if (scanDate > preRegEndTime) {
+    // Check if it's event day
+    if (scanDate.getUTCFullYear() === eventDate.getUTCFullYear() &&
+        scanDate.getUTCMonth() === eventDate.getUTCMonth() &&
+        scanDate.getUTCDate() === eventDate.getUTCDate() &&
+        scanDate.getUTCHours() >= 9) {
         return 'Actual';
+    }
+
+    if (scanDate > eventDate) {
+        return 'Actual'
     }
 
     return null;
@@ -72,65 +80,43 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     const [isScanning, setIsScanning] = useState(true);
 
     const handleCheckIn = useCallback(async (qrData: string) => {
-        setIsScanning(false); // Stop scanning to show result
+        setIsScanning(false);
         const scanTime = new Date();
         const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
-    
+
         if (!registrationType) {
             toast({
                 title: 'Check-in Not Allowed',
                 description: 'Check-in is not open at this time.',
                 variant: 'destructive',
             });
-            setTimeout(() => setIsScanning(true), 2000);
+            setTimeout(() => {
+                setIsScanning(true);
+                setScanResult(null);
+            }, 2000);
             return;
         }
-        
+
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
-    
+
         if (matchedMember) {
             alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
             setScanResult({ memberName: matchedMember.fullName, found: true });
             onCheckInSuccess();
-            /*
-            try {
-                await addAttendanceLog({
-                    member_id: matchedMember.id,
-                    member_name: matchedMember.fullName,
-                    type: registrationType,
-                    method: 'QR',
-                    timestamp: scanTime,
-                });
-                setScanResult({ memberName: matchedMember.fullName, found: true });
-                toast({
-                    title: 'Check-in Successful',
-                    description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
-                });
-                onCheckInSuccess();
-            } catch (error) {
-                 toast({
-                    title: 'Database Error',
-                    description: 'Could not save attendance log.',
-                    variant: 'destructive',
-                });
-            }
-            */
         } else {
-             setScanResult({ memberName: 'Not Found', found: false });
-             toast({
+            setScanResult({ memberName: 'Not Found', found: false });
+            toast({
                 title: 'Check-in Failed',
                 description: 'Invalid QR Code. Member not found.',
                 variant: 'destructive',
             });
         }
-        
-        // Re-enable scanning after a delay
+
         setTimeout(() => {
             setIsScanning(true);
             setScanResult(null);
         }, 2000);
-    
-    }, [eventDate, preRegStartDate, toast, members, onCheckInSuccess]);
+    }, [eventDate, preRegStartDate, members, onCheckInSuccess, toast]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -161,45 +147,41 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     }, [toast]);
 
     useEffect(() => {
-        let animationFrameId: number;
-
-        const tick = () => {
-            if (isScanning && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
-                const video = videoRef.current;
-                const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
-
-                if (ctx) {
-                    canvas.height = video.videoHeight;
-                    canvas.width = video.videoWidth;
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'dontInvert',
-                    });
-
-                    if (code) {
-                        handleCheckIn(code.data);
-                        // No need to request another frame here, handleCheckIn will stop scanning.
-                        return; 
-                    }
-                }
-            }
-            // Request the next frame if still scanning
-            if (isScanning) {
-                 animationFrameId = requestAnimationFrame(tick);
-            }
-        };
-
-        if (hasCameraPermission && isScanning) {
-            animationFrameId = requestAnimationFrame(tick);
+        if (!isScanning || !hasCameraPermission) {
+            return;
         }
 
-        return () => {
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, [hasCameraPermission, isScanning, handleCheckIn]);
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) {
+            return;
+        }
 
+        const context = canvas.getContext('2d');
+        if (!context) {
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'dontInvert',
+                });
+
+                if (code) {
+                    handleCheckIn(code.data);
+                }
+            }
+        }, 200); // Scan every 200ms
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [isScanning, hasCameraPermission, handleCheckIn]);
 
     return (
         <div className="space-y-4">
@@ -274,28 +256,6 @@ const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { 
         if (matchedMember) {
             alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
             onCheckInSuccess();
-            /*
-            try {
-                 await addAttendanceLog({
-                    member_id: matchedMember.id,
-                    member_name: matchedMember.fullName,
-                    type: registrationType,
-                    method: 'QR',
-                    timestamp: scanTime,
-                });
-                toast({
-                    title: 'Check-in Successful',
-                    description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
-                });
-                onCheckInSuccess();
-            } catch(error) {
-                 toast({
-                    title: 'Database Error',
-                    description: 'Could not save attendance log.',
-                    variant: 'destructive',
-                });
-            }
-            */
         } else {
              toast({
                 title: 'Check-in Failed',
@@ -465,21 +425,7 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
         try {
             const result = await recognizeFace({ imageDataUri });
             if (result.matchFound && result.member) {
-                 /*
-                await addAttendanceLog({
-                    member_id: result.member.id,
-                    member_name: result.member.fullName,
-                    type: registrationType,
-                    method: 'Face',
-                    timestamp: scanTime,
-                });
-                */
                 alert(`Face Recognized!\n\nMember: ${result.member.fullName}`);
-
-                toast({
-                    title: 'Check-in Successful',
-                    description: `Welcome, ${result.member.fullName}! You've been checked in for ${registrationType}.`,
-                });
                 onCheckInSuccess();
             } else {
                 toast({
