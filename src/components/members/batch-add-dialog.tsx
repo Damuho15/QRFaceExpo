@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, Users, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Member } from '@/lib/types';
-import { addMembers } from '@/lib/supabaseClient';
+import { addMembers, getMembers } from '@/lib/supabaseClient';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -49,11 +49,15 @@ const parseDate = (dateInput: string | number): Date | null => {
                 month = parseInt(parts[1], 10) - 1;
                 day = parseInt(parts[2], 10);
             } else { // MM-DD-YYYY or MM/DD/YYYY
-                year = parseInt(parts[2], 10);
                 month = parseInt(parts[0], 10) - 1;
                 day = parseInt(parts[1], 10);
+                year = parseInt(parts[2], 10);
             }
             
+            if (String(year).length === 2) {
+                year = year >= 50 ? 1900 + year : 2000 + year;
+            }
+
             const date = new Date(year, month, day);
             if (!isNaN(date.getTime()) && year > 1900) {
                 return date;
@@ -101,7 +105,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
           
           if (json.length < 2) {
              toast({
@@ -112,20 +116,23 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             resetState();
             return;
           }
-
-          const headerRow = json[0];
+          
+          const headerRow: string[] = json[0].map((h: any) => String(h).trim());
           const headerIndexMap: { [key: string]: number } = {};
+          
           expectedHeaders.forEach(header => {
-            const index = headerRow.findIndex(cell => typeof cell === 'string' && cell.trim() === header);
+            const index = headerRow.findIndex(cell => cell === header);
             if (index !== -1) {
               headerIndexMap[header] = index;
             }
           });
-          
+
           const validationErrors: string[] = [];
           const dataRows = json.slice(1);
 
           const members: NewMember[] = dataRows.map((row: any[], index) => {
+            if (row.every(cell => cell === null || cell === '')) return null;
+
             const rowNumber = index + 2;
             const rowErrors: string[] = [];
             
@@ -217,7 +224,29 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
     setIsSubmitting(true);
 
     try {
-      const result = await addMembers(parsedMembers);
+      const existingMembers = await getMembers();
+      const existingEmails = new Set(existingMembers.map(m => m.email.toLowerCase()));
+
+      const newMembers = parsedMembers.filter(member => !existingEmails.has(member.email.toLowerCase()));
+      const skippedCount = parsedMembers.length - newMembers.length;
+
+      if (skippedCount > 0) {
+        toast({
+            title: 'Duplicates Skipped',
+            description: `${skippedCount} member(s) were skipped because they already exist in the database.`,
+        });
+      }
+
+      if (newMembers.length === 0) {
+        toast({
+            title: 'No New Members',
+            description: 'All members in the file already exist.',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = await addMembers(newMembers);
       if (result) {
         toast({
           title: 'Batch Add Successful',
