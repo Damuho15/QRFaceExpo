@@ -125,6 +125,37 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 }
 
+export const updateMember = async (member: Member): Promise<Member | null> => {
+    const { id, ...memberData } = member;
+    
+    const birthdayISO = member.birthday instanceof Date ? member.birthday.toISOString() : new Date().toISOString();
+
+    const memberToUpdate = {
+        ...memberData,
+        birthday: birthdayISO,
+        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
+        nickname: member.nickname || null,
+        email: member.email || null,
+        phone: member.phone || null,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
+    };
+
+    const { data, error } = await supabase
+        .from('members')
+        .update(memberToUpdate)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating member:', error);
+        return null;
+    }
+
+    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
+};
+
 /**
  * Handles batch insertion of members. This function is the single source of truth for validation and data formatting.
  * @param rawMembers - An array of raw objects from the file parser.
@@ -160,7 +191,6 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
             qrCodePayload: fullName,
             ministries: String(rawMember.Ministries || '').trim() || null,
             lg: String(rawMember.LG || '').trim() || null,
-            pictureUrl: null,
         };
     }).filter((m): m is Exclude<typeof m, null> => m !== null);
 
@@ -181,35 +211,4 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     }
 
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
-};
-
-export const updateMember = async (member: Member): Promise<Member | null> => {
-    const { id, ...memberData } = member;
-    
-    const birthdayISO = member.birthday instanceof Date ? member.birthday.toISOString() : new Date(member.birthday).toISOString();
-
-     const memberToUpdate = {
-        ...memberData,
-        birthday: birthdayISO,
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
-        nickname: member.nickname || null,
-        email: member.email || null,
-        phone: member.phone || null,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
-    };
-
-    const { data, error } = await supabase
-        .from('members')
-        .update(memberToUpdate)
-        .eq('id', id)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error updating member:', error);
-        return null;
-    }
-
-    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 };
