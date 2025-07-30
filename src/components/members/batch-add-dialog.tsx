@@ -175,7 +175,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       <DialogTrigger asChild>
         <Button variant="outline"><Users className="mr-2 h-4 w-4" />Batch Add</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
