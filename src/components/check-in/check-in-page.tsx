@@ -72,6 +72,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
     const [isScanning, setIsScanning] = useState(true);
 
     const handleCheckIn = useCallback((qrData: string) => {
+        setIsScanning(false);
         const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
 
         if (!registrationType) {
@@ -155,9 +156,8 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
                     });
 
                     if (code) {
-                        setIsScanning(false);
                         handleCheckIn(code.data);
-                        return;
+                        return; // Stop scanning once a code is found
                     }
                 }
             }
@@ -227,6 +227,36 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
             fileInputRef.current.value = '';
         }
     }
+    
+    const handleCheckIn = (qrData: string) => {
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            resetInput();
+            return;
+        }
+
+        const matchedMember = members.find(m => m.qrCodePayload === qrData);
+
+        if (matchedMember) {
+             toast({
+                title: 'Check-in Successful',
+                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
+            });
+        } else {
+             toast({
+                title: 'Check-in Failed',
+                description: 'Invalid QR Code. Member not found.',
+                variant: 'destructive',
+            });
+        }
+        resetInput();
+    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -260,36 +290,6 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
             };
             reader.readAsDataURL(file);
         }
-    };
-    
-    const handleCheckIn = (qrData: string) => {
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
-
-        if (!registrationType) {
-            toast({
-                title: 'Check-in Not Allowed',
-                description: 'Check-in is not open at this time.',
-                variant: 'destructive',
-            });
-            resetInput();
-            return;
-        }
-
-        const matchedMember = members.find(m => m.qrCodePayload === qrData);
-
-        if (matchedMember) {
-             toast({
-                title: 'Check-in Successful',
-                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
-            });
-        } else {
-             toast({
-                title: 'Check-in Failed',
-                description: 'Invalid QR Code. Member not found.',
-                variant: 'destructive',
-            });
-        }
-        resetInput();
     };
 
     return (
@@ -714,6 +714,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
-    
