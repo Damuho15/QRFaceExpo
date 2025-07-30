@@ -49,7 +49,7 @@ const memberSchema = z.object({
   weddingAnniversary: z.date().optional().nullable(),
   picture: z.any().optional(),
   ministries: z.string().optional(),
-  lg: z.string().optional(),
+lg: z.string().optional(),
 });
 
 export type MemberFormValues = z.infer<typeof memberSchema>;
@@ -90,7 +90,7 @@ export default function MemberDialog({
     },
   });
 
-   useEffect(() => {
+  useEffect(() => {
     if (open && isEditMode && memberToEdit) {
       form.reset({
         fullName: memberToEdit.fullName || '',
@@ -135,20 +135,7 @@ export default function MemberDialog({
         }
         
         if (isEditMode && memberToEdit) {
-            const updatePayload = {
-                fullName: data.fullName,
-                nickname: data.nickname || null,
-                email: data.email || null,
-                phone: data.phone || null,
-                birthday: new Date(data.birthday).toISOString(),
-                weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary).toISOString() : null,
-                pictureUrl: pictureUrlToSave,
-                ministries: data.ministries || null,
-                lg: data.lg || null,
-                qrCodePayload: data.fullName,
-            };
-
-            const result = await updateMember(memberToEdit.id, updatePayload);
+            const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
             toast({
                 title: 'Member Updated',
                 description: `${result.fullName} has been successfully updated.`,
@@ -164,7 +151,7 @@ export default function MemberDialog({
                 description: `${result.fullName} has been successfully added.`,
             });
             setNewMember(result);
-            setShowQr(true);
+setShowQr(true);
             onSuccess?.();
         }
     } catch (error: any) {
@@ -443,3 +430,5 @@ export default function MemberDialog({
     </Dialog>
   );
 }
+
+    

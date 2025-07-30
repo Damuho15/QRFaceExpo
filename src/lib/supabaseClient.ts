@@ -138,13 +138,30 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
 /**
  * Updates an existing member in the database.
  * @param id The ID of the member to update.
- * @param payload The pre-constructed, validated data payload from the form.
+ * @param formData The raw data from the react-hook-form.
+ * @param pictureUrl The URL of the uploaded picture, or null.
  * @returns The updated Member object.
  */
-export const updateMember = async (id: string, payload: Omit<Member, 'id' | 'birthday' | 'weddingAnniversary'> & { birthday: string; weddingAnniversary: string | null; }): Promise<Member> => {
+export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
+    // Construct a safe payload with only the fields that are meant to be updated.
+    // This prevents accidentally trying to update primary keys or other protected fields.
+    const updatePayload = {
+        fullName: formData.fullName,
+        nickname: formData.nickname || null,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        birthday: new Date(formData.birthday).toISOString(),
+        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
+        pictureUrl: pictureUrl,
+        ministries: formData.ministries || null,
+        lg: formData.lg || null,
+        // The QR code payload should also be updated if the name changes.
+        qrCodePayload: formData.fullName,
+    };
+
     const { data, error } = await supabase
         .from('members')
-        .update(payload)
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();
@@ -222,3 +239,5 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     // 4. On success, return the data, ensuring dates are converted back for consistency.
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
+
+    
