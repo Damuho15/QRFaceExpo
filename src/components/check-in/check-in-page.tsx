@@ -135,7 +135,7 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
 
     useEffect(() => {
         let lastScanTime = 0;
-        const scanInterval = 300; // Scan every 300ms
+        const scanInterval = 150; // Scan every 150ms
 
         const tick = (time: number) => {
             if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
