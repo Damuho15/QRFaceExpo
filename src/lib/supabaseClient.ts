@@ -62,7 +62,7 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         birthday: new Date(member.birthday).toISOString(),
         weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
         pictureUrl: member.pictureUrl || null,
-        qrCodePayload: member.fullName,
+        qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
         lg: member.lg || null,
     };
@@ -81,7 +81,7 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 }
 
-export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload'>)[]): Promise<Member[] | null> => {
+export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' | 'pictureUrl'>)[]): Promise<Member[] | null> => {
     const membersToInsert = members.map(member => {
         return {
             fullName: member.fullName,
