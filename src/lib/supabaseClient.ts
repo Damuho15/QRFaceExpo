@@ -18,23 +18,27 @@ const BUCKET_NAME = 'member-pictures';
 
 /**
  * Robustly parses a date from various formats, including Excel's serial number format.
- * @param dateInput - The value to parse (string, number, or null).
+ * @param dateInput - The value to parse (string, number, Date, or null).
  * @returns A Date object or null if parsing fails.
  */
 const parseDate = (dateInput: any): Date | null => {
     if (dateInput === null || dateInput === undefined || String(dateInput).trim() === '') {
         return null;
     }
+    
+    // If it's already a Date object, just return it
+    if (dateInput instanceof Date) {
+        if (!isNaN(dateInput.getTime())) {
+            return dateInput;
+        }
+        return null;
+    }
 
     // Handle Excel serial numbers (numbers)
     if (typeof dateInput === 'number') {
-        // Excel's epoch starts on 1899-12-30 for compatibility with Lotus 1-2-3.
-        // The serial number represents the number of days since this epoch.
         const excelEpoch = new Date(1899, 11, 30);
         const msPerDay = 86400000;
         const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
-        // JS Date object conversion from Excel serial number can be off by the timezone offset.
-        // We adjust for this to get the correct UTC date.
         const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
         if (!isNaN(adjustedDate.getTime())) {
@@ -46,7 +50,6 @@ const parseDate = (dateInput: any): Date | null => {
     if (typeof dateInput === 'string') {
         const date = new Date(dateInput);
         if (!isNaN(date.getTime())) {
-            // Adjust for timezone if only date part is present, to prevent day-off errors.
             if (!/T|Z/i.test(dateInput)) {
                  return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             }
@@ -54,7 +57,6 @@ const parseDate = (dateInput: any): Date | null => {
         }
     }
     
-    // Return null if no valid date could be parsed
     return null;
 };
 
@@ -88,7 +90,6 @@ export const getMembers = async (): Promise<Member[]> => {
         return [];
     }
 
-    // Supabase returns dates as strings, so we need to convert them back to Date objects
     return data.map((member: any) => ({
         ...member,
         birthday: member.birthday ? new Date(member.birthday) : new Date(),
@@ -97,7 +98,6 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
-    // This function assumes `member.birthday` is a valid Date object
     const memberToInsert = {
         fullName: member.fullName,
         nickname: member.nickname || null,
@@ -126,8 +126,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 }
 
 /**
- * Handles batch insertion of members. This function is responsible for all validation and data formatting.
- * @param rawMembers - An array of raw objects, typically from a file parser.
+ * Handles batch insertion of members. This function is the single source of truth for validation and data formatting.
+ * @param rawMembers - An array of raw objects from the file parser.
  * @returns An array of successfully inserted members, or null on a major failure.
  */
 export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<Member[] | null> => {
@@ -136,35 +136,31 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     }
 
     const validMembersToInsert = rawMembers.map(rawMember => {
-        // 1. Validate required fields
         const fullName = String(rawMember.FullName || '').trim();
         if (!fullName) {
             console.warn('Skipping row due to missing FullName:', rawMember);
             return null;
         }
 
-        // 2. Parse and validate birthday
         const birthday = parseDate(rawMember.Birthday);
         if (!birthday) {
             console.warn('Skipping row due to invalid or missing Birthday:', rawMember);
             return null;
         }
 
-        // 3. Parse optional wedding anniversary
         const weddingAnniversary = parseDate(rawMember.WeddingAnniversary);
         
-        // 4. Build the final, clean object for insertion
         return {
             fullName: fullName,
             nickname: String(rawMember.Nickname || '').trim() || null,
             email: String(rawMember.Email || '').trim() || null,
             phone: String(rawMember.Phone || '').trim() || null,
-            birthday: birthday.toISOString(), // Format valid date
-            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null, // Format valid date or null
-            qrCodePayload: fullName, // Default QR payload to the full name
+            birthday: birthday.toISOString(),
+            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+            qrCodePayload: fullName,
             ministries: String(rawMember.Ministries || '').trim() || null,
             lg: String(rawMember.LG || '').trim() || null,
-            pictureUrl: null, // Batch add does not include pictures
+            pictureUrl: null,
         };
     }).filter((m): m is Exclude<typeof m, null> => m !== null);
 
@@ -173,7 +169,6 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
         return [];
     }
 
-    // 5. Perform the batch insert
     const { data, error } = await supabase
         .from('members')
         .insert(validMembersToInsert)
@@ -181,24 +176,22 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
     if (error) {
         console.error('Error batch adding members:', error);
+        // On failure, return null to indicate to the UI that the operation failed.
         return null;
     }
 
-    // Convert date strings back to Date objects for consistency with other functions
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
 
 export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
     
-    // Ensure birthday is a valid Date object before converting
     const birthdayISO = member.birthday instanceof Date ? member.birthday.toISOString() : new Date(member.birthday).toISOString();
 
      const memberToUpdate = {
         ...memberData,
         birthday: birthdayISO,
         weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
-        // Ensure optional text fields are null if empty
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
