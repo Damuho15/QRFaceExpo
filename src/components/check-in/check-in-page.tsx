@@ -28,21 +28,22 @@ import { format } from 'date-fns';
 import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 
-
 const getNextSunday = (from: Date): Date => {
-    const date = new Date(from);
-    const day = date.getUTCDay(); // 0 for Sunday, 6 for Saturday
-    const daysToAdd = day === 0 ? 0 : 7 - day;
-    date.setUTCDate(date.getUTCDate() + daysToAdd);
+    const date = new Date(from.getTime());
+    const day = date.getUTCDay();
+    const diff = day === 0 ? 7 : 7 - day;
+    date.setUTCDate(date.getUTCDate() + diff);
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
-    const date = new Date(from); // from is always a Sunday
-    const day = date.getUTCDay(); // which is 0
-    // To get to the previous Tuesday (day 2) from a Sunday (day 0), we need to go back 5 days.
-    // Sunday (0) -> Saturday (6) -> Friday (5) -> Thursday (4) -> Wednesday (3) -> Tuesday (2)
-    date.setUTCDate(date.getUTCDate() - 5);
+    const date = new Date(from.getTime());
+    const day = date.getUTCDay();
+    const daysToSubtract = (day + 7 - 2) % 7;
+    date.setUTCDate(date.getUTCDate() - daysToSubtract);
+    if (daysToSubtract === 0) {
+        date.setUTCDate(date.getUTCDate() - 7);
+    }
     return date;
 };
 
@@ -71,11 +72,9 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
 // Helper to parse date strings as UTC
 const parseDateAsUTC = (dateString: string) => {
-    // When a date string like '2024-07-30' is parsed, it's treated as UTC midnight.
-    // However, `new Date()` might interpret it in local time. To ensure consistency,
-    // we explicitly tell it to parse as if it's a UTC date by adding 'T00:00:00Z'
-    const utcDate = new Date(`${dateString}T00:00:00Z`);
-    return utcDate;
+    const date = new Date(dateString);
+    const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() + userTimezoneOffset);
 }
 
 const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
@@ -327,145 +326,143 @@ const QRCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegS
 };
 
 const FaceCheckinTab = () => {
-  const { toast } = useToast();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+    const { toast } = useToast();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    const getCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        setHasCameraPermission(true);
+    useEffect(() => {
+        const getCameraPermission = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                setHasCameraPermission(true);
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                setHasCameraPermission(false);
+                toast({
+                    variant: 'destructive',
+                    title: 'Camera Access Denied',
+                    description: 'Please enable camera permissions in your browser settings to use this app.',
+                });
+            }
+        };
+
+        getCameraPermission();
+
+        return () => {
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [toast]);
+
+    const handleCheckIn = async () => {
+        if (!videoRef.current || !hasCameraPermission) {
+            toast({
+                variant: 'destructive',
+                title: 'Cannot Check-in',
+                description: 'Camera access is required for face recognition.',
+            });
+            return;
         }
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
+
+        setIsProcessing(true);
         toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to use this app.',
+            title: 'Processing Image...',
+            description: 'Capturing frame and analyzing face.',
         });
-      }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            setIsProcessing(false);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not process video frame.' });
+            return;
+        }
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const imageDataUri = canvas.toDataURL('image/jpeg');
+
+        try {
+            const result = await recognizeFace({ imageDataUri });
+            if (result.matchFound && result.member) {
+                toast({
+                    title: 'Check-in Successful',
+                    description: `Welcome, ${result.member.fullName}!`,
+                });
+            } else {
+                toast({
+                    title: 'Check-in Failed',
+                    description: 'Face not recognized. Please try again or use QR code.',
+                    variant: 'destructive',
+                });
+            }
+        } catch (error) {
+            console.error('Face recognition error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'AI Error',
+                description: 'An error occurred during face recognition analysis.',
+            });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
-    getCameraPermission();
-
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [toast]);
-
-  const handleCheckIn = async () => {
-    if (!videoRef.current || !hasCameraPermission) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot Check-in',
-        description: 'Camera access is required for face recognition.',
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    toast({
-      title: 'Processing Image...',
-      description: 'Capturing frame and analyzing face.',
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      setIsProcessing(false);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not process video frame.' });
-      return;
-    }
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    const imageDataUri = canvas.toDataURL('image/jpeg');
-
-    try {
-      const result = await recognizeFace({ imageDataUri });
-      if (result.matchFound && result.member) {
-        toast({
-          title: 'Check-in Successful',
-          description: `Welcome, ${result.member.fullName}!`,
-        });
-      } else {
-        toast({
-          title: 'Check-in Failed',
-          description: 'Face not recognized. Please try again or use QR code.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Face recognition error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI Error',
-        description: 'An error occurred during face recognition analysis.',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Face Recognition Check-in</CardTitle>
-        <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-          <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-          {hasCameraPermission === false && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-              <Camera className="h-16 w-16 text-muted-foreground" />
-              <p className="mt-2 text-muted-foreground">Camera not available</p>
-            </div>
-          )}
-        </div>
-        {hasCameraPermission === false && (
-          <Alert variant="destructive">
-            <AlertTitle>Camera Access Required</AlertTitle>
-            <AlertDescription>
-              Please allow camera access in your browser settings to use this feature.
-            </AlertDescription>
-          </Alert>
-        )}
-        <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
-          {isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Recognizing...
-            </>
-          ) : (
-            <>
-              <UserCheck className="mr-2 h-4 w-4" /> Check In
-            </>
-          )}
-        </Button>
-      </CardContent>
-    </Card>
-  );
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Face Recognition Check-in</CardTitle>
+                <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                    {hasCameraPermission === false && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                            <Camera className="h-16 w-16 text-muted-foreground" />
+                            <p className="mt-2 text-muted-foreground">Camera not available</p>
+                        </div>
+                    )}
+                </div>
+                {hasCameraPermission === false && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Camera Access Required</AlertTitle>
+                        <AlertDescription>
+                            Please allow camera access in your browser settings to use this feature.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
+                    {isProcessing ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Recognizing...
+                        </>
+                    ) : (
+                        <>
+                            <UserCheck className="mr-2 h-4 w-4" /> Check In
+                        </>
+                    )}
+                </Button>
+            </CardContent>
+        </Card>
+    );
 };
 
 
 export default function CheckInPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
-    // State for the dates saved in the DB
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
     
-    // Temporary state for staged date changes in the UI
     const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
     const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
@@ -475,13 +472,11 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                 // Hardcoded for testing rollover
-                const today = new Date('2026-01-01T12:00:00Z');
-                today.setUTCHours(0, 0, 0, 0);
+                 const today = new Date();
+                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
                 
-                // Automated Rollover Logic
                 if (today > dbEventDate) {
                     const newEventDate = getNextSunday(today);
                     const newPreRegDate = getPreviousTuesday(newEventDate);
@@ -491,7 +486,6 @@ export default function CheckInPage() {
                         event_date: newEventDate.toISOString().split('T')[0],
                     });
                     
-                    // Set both main state and temp state to the new automated dates
                     setEventDate(newEventDate);
                     setPreRegStartDate(newPreRegDate);
                     setTempEventDate(newEventDate);
@@ -503,11 +497,9 @@ export default function CheckInPage() {
                     });
 
                 } else {
-                    // Event date is in the future, use stored dates
                     const storedEventDate = parseDateAsUTC(config.event_date);
                     const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
 
-                    // Set both main state and temp state to the stored dates
                     setEventDate(storedEventDate);
                     setPreRegStartDate(storedPreRegDate);
                     setTempEventDate(storedEventDate);
@@ -529,17 +521,15 @@ export default function CheckInPage() {
     }, [fetchAndSetDates]);
 
     const handleManualDateUpdate = async (newPreRegDate: Date, newEventDate: Date) => {
+        setIsLoading(true);
         try {
-            setIsLoading(true);
             await updateEventConfig({
                 pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
                 event_date: newEventDate.toISOString().split('T')[0],
             });
-            // Update main state to reflect saved changes
             setPreRegStartDate(newPreRegDate);
             setEventDate(newEventDate);
 
-            // Also update temp state to keep UI consistent
             setTempPreRegStartDate(newPreRegDate);
             setTempEventDate(newEventDate);
             toast({
@@ -548,7 +538,6 @@ export default function CheckInPage() {
             });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
-            // On failure, revert temp dates to the last known saved state
             if(preRegStartDate && eventDate) {
                 setTempPreRegStartDate(preRegStartDate);
                 setTempEventDate(eventDate);
@@ -575,18 +564,20 @@ export default function CheckInPage() {
         handleManualDateUpdate(tempPreRegStartDate, tempEventDate);
     };
     
-    // Handlers for date pickers now only update temp state
     const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = parseDateAsUTC(e.target.value);
-        setTempPreRegStartDate(newDate);
+        if (e.target.value) {
+            const newDate = parseDateAsUTC(e.target.value);
+            setTempPreRegStartDate(newDate);
+        }
     };
 
     const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = parseDateAsUTC(e.target.value);
-        setTempEventDate(newDate);
+        if(e.target.value) {
+            const newDate = parseDateAsUTC(e.target.value);
+            setTempEventDate(newDate);
+        }
     };
 
-    // Check if the temporary dates in the UI differ from the saved dates
     const areDatesChanged =
     (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
     (tempEventDate?.getTime() !== eventDate?.getTime());
@@ -619,7 +610,7 @@ export default function CheckInPage() {
                 </CardContent>
             </Card>
         </div>
-    )
+    );
   }
 
   return (
@@ -685,5 +676,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
