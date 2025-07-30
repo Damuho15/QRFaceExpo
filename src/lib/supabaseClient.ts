@@ -74,7 +74,7 @@ export const getMembers = async (): Promise<Member[]> => {
     const { data, error } = await supabase
         .from('members')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('fullName', { ascending: true });
 
     if (error) {
         console.error('Error fetching members:', error);
