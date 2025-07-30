@@ -40,7 +40,7 @@ const parseDate = (dateInput: string | number): Date | null => {
     }
 
     if (typeof dateInput === 'string') {
-        // Handles MM-DD-YYYY, YYYY-MM-DD, MM/DD/YYYY
+        // Handles MM-DD-YYYY, YYYY-MM-DD, MM/DD/YYYY, M/D/YYYY
         const parts = dateInput.split(/[-/]/);
         if (parts.length === 3) {
             let year, month, day;
@@ -137,14 +137,10 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             const rowErrors: string[] = [];
             
             const fullName = row[headerIndexMap['FullName']];
-            const email = row[headerIndexMap['Email']];
             const birthdayValue = row[headerIndexMap['Birthday']];
             
             if (!fullName) {
                 rowErrors.push('FullName is missing');
-            }
-            if (!email) {
-                rowErrors.push('Email is missing');
             }
             
             const birthday = parseDate(birthdayValue);
@@ -168,7 +164,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             return {
               fullName: String(fullName || ''),
               nickname: row[headerIndexMap['Nickname']] ? String(row[headerIndexMap['Nickname']]) : '',
-              email: String(email || ''),
+              email: row[headerIndexMap['Email']] ? String(row[headerIndexMap['Email']]) : '',
               phone: row[headerIndexMap['Phone']] ? String(row[headerIndexMap['Phone']]) : '',
               birthday: birthday!,
               weddingAnniversary: weddingAnniversary,
@@ -225,15 +221,15 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
 
     try {
       const existingMembers = await getMembers();
-      const existingEmails = new Set(existingMembers.map(m => m.email.toLowerCase()));
+      const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
 
-      const newMembers = parsedMembers.filter(member => !existingEmails.has(member.email.toLowerCase()));
+      const newMembers = parsedMembers.filter(member => !existingFullNames.has(member.fullName.toLowerCase()));
       const skippedCount = parsedMembers.length - newMembers.length;
 
       if (skippedCount > 0) {
         toast({
             title: 'Duplicates Skipped',
-            description: `${skippedCount} member(s) were skipped because they already exist in the database.`,
+            description: `${skippedCount} member(s) were skipped because their full name already exists in the database.`,
         });
       }
 
@@ -243,6 +239,8 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             description: 'All members in the file already exist.',
         });
         setIsSubmitting(false);
+        resetState();
+        setOpen(false);
         return;
       }
 
@@ -298,7 +296,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv) with member data.
-            Ensure your file has columns: `FullName`, `Email`, `Birthday`, and optionally `Nickname`, `Phone`, and `WeddingAnniversary`.
+            Ensure your file has columns: `FullName`, `Birthday`, and optionally `Nickname`, `Email`, `Phone`, and `WeddingAnniversary`.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -338,7 +336,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                 {parsedMembers.map((member, index) => (
                                     <TableRow key={index}>
                                         <TableCell className="font-medium">{member.fullName}</TableCell>
-                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell>{member.email || 'N/A'}</TableCell>
                                         <TableCell>{isValidDate(member.birthday) ? member.birthday.toLocaleDateString() : 'Invalid Date'}</TableCell>
                                         <TableCell>{member.weddingAnniversary && isValidDate(member.weddingAnniversary) ? member.weddingAnniversary.toLocaleDateString() : 'N/A'}</TableCell>
                                     </TableRow>
