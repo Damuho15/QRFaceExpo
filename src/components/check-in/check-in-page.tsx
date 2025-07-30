@@ -472,7 +472,8 @@ export default function CheckInPage() {
     // Effect for initializing and managing dates from localStorage
     useEffect(() => {
         setIsMounted(true);
-        const today = new Date();
+        //const today = new Date();
+        const today = new Date('2024-08-01')
         today.setHours(0,0,0,0);
 
         const storedEventDateStr = localStorage.getItem('eventDate');
