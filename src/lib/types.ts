@@ -1,3 +1,4 @@
+
 export type Member = {
   id: string;
   fullName: string;
@@ -20,4 +21,11 @@ export type AttendanceLog = {
   timestamp: Date;
   type: 'Pre-registration' | 'Actual';
   method: 'QR' | 'Face';
+};
+
+export type EventConfig = {
+  id: number;
+  pre_reg_start_date: string;
+  event_date: string;
+  updated_at: string;
 };

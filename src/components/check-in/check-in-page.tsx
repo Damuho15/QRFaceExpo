@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -24,42 +24,42 @@ import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2 } f
 import jsQR from 'jsqr';
 import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
+import { Skeleton } from '../ui/skeleton';
 
 
 const getNextSunday = (from = new Date()) => {
     const date = new Date(from);
-    date.setHours(0, 0, 0, 0);
-    const day = date.getDay();
+    date.setUTCHours(0, 0, 0, 0);
+    const day = date.getUTCDay();
     const nextSunday = new Date(date);
     const addDays = (7 - day) % 7;
     // If today is Sunday, add 7 days to get next Sunday. Otherwise, add days to get to the upcoming Sunday.
-    nextSunday.setDate(date.getDate() + (addDays === 0 ? 7 : addDays));
-    nextSunday.setHours(9, 0, 0, 0);
+    nextSunday.setUTCDate(date.getUTCDate() + (addDays === 0 ? 7 : addDays));
     return nextSunday;
 };
 
 
 const getPreviousTuesday = (fromDate: Date) => {
     const date = new Date(fromDate);
-    const day = date.getDay(); // Sunday is 0, Tuesday is 2
+    const day = date.getUTCDay(); // Sunday is 0, Tuesday is 2
     const prevTuesday = new Date(date);
     const subtractDays = (day + 5) % 7; // (0+5)%7=5 (Sun), (1+5)%7=6 (Mon), (2+5)%7=0 (Tue), (3+5)%7=1 (Wed)
-    prevTuesday.setDate(date.getDate() - subtractDays);
-    prevTuesday.setHours(0, 0, 0, 0);
+    prevTuesday.setUTCDate(date.getUTCDate() - subtractDays);
     return prevTuesday;
 };
 
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
-    preRegStart.setHours(0, 0, 0, 0);
+    preRegStart.setUTCHours(0, 0, 0, 0);
 
     const eventStartTime = new Date(eventDate);
-    eventStartTime.setHours(9, 0, 0, 0);
+    eventStartTime.setUTCHours(9, 0, 0, 0);
     
     const preRegEndTime = new Date(eventStartTime);
-    preRegEndTime.setMilliseconds(preRegEndTime.getMilliseconds() - 1);
+    preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
 
 
     if (scanDate >= preRegStart && scanDate < preRegEndTime) {
@@ -452,37 +452,137 @@ const FaceCheckinTab = () => {
   );
 };
 
-const initialEventDate = getNextSunday(new Date());
-const initialPreRegDate = getPreviousTuesday(initialEventDate);
 
 export default function CheckInPage() {
-    const [isMounted, setIsMounted] = useState(false);
-    const [eventDate, setEventDate] = useState<Date>(initialEventDate);
-    const [preRegStartDate, setPreRegStartDate] = useState<Date>(initialPreRegDate);
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(true);
+    const [eventDate, setEventDate] = useState<Date | null>(null);
+    const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
+    
+    const fetchAndSetDates = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const config = await getEventConfig();
+            if (config) {
+                const today = new Date();
+                today.setUTCHours(0, 0, 0, 0);
+
+                const dbEventDate = parseISO(config.event_date);
+                
+                if (today > dbEventDate) {
+                    // Event date has passed, auto-rollover
+                    const newEventDate = getNextSunday(today);
+                    const newPreRegDate = getPreviousTuesday(newEventDate);
+                    
+                    await updateEventConfig({
+                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
+                        event_date: newEventDate.toISOString().split('T')[0],
+                    });
+                    
+                    setEventDate(newEventDate);
+                    setPreRegStartDate(newPreRegDate);
+                     toast({
+                        title: 'Event Dates Updated',
+                        description: 'The event has been automatically rolled over to the next week.',
+                    });
+
+                } else {
+                    // Event date is in the future, use stored dates
+                    setEventDate(dbEventDate);
+                    setPreRegStartDate(parseISO(config.pre_reg_start_date));
+                }
+            } else {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch or update event dates.' });
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
     
     useEffect(() => {
-        setIsMounted(true);
-    }, []);
+        fetchAndSetDates();
+    }, [fetchAndSetDates]);
 
-    const handlePreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = new Date(e.target.value);
-        const adjustedDate = new Date(newDate.getTime() + newDate.getTimezoneOffset() * 60000);
-        setPreRegStartDate(adjustedDate);
+    const handleDateChange = async (newPreRegDate: Date, newEventDate: Date) => {
+         if (newPreRegDate >= newEventDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Dates',
+                description: 'The pre-registration date must be before the event date.',
+            });
+            // Revert UI to valid state
+            fetchAndSetDates(); 
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            await updateEventConfig({
+                pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
+                event_date: newEventDate.toISOString().split('T')[0],
+            });
+            setPreRegStartDate(newPreRegDate);
+            setEventDate(newEventDate);
+            toast({
+                title: 'Dates Updated',
+                description: 'The event dates have been successfully saved.',
+            });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
+            fetchAndSetDates(); // Revert on failure
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = parseISO(e.target.value);
+        if(eventDate) {
+            handleDateChange(newDate, eventDate);
+        }
     };
 
-    const handleEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = new Date(e.target.value);
-        const adjustedDate = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 9, 0, 0);
-        setEventDate(adjustedDate);
-        
-        // Always set the pre-reg date based on the event date
-        const newPreRegDate = getPreviousTuesday(adjustedDate);
-        setPreRegStartDate(newPreRegDate);
+    const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = parseISO(e.target.value);
+        if(preRegStartDate) {
+            handleDateChange(preRegStartDate, newDate);
+        }
     };
 
-    if (!isMounted) {
-        return null;
-    }
+
+  if (isLoading || !eventDate || !preRegStartDate) {
+    return (
+        <div className="space-y-6">
+             <div>
+                <h1 className="text-2xl font-bold font-headline">Event Check-in</h1>
+                <p className="text-muted-foreground">
+                Select a method to record member attendance.
+                </p>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Event Configuration</CardTitle>
+                    <CardDescription>
+                         Loading event configuration...
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                     <div className="flex flex-col space-y-2">
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -506,8 +606,9 @@ export default function CheckInPage() {
                       <Input
                         type="date"
                         value={format(preRegStartDate, 'yyyy-MM-dd')}
-                        onChange={handlePreRegDateChange}
+                        onChange={onPreRegDateChange}
                         className="w-full"
+                        disabled={isLoading}
                       />
                 </div>
                 <div className="flex flex-col space-y-2">
@@ -515,8 +616,9 @@ export default function CheckInPage() {
                      <Input
                         type="date"
                         value={format(eventDate, 'yyyy-MM-dd')}
-                        onChange={handleEventDateChange}
+                        onChange={onEventDateChange}
                         className="w-full"
+                        disabled={isLoading}
                       />
                 </div>
             </CardContent>

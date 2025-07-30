@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import type { Member } from '@/lib/types';
+import type { Member, EventConfig } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
 
 // Notice the `NEXT_PUBLIC_` prefix is required for Next.js to expose the variable to the browser.
@@ -218,4 +218,39 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     }
     
     return data ? data : [];
+};
+
+
+export const getEventConfig = async (): Promise<EventConfig | null> => {
+    const { data, error } = await supabase
+        .from('event_config')
+        .select('*')
+        .eq('id', 1)
+        .single();
+    
+    if (error) {
+        console.error('Error fetching event config:', error);
+        return null;
+    }
+    
+    return data;
+};
+
+export const updateEventConfig = async (dates: { pre_reg_start_date: string, event_date: string }): Promise<EventConfig> => {
+    const { data, error } = await supabase
+        .from('event_config')
+        .update({
+            pre_reg_start_date: dates.pre_reg_start_date,
+            event_date: dates.event_date,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', 1)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating event config:', error);
+        throw error;
+    }
+    return data;
 };
