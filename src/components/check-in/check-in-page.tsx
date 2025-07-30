@@ -75,7 +75,9 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
 // Helper to parse date strings as UTC
 const parseDateAsUTC = (dateString: string) => {
-    return new Date(`${dateString}T00:00:00Z`);
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() + timezoneOffset);
 }
 
 const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
@@ -469,7 +471,7 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                const today = new Date();
+                const today = new Date('2026-01-01');
                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
