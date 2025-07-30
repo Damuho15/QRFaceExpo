@@ -456,7 +456,6 @@ export default function CheckInPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [eventDate, setEventDate] = useState<Date>(new Date());
     const [preRegStartDate, setPreRegStartDate] = useState<Date>(new Date());
-    const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
     
     useEffect(() => {
         setIsMounted(true);
@@ -475,7 +474,6 @@ export default function CheckInPage() {
         const newDate = new Date(e.target.value);
         const adjustedDate = new Date(newDate.getTime() + newDate.getTimezoneOffset() * 60000);
         setPreRegStartDate(adjustedDate);
-        setIsPreRegDateManuallySet(true);
     };
 
     const handleEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -483,10 +481,9 @@ export default function CheckInPage() {
         const adjustedDate = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 9, 0, 0);
         setEventDate(adjustedDate);
         
-        if (!isPreRegDateManuallySet) {
-            const newPreRegDate = getPreviousTuesday(adjustedDate);
-            setPreRegStartDate(newPreRegDate);
-        }
+        // Always set the pre-reg date based on the event date
+        const newPreRegDate = getPreviousTuesday(adjustedDate);
+        setPreRegStartDate(newPreRegDate);
     };
 
     if (!isMounted) {
