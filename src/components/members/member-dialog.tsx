@@ -63,24 +63,26 @@ interface MemberDialogProps {
 }
 
 /**
- * Safely parses a 'YYYY-MM-DD' string into a Date object in UTC.
- * This prevents local timezone from shifting the date.
+ * Safely parses a 'YYYY-MM-DD' string into a local Date object.
+ * This prevents timezone from shifting the date upon object creation.
  * @param dateString The date string to parse.
  * @returns A Date object or null if the string is invalid.
  */
-const parseDateStringAsUtc = (dateString: string | null | undefined): Date | null => {
-  if (!dateString) return null;
-  const parts = dateString.split('-');
-  if (parts.length !== 3) return null;
-
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS
-  const day = parseInt(parts[2], 10);
-
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-
-  return new Date(Date.UTC(year, month, day));
+const parseDateString = (dateString: string | null | undefined): Date | null => {
+    if (!dateString) return null;
+  
+    // The 'T00:00:00' part is crucial. It tells the constructor to parse the date in the local timezone
+    // rather than UTC, which is the default for 'YYYY-MM-DD' strings.
+    const date = new Date(`${dateString}T00:00:00`);
+  
+    // Check if the resulting date is valid
+    if (isNaN(date.getTime())) {
+      return null;
+    }
+  
+    return date;
 };
+
 
 export default function MemberDialog({
   mode,
@@ -118,8 +120,8 @@ export default function MemberDialog({
         nickname: memberToEdit.nickname || '',
         email: memberToEdit.email || '',
         phone: memberToEdit.phone || '',
-        birthday: parseDateStringAsUtc(memberToEdit.birthday) || undefined,
-        weddingAnniversary: parseDateStringAsUtc(memberToEdit.weddingAnniversary),
+        birthday: parseDateString(memberToEdit.birthday) || undefined,
+        weddingAnniversary: parseDateString(memberToEdit.weddingAnniversary),
         ministries: memberToEdit.ministries || '',
         lg: memberToEdit.lg || '',
         picture: null,
@@ -157,8 +159,8 @@ export default function MemberDialog({
         
         const payload = {
             ...data,
-            pictureUrl: pictureUrlToSave
-        }
+            pictureUrl: pictureUrlToSave,
+        };
 
         if (isEditMode && memberToEdit) {
             const result = await updateMember(memberToEdit.id, payload);
