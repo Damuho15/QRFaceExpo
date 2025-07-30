@@ -74,7 +74,6 @@ export const getMembers = async (): Promise<Member[]> => {
     const { data, error } = await supabase
         .from('members')
         .select('*')
-        .order('updated_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -125,7 +124,6 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         ministries: formData.ministries || null,
         lg: formData.lg || null,
         qrCodePayload: formData.fullName,
-        updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await supabase

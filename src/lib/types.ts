@@ -11,7 +11,6 @@ export type Member = {
   ministries?: string | null;
   lg?: string | null;
   created_at: string;
-  updated_at?: string | null;
 };
 
 export type AttendanceLog = {
