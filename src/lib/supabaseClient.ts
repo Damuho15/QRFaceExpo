@@ -172,7 +172,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
     }
 
     // Convert date strings from DB back to Date objects for the UI
-    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(member.weddingAnniversary) : null } : null;
+    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 };
 
 
