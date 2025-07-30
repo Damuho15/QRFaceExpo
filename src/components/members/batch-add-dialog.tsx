@@ -32,7 +32,6 @@ const parseDate = (dateInput: string | number): Date | null => {
     
     // Check if it's an Excel serial number
     if (typeof dateInput === 'number') {
-        // XLSX.SSF.parse_date_code is 1-based for month, JS Date is 0-based
         const d = XLSX.SSF.parse_date_code(dateInput);
         if (d) {
             const date = new Date(Date.UTC(d.y, d.m - 1, d.d, d.H, d.M, d.S));
@@ -41,12 +40,9 @@ const parseDate = (dateInput: string | number): Date | null => {
     }
 
     if (typeof dateInput === 'string') {
-        // Attempt to parse various string formats
-        // This handles YYYY-MM-DD, MM/DD/YYYY, and even some textual dates.
         const date = new Date(dateInput);
         if (isValidDate(date)) {
-            // Adjust for timezone offset if parsing a date string without time
-             if (!dateInput.match(/[:Z]/)) { // doesn't contain time or timezone info
+             if (!dateInput.match(/[:Z]/)) {
                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             }
             return date;

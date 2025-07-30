@@ -59,8 +59,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
+        birthday: member.birthday.toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -87,7 +87,7 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: member.birthday.toISOString(),
+        birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
         weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
         qrCodePayload: member.fullName, // Use fullName as QR code payload
         ministries: member.ministries || null,
@@ -116,8 +116,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
      const memberToUpdate = {
         ...memberData,
-        birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
+        birthday: member.birthday.toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
         ministries: member.ministries || null,
         lg: member.lg || null,
     };
