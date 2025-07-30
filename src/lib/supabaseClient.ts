@@ -54,12 +54,10 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
-    const { birthday, weddingAnniversary, ...restOfMember } = member;
-
     const memberData = {
-        ...restOfMember,
-        birthday: new Date(birthday).toISOString(),
-        weddingAnniversary: weddingAnniversary ? new Date(weddingAnniversary).toISOString() : null,
+        ...member,
+        birthday: member.birthday.toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
     };
 
     const { data, error } = await supabase
