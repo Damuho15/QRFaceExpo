@@ -73,54 +73,22 @@ export default function MemberDialog({
   const { toast } = useToast();
   const isEditMode = mode === 'edit';
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(memberToEdit?.pictureUrl || null);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      fullName: '',
-      nickname: '',
-      email: '',
-      phone: '',
-      birthday: undefined,
-      weddingAnniversary: null,
-      ministries: '',
-      lg: '',
+      fullName: memberToEdit?.fullName || '',
+      nickname: memberToEdit?.nickname || '',
+      email: memberToEdit?.email || '',
+      phone: memberToEdit?.phone || '',
+      birthday: memberToEdit?.birthday ? new Date(memberToEdit.birthday) : undefined,
+      weddingAnniversary: memberToEdit?.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
+      ministries: memberToEdit?.ministries || '',
+      lg: memberToEdit?.lg || '',
       picture: null,
     },
   });
-
-  useEffect(() => {
-    if (open) {
-      if (isEditMode && memberToEdit) {
-        form.reset({
-          fullName: memberToEdit.fullName,
-          nickname: memberToEdit.nickname || '',
-          email: memberToEdit.email || '',
-          phone: memberToEdit.phone || '',
-          birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : new Date(),
-          weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
-          ministries: memberToEdit.ministries || '',
-          lg: memberToEdit.lg || '',
-          picture: null,
-        });
-        setPreviewImage(memberToEdit.pictureUrl || null);
-      } else {
-        form.reset({
-          fullName: '',
-          nickname: '',
-          email: '',
-          phone: '',
-          birthday: undefined,
-          weddingAnniversary: null,
-          ministries: '',
-          lg: '',
-          picture: null,
-        });
-        setPreviewImage(null);
-      }
-    }
-  }, [open, isEditMode, memberToEdit, form]);
 
   const handlePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -189,7 +157,7 @@ export default function MemberDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {TriggerComponent}
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
+      <DialogContent key={memberToEdit?.id || 'add-new'} className="sm:max-w-md" onInteractOutside={(e) => {
           if (showQr || isSubmitting) {
             e.preventDefault();
           }
