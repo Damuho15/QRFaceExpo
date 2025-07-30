@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, FilterFn } from '@tanstack/react-table';
 import type { Member } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,26 +34,10 @@ import {
 import { deleteMember } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 
-
-const formatDate = (dateValue: string | null | undefined): string => {
-    if (!dateValue) return 'N/A';
-    
-    // Assumes dateValue is a string in 'YYYY-MM-DD' format.
-    // This avoids creating a Date object and triggering timezone conversions.
-    try {
-        if (typeof dateValue !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
-             return 'Invalid Date';
-        }
-        const [year, month, day] = dateValue.substring(0, 10).split('-');
-        if (!year || !month || !day) return 'Invalid Date';
-        
-        return `${month}-${day}-${year}`;
-    } catch (error) {
-        console.error("Error formatting date string:", dateValue, error);
-        return 'Invalid Date';
-    }
-};
-
+const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+    const rowValue = row.getValue(columnId) as string;
+    return rowValue?.toLowerCase().includes(String(value).toLowerCase());
+}
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -136,20 +120,22 @@ export const columns: ColumnDef<Member>[] = [
         </Button>
       );
     },
+    filterFn: caseInsensitiveFilter,
   },
   {
     accessorKey: 'nickname',
     header: 'Nickname',
+    filterFn: caseInsensitiveFilter,
   },
   {
     accessorKey: 'birthday',
     header: 'Birthday',
-    cell: ({ row }) => formatDate(row.original.birthday),
+    cell: ({ row }) => <Input type="date" value={row.original.birthday || ''} readOnly className="border-none"/>,
   },
   {
     accessorKey: 'weddingAnniversary',
     header: 'Wedding Anniversary',
-    cell: ({ row }) => formatDate(row.original.weddingAnniversary),
+    cell: ({ row }) => <Input type="date" value={row.original.weddingAnniversary || ''} readOnly className="border-none"/>,
   },
   {
     accessorKey: 'email',
