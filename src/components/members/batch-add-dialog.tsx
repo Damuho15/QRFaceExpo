@@ -175,15 +175,15 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       <DialogTrigger asChild>
         <Button variant="outline"><Users className="mr-2 h-4 w-4" />Batch Add</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv). Use the template for the correct format. `FullName` is required.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2">
+        <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
                 <Label htmlFor="excel-upload" className="sr-only">Excel File</Label>
                 <div className="flex items-center gap-2">
                     <Input id="excel-upload" type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={handleFileChange} disabled={isSubmitting}/>
@@ -194,7 +194,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                 <Button variant="secondary" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" />Download Template</Button>
             </div>
             {parsedData.length > 0 && (
-                <div>
+                <div className="space-y-4">
                     <Label>Preview Members ({parsedData.length})</Label>
                     <ScrollArea className="h-64 mt-2 w-full rounded-md border">
                         <Table>
