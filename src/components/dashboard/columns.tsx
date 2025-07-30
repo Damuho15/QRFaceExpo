@@ -21,7 +21,7 @@ const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
 
 export const columns: ColumnDef<AttendanceLog>[] = [
   {
-    accessorKey: 'memberName',
+    accessorKey: 'member_name',
     header: ({ column }) => {
       return (
         <Button
@@ -33,7 +33,7 @@ export const columns: ColumnDef<AttendanceLog>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="font-medium">{row.getValue('memberName')}</div>
+    cell: ({ row }) => <div className="font-medium">{row.getValue('member_name')}</div>
   },
   {
     accessorKey: 'timestamp',

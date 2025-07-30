@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -25,7 +26,7 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
         const hourlyCounts: { [key: string]: { "Pre-registration": number, Actual: number } } = {};
 
         logs.forEach(log => {
-            const hour = new Date(log.timestamp).getHours();
+            const hour = new Date(log.timestamp).getUTCHours(); // Use UTC hours
             const hourKey = `${hour}:00`;
             if (!hourlyCounts[hourKey]) {
                 hourlyCounts[hourKey] = { "Pre-registration": 0, Actual: 0 };
@@ -66,6 +67,7 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
             tickLine={false}
             axisLine={false}
             tickFormatter={(value) => `${value}`}
+            allowDecimals={false}
             />
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <Bar dataKey="Pre-registration" fill="var(--color-Pre-registration)" radius={4} />

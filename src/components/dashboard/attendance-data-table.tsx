@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -46,6 +47,11 @@ export default function AttendanceDataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    initialState: {
+        pagination: {
+            pageSize: 5,
+        }
+    },
     state: {
       sorting,
       columnFilters,
@@ -62,9 +68,9 @@ export default function AttendanceDataTable<TData, TValue>({
         <div className="flex items-center py-4">
           <Input
             placeholder="Filter by member name..."
-            value={(table.getColumn('memberName')?.getFilterValue() as string) ?? ''}
+            value={(table.getColumn('member_name')?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
-              table.getColumn('memberName')?.setFilterValue(event.target.value)
+              table.getColumn('member_name')?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
           />

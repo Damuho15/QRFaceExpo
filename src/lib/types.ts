@@ -16,9 +16,9 @@ export type Member = {
 
 export type AttendanceLog = {
   id: string;
-  memberId: string;
-  memberName: string;
-  timestamp: Date;
+  member_id: string;
+  member_name: string;
+  timestamp: string;
   type: 'Pre-registration' | 'Actual';
   method: 'QR' | 'Face';
 };

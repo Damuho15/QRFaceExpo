@@ -1,7 +1,7 @@
 
 
 import { createClient } from '@supabase/supabase-js';
-import type { Member, EventConfig } from '@/lib/types';
+import type { Member, EventConfig, AttendanceLog } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
 
 // Notice the `NEXT_PUBLIC_` prefix is required for Next.js to expose the variable to the browser.
@@ -267,4 +267,37 @@ export const updateEventConfig = async (dates: { pre_reg_start_date: string, eve
         throw error;
     }
     return data;
+};
+
+
+export const addAttendanceLog = async (log: Omit<AttendanceLog, 'id' | 'timestamp'> & { member_id: string; timestamp?: Date }) => {
+    const { data, error } = await supabase
+        .from('attendance_logs')
+        .insert({
+            ...log,
+            timestamp: (log.timestamp || new Date()).toISOString(),
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding attendance log:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+export const getAttendanceLogs = async (): Promise<AttendanceLog[]> => {
+    const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching attendance logs:', error);
+        throw error;
+    }
+
+    return data || [];
 };

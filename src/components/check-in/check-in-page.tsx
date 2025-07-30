@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX } from 'lucide-react';
 import jsQR from 'jsqr';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
-import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers } from '@/lib/supabaseClient';
+import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAttendanceLog } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Member } from '@/lib/types';
@@ -71,10 +71,11 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
     const [scanResult, setScanResult] = useState<{ memberName: string; found: boolean } | null>(null);
     const [isScanning, setIsScanning] = useState(true);
 
-    const handleCheckIn = useCallback((qrData: string) => {
+    const handleCheckIn = useCallback(async (qrData: string) => {
         setIsScanning(false);
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
-
+        const scanTime = new Date();
+        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
+    
         if (!registrationType) {
             toast({
                 title: 'Check-in Not Allowed',
@@ -86,13 +87,28 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
         }
         
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
-
+    
         if (matchedMember) {
-            setScanResult({ memberName: matchedMember.fullName, found: true });
-            toast({
-                title: 'Check-in Successful',
-                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
-            });
+            try {
+                await addAttendanceLog({
+                    member_id: matchedMember.id,
+                    member_name: matchedMember.fullName,
+                    type: registrationType,
+                    method: 'QR',
+                    timestamp: scanTime,
+                });
+                setScanResult({ memberName: matchedMember.fullName, found: true });
+                toast({
+                    title: 'Check-in Successful',
+                    description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
+                });
+            } catch (error) {
+                 toast({
+                    title: 'Database Error',
+                    description: 'Could not save attendance log.',
+                    variant: 'destructive',
+                });
+            }
         } else {
              setScanResult({ memberName: 'Not Found', found: false });
              toast({
@@ -106,7 +122,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
             setIsScanning(true);
             setScanResult(null);
         }, 2000);
-
+    
     }, [eventDate, preRegStartDate, toast, members]);
 
     useEffect(() => {
@@ -228,8 +244,9 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
         }
     }
     
-    const handleCheckIn = (qrData: string) => {
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+    const handleCheckIn = async (qrData: string) => {
+        const scanTime = new Date();
+        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
 
         if (!registrationType) {
             toast({
@@ -244,10 +261,25 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
-             toast({
-                title: 'Check-in Successful',
-                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
-            });
+            try {
+                 await addAttendanceLog({
+                    member_id: matchedMember.id,
+                    member_name: matchedMember.fullName,
+                    type: registrationType,
+                    method: 'QR',
+                    timestamp: scanTime,
+                });
+                toast({
+                    title: 'Check-in Successful',
+                    description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
+                });
+            } catch(error) {
+                 toast({
+                    title: 'Database Error',
+                    description: 'Could not save attendance log.',
+                    variant: 'destructive',
+                });
+            }
         } else {
              toast({
                 title: 'Check-in Failed',
@@ -338,7 +370,7 @@ const QRCheckinTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date
     );
 };
 
-const FaceCheckinTab = () => {
+const FaceCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegStartDate: Date }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -384,6 +416,18 @@ const FaceCheckinTab = () => {
             return;
         }
 
+        const scanTime = new Date();
+        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setIsProcessing(true);
         toast({
             title: 'Processing Image...',
@@ -405,9 +449,16 @@ const FaceCheckinTab = () => {
         try {
             const result = await recognizeFace({ imageDataUri });
             if (result.matchFound && result.member) {
+                await addAttendanceLog({
+                    member_id: result.member.id,
+                    member_name: result.member.fullName,
+                    type: registrationType,
+                    method: 'Face',
+                    timestamp: scanTime,
+                });
                 toast({
                     title: 'Check-in Successful',
-                    description: `Welcome, ${result.member.fullName}!`,
+                    description: `Welcome, ${result.member.fullName}! You've been checked in for ${registrationType}.`,
                 });
             } else {
                 toast({
@@ -695,7 +746,7 @@ export default function CheckInPage() {
             )}
         </TabsContent>
         <TabsContent value="face">
-             {isLoading ? (
+             {isLoading || !eventDate || !preRegStartDate ? (
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-6 w-64" />
@@ -707,7 +758,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
              ) : (
-                <FaceCheckinTab />
+                <FaceCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate}/>
              )}
         </TabsContent>
       </Tabs>

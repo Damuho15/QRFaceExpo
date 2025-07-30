@@ -1,26 +1,28 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint } from 'lucide-react';
-import { mockMembers, mockAttendanceLogs } from '@/lib/data';
+import { getMembers, getAttendanceLogs } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
 import { columns } from './columns';
-import type { AttendanceLog } from '@/lib/types';
+import type { AttendanceLog, Member } from '@/lib/types';
+import { Skeleton } from '../ui/skeleton';
 
 const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
   const [timeString, setTimeString] = useState('');
 
   useEffect(() => {
-    setTimeString(log.timestamp.toLocaleTimeString());
+    setTimeString(new Date(log.timestamp).toLocaleTimeString());
   }, [log.timestamp]);
 
   return (
     <div className="flex items-center">
       <div className="flex-1 space-y-1">
-        <p className="text-sm font-medium leading-none">{log.memberName}</p>
+        <p className="text-sm font-medium leading-none">{log.member_name}</p>
         <p className="text-sm text-muted-foreground">{log.method} check-in ({log.type})</p>
       </div>
       <div className="text-sm text-muted-foreground">{timeString}</div>
@@ -29,12 +31,68 @@ const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
 };
 
 export default function DashboardPage() {
-  const totalMembers = mockMembers.length;
-  const preRegistrations = mockAttendanceLogs.filter(log => log.type === 'Pre-registration').length;
-  const actualRegistrations = mockAttendanceLogs.filter(log => log.type === 'Actual').length;
-  const qrCheckins = mockAttendanceLogs.filter(log => log.method === 'QR').length;
-  const faceCheckins = mockAttendanceLogs.filter(log => log.method === 'Face').length;
+    const [loading, setLoading] = useState(true);
+    const [members, setMembers] = useState<Member[]>([]);
+    const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [memberData, logData] = await Promise.all([
+                getMembers(),
+                getAttendanceLogs(),
+            ]);
+            setMembers(memberData);
+            setAttendanceLogs(logData);
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+            // You might want to add a toast here
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+
+  const totalMembers = members.length;
+  const preRegistrations = attendanceLogs.filter(log => log.type === 'Pre-registration').length;
+  const actualRegistrations = attendanceLogs.filter(log => log.type === 'Actual').length;
+  const qrCheckins = attendanceLogs.filter(log => log.method === 'QR').length;
+  const faceCheckins = attendanceLogs.filter(log => log.method === 'Face').length;
   
+  if (loading) {
+      return (
+        <div className="space-y-6">
+            <div>
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-48 mb-2" /><Skeleton className="h-4 w-64" /></CardHeader><CardContent><Skeleton className="h-56 w-full" /></CardContent></Card>
+                <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-48 mb-2" /><Skeleton className="h-4 w-56" /></CardHeader><CardContent className="space-y-4">{Array(5).fill(0).map((_,i) => <Skeleton key={i} className="h-12 w-full" />)}</CardContent></Card>
+            </div>
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                     <Skeleton className="h-96 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+      )
+  }
+
   return (
     <div className="flex flex-col gap-6">
        <div>
@@ -63,7 +121,7 @@ export default function DashboardPage() {
                 <CardDescription>A summary of check-ins throughout the event.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                <AttendanceChart data={mockAttendanceLogs} />
+                <AttendanceChart data={attendanceLogs} />
             </CardContent>
         </Card>
         <Card className="lg:col-span-3">
@@ -73,7 +131,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                {mockAttendanceLogs.slice(-5).reverse().map(log => (
+                {attendanceLogs.slice(0, 5).map(log => (
                     <RecentActivityItem key={log.id} log={log} />
                 ))}
                 </div>
@@ -81,7 +139,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <AttendanceDataTable columns={columns} data={mockAttendanceLogs} />
+      <AttendanceDataTable columns={columns} data={attendanceLogs} />
 
     </div>
   );
