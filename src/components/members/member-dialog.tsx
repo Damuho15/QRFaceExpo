@@ -42,7 +42,7 @@ const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
   nickname: z.string().optional(),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits.'),
+  phone: z.string().optional(),
   birthday: z.date({
     required_error: 'A date of birth is required.',
   }),
@@ -151,7 +151,7 @@ export default function MemberDialog({
           fullName: data.fullName,
           nickname: data.nickname || '',
           email: data.email || '',
-          phone: data.phone,
+          phone: data.phone || '',
           birthday: data.birthday,
           weddingAnniversary: data.weddingAnniversary || null,
           pictureUrl: pictureUrl,
@@ -396,7 +396,7 @@ export default function MemberDialog({
                         name="phone"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Telephone Number</FormLabel>
+                            <FormLabel>Telephone Number (Optional)</FormLabel>
                             <FormControl>
                                 <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
                             </FormControl>

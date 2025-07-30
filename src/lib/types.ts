@@ -4,8 +4,8 @@ export type Member = {
   nickname: string;
   birthday: Date;
   weddingAnniversary?: Date | null;
-  email: string;
-  phone: string;
+  email?: string | null;
+  phone?: string | null;
   qrCodePayload: string;
   pictureUrl?: string | null;
   ministries?: string | null;
