@@ -33,12 +33,19 @@ const parseDate = (dateString: string): Date | null => {
     // Handles both MM-DD-YYYY and YYYY-MM-DD and MM/DD/YYYY
     const parts = dateString.split(/[-/]/);
     if (parts.length === 3) {
-        const year = parts[2].length === 4 ? parseInt(parts[2], 10) : parseInt(parts[0], 10);
-        const month = parseInt(parts[0].length === 4 ? parts[1] : parts[0], 10) - 1; // month is 0-indexed
-        const day = parseInt(parts[0].length === 4 ? parts[2] : parts[1], 10);
+        let year, month, day;
+        if (parts[0].length === 4) { // YYYY-MM-DD
+            year = parseInt(parts[0], 10);
+            month = parseInt(parts[1], 10) - 1;
+            day = parseInt(parts[2], 10);
+        } else { // MM-DD-YYYY or MM/DD/YYYY
+            year = parseInt(parts[2], 10);
+            month = parseInt(parts[0], 10) - 1;
+            day = parseInt(parts[1], 10);
+        }
         
         const date = new Date(year, month, day);
-        if (!isNaN(date.getTime())) {
+        if (!isNaN(date.getTime()) && year > 1900) {
             return date;
         }
     }
@@ -63,7 +70,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' }); // Removed cellDates: true
+          const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const rows: any[] = XLSX.utils.sheet_to_json(worksheet, {
