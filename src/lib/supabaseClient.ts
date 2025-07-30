@@ -13,6 +13,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const BUCKET_NAME = 'member-pictures';
+
+export const uploadMemberPicture = async (file: File): Promise<string | null> => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(fileName, file);
+
+    if (error) {
+        console.error('Error uploading picture:', error);
+        return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(data.path);
+
+    return publicUrl;
+};
+
 export const getMembers = async (): Promise<Member[]> => {
     const { data, error } = await supabase
         .from('members')
@@ -32,8 +52,8 @@ export const getMembers = async (): Promise<Member[]> => {
     }));
 };
 
-export const addMember = async (member: Omit<Member, 'id' | 'qrCodePayload'> & { qrCodePayload?: string }): Promise<Member | null> => {
-    const memberData: Omit<typeof member, 'birthday' | 'weddingAnniversary'> & { birthday: string; weddingAnniversary?: string | null; qrCodePayload: string } = {
+export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
+    const memberData: Omit<Member, 'id' | 'birthday' | 'weddingAnniversary' | 'qrCodePayload'> & { birthday: string; weddingAnniversary?: string | null; qrCodePayload: string } = {
         ...member,
         birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
         weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString().split('T')[0] : null,

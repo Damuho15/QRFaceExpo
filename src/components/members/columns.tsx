@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -39,6 +40,21 @@ export const columns: ColumnDef<Member>[] = [
     ),
     enableSorting: false,
     enableHiding: false,
+  },
+  {
+    accessorKey: 'pictureUrl',
+    header: 'Picture',
+    cell: ({ row }) => {
+        const member = row.original;
+        const fallback = member.fullName.charAt(0);
+        return (
+            <Avatar>
+                <AvatarImage src={member.pictureUrl || ''} alt={member.fullName} data-ai-hint="member picture" />
+                <AvatarFallback>{fallback}</AvatarFallback>
+            </Avatar>
+        )
+    },
+    enableSorting: false,
   },
   {
     accessorKey: 'qrCodePayload',

@@ -7,6 +7,7 @@ export type Member = {
   email: string;
   phone: string;
   qrCodePayload: string;
+  pictureUrl?: string | null;
 };
 
 export type AttendanceLog = {

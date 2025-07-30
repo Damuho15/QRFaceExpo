@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { addMember, updateMember } from '@/lib/supabaseClient';
+import { addMember, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
 
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -46,6 +46,7 @@ const memberSchema = z.object({
     required_error: 'A date of birth is required.',
   }),
   weddingAnniversary: z.date().optional().nullable(),
+  picture: z.any().optional(),
 });
 
 type MemberFormValues = z.infer<typeof memberSchema>;
@@ -69,6 +70,7 @@ export default function MemberDialog({
   const { toast } = useToast();
   const isEditMode = mode === 'edit';
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(memberToEdit?.pictureUrl || null);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
@@ -97,7 +99,8 @@ export default function MemberDialog({
         ...memberToEdit,
         birthday: new Date(memberToEdit.birthday),
         weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
-      })
+      });
+      setPreviewImage(memberToEdit.pictureUrl || null);
     }
     if (!open) {
       setTimeout(() => {
@@ -105,61 +108,83 @@ export default function MemberDialog({
         setShowQr(false);
         setNewMember(null);
         setIsSubmitting(false);
+        setPreviewImage(null);
       }, 300);
     }
   }, [open, isEditMode, memberToEdit, form]);
 
+  const handlePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      form.setValue('picture', file);
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  };
+
   const onSubmit = async (data: MemberFormValues) => {
     setIsSubmitting(true);
-    
+    let pictureUrl = memberToEdit?.pictureUrl || null;
+
     try {
-        if (isEditMode && memberToEdit) {
-            const memberData: Member = {
-                id: memberToEdit.id,
-                ...data,
-                nickname: data.nickname || '',
-                qrCodePayload: data.fullName,
-                weddingAnniversary: data.weddingAnniversary || null,
-            };
-            const result = await updateMember(memberData);
-            if (result) {
-                toast({
-                    title: 'Member Updated',
-                    description: `${data.fullName} has been successfully updated.`,
-                });
-                onSuccess?.();
-                setOpen(false);
-            } else {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Update Failed',
-                    description: 'Could not update the member. Please try again.',
-                });
-            }
-        } else {
-            const memberData: Omit<Member, 'id'> = {
-                ...data,
-                nickname: data.nickname || '',
-                qrCodePayload: data.fullName,
-                weddingAnniversary: data.weddingAnniversary || null,
-            };
-            const result = await addMember(memberData);
-            if (result) {
-                toast({
-                    title: 'Member Added',
-                    description: `${data.fullName} has been successfully added.`,
-                });
-                setNewMember(result);
-                setShowQr(true);
-                onSuccess?.();
-            } else {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Add Failed',
-                    description: 'Could not add the member. Please try again.',
-                });
-            }
+      // Upload picture if a new one is selected
+      if (data.picture && data.picture instanceof File) {
+        pictureUrl = await uploadMemberPicture(data.picture);
+        if (!pictureUrl) {
+          toast({
+            variant: 'destructive',
+            title: 'Picture Upload Failed',
+            description: 'Could not upload the member picture. Please try again.',
+          });
+          setIsSubmitting(false);
+          return;
         }
+      }
+
+      const memberPayload = {
+          fullName: data.fullName,
+          nickname: data.nickname || '',
+          email: data.email,
+          phone: data.phone,
+          birthday: data.birthday,
+          weddingAnniversary: data.weddingAnniversary || null,
+          pictureUrl: pictureUrl,
+          qrCodePayload: data.fullName,
+      }
+
+      if (isEditMode && memberToEdit) {
+          const result = await updateMember({ ...memberPayload, id: memberToEdit.id });
+          if (result) {
+              toast({
+                  title: 'Member Updated',
+                  description: `${data.fullName} has been successfully updated.`,
+              });
+              onSuccess?.();
+              setOpen(false);
+          } else {
+               toast({
+                  variant: 'destructive',
+                  title: 'Update Failed',
+                  description: 'Could not update the member. Please try again.',
+              });
+          }
+      } else {
+          const result = await addMember(memberPayload);
+          if (result) {
+              toast({
+                  title: 'Member Added',
+                  description: `${data.fullName} has been successfully added.`,
+              });
+              setNewMember(result);
+              setShowQr(true);
+              onSuccess?.();
+          } else {
+               toast({
+                  variant: 'destructive',
+                  title: 'Add Failed',
+                  description: 'Could not add the member. Please try again.',
+              });
+          }
+      }
     } catch (error) {
         toast({
             variant: 'destructive',
@@ -204,6 +229,34 @@ export default function MemberDialog({
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="picture"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Member Picture</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handlePictureChange} 
+                          disabled={isSubmitting} 
+                        />
+                      </FormControl>
+                      {previewImage && (
+                          <Image 
+                              src={previewImage} 
+                              alt="Member preview" 
+                              width={100} 
+                              height={100} 
+                              className="mt-2 rounded-md object-cover"
+                              data-ai-hint="member picture"
+                          />
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="fullName"
