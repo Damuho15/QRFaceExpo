@@ -405,7 +405,7 @@ const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }:
     );
 };
 
-const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { eventDate: Date, preRegStartDate: Date, onCheckInSuccess: () => void }) => {
+const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess }: { members: Member[], eventDate: Date, preRegStartDate: Date, onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -481,28 +481,32 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
 
         try {
             const result = await recognizeFace({ imageDataUri });
-            if (result.matchFound && result.member) {
-                 if (!result.member.id) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Check-in Failed',
-                        description: 'Recognized member is missing a valid ID.',
+
+            if (result.matchFound && result.member && result.member.id) {
+                // Verify the member ID exists in our database
+                const actualMember = members.find(m => m.id === result.member.id);
+
+                if (actualMember) {
+                    await addAttendanceLog({
+                        member_id: actualMember.id,
+                        member_name: actualMember.fullName,
+                        type: registrationType,
+                        method: 'Face',
+                        timestamp: new Date()
                     });
-                    setIsProcessing(false);
-                    return;
+                    toast({
+                        title: 'Check-in Successful!',
+                        description: `Welcome, ${actualMember.fullName}!`,
+                    });
+                    onCheckInSuccess();
+                } else {
+                     // AI returned an ID, but it's not in our DB.
+                     toast({
+                        title: 'Check-in Failed',
+                        description: 'Face not recognized. Please try again or use QR code.',
+                        variant: 'destructive',
+                    });
                 }
-                await addAttendanceLog({
-                    member_id: result.member.id,
-                    member_name: result.member.fullName,
-                    type: registrationType,
-                    method: 'Face',
-                    timestamp: new Date()
-                });
-                toast({
-                    title: 'Check-in Successful!',
-                    description: `Welcome, ${result.member.fullName}!`,
-                });
-                onCheckInSuccess();
             } else {
                 toast({
                     title: 'Check-in Failed',
@@ -810,7 +814,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
              ) : (
-                <FaceCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} onCheckInSuccess={handleCheckInSuccess} />
+                <FaceCheckinTab members={members} eventDate={eventDate} preRegStartDate={preRegStartDate} onCheckInSuccess={handleCheckInSuccess} />
              )}
         </TabsContent>
       </Tabs>
