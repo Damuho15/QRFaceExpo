@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createClient } from '@supabase/supabase-js';
@@ -14,6 +15,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const BUCKET_NAME = 'member-pictures';
+
+const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
@@ -60,7 +63,7 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         email: member.email || null,
         phone: member.phone || null,
         birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -82,25 +85,42 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 }
 
 export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' | 'pictureUrl'>)[]): Promise<Member[] | null> => {
-    const membersToInsert = members.map(member => ({
-        fullName: member.fullName,
-        nickname: member.nickname || null,
-        email: member.email || null,
-        phone: member.phone || null,
-        birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
-        qrCodePayload: member.fullName,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
-    }));
+    if (!members || members.length === 0) {
+        return [];
+    }
+
+    const membersToInsert = members.map(member => {
+        const birthdayISO = isValidDate(member.birthday) ? member.birthday.toISOString() : null;
+        if (!birthdayISO) {
+            console.error('Invalid birthday for member:', member.fullName);
+            // Or throw an error, depending on desired behavior for invalid data
+            return null;
+        }
+
+        const weddingAnniversaryISO = isValidDate(member.weddingAnniversary) ? member.weddingAnniversary.toISOString() : null;
+
+        return {
+            fullName: member.fullName,
+            nickname: member.nickname || null,
+            email: member.email || null,
+            phone: member.phone || null,
+            birthday: birthdayISO,
+            weddingAnniversary: weddingAnniversaryISO,
+            qrCodePayload: member.fullName, // Default QR payload
+            ministries: member.ministries || null,
+            lg: member.lg || null,
+            pictureUrl: null, // Batch add does not include pictures
+        };
+    }).filter(m => m !== null); // Filter out any members that had invalid data
 
     if (membersToInsert.length === 0) {
+        console.log("No valid members to insert after filtering.");
         return [];
     }
 
     const { data, error } = await supabase
         .from('members')
-        .insert(membersToInsert)
+        .insert(membersToInsert as any)
         .select();
 
     if (error) {
@@ -108,7 +128,7 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
         return null;
     }
 
-    return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : null;
+    return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
 
 
@@ -118,8 +138,6 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
         ...memberData,
         birthday: member.birthday.toISOString(),
         weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
     };
     const { data, error } = await supabase
         .from('members')
@@ -135,3 +153,5 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
 
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 };
+
+    

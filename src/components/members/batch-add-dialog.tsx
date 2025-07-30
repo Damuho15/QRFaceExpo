@@ -33,21 +33,19 @@ const parseDate = (dateInput: string | number): Date | null => {
     
     // Handle Excel serial numbers
     if (typeof dateInput === 'number') {
-        // The date code from XLSX.SSF.parse_date_code is UTC-based
-        const d = XLSX.SSF.parse_date_code(dateInput);
-        if (d) {
-            // Create a Date object from UTC components
-            const date = new Date(Date.UTC(d.y, d.m - 1, d.d, d.H, d.M, d.S));
-            if(isValidDate(date)) return date;
-        }
+        const excelEpoch = new Date(1899, 11, 30);
+        const msPerDay = 86400000;
+        const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
+        // Adjust for timezone offset
+        const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
+        if (isValidDate(adjustedDate)) return adjustedDate;
     }
 
     if (typeof dateInput === 'string') {
-        // Attempt to parse common date formats
         const date = new Date(dateInput);
         if (isValidDate(date)) {
-            // If no time component is present, JS might assume UTC midnight.
-            // We adjust for the timezone offset to correctly represent the local date.
+            // Adjust for timezone if only date part is present
             if (!/T|Z/i.test(dateInput)) {
                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             }
@@ -88,10 +86,10 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true });
           
           if (json.length < 2) {
              toast({
@@ -103,14 +101,16 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             return;
           }
           
-          const headerRow: string[] = json[0].map((h: any) => String(h).trim());
+          const headerRow: string[] = json[0].map((h: any) => String(h || '').trim());
           const headerIndexMap: { [key: string]: number } = {};
           
-          headerRow.forEach((header, index) => {
-            if (expectedHeaders.includes(header)) {
-              headerIndexMap[header] = index;
-            }
+          expectedHeaders.forEach(expectedHeader => {
+              const foundIndex = headerRow.findIndex(h => h.toLowerCase() === expectedHeader.toLowerCase());
+              if (foundIndex !== -1) {
+                  headerIndexMap[expectedHeader] = foundIndex;
+              }
           });
+
 
           if (headerIndexMap['FullName'] === undefined || headerIndexMap['Birthday'] === undefined) {
              toast({
@@ -126,7 +126,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const dataRows = json.slice(1);
 
           const members: NewMember[] = dataRows.map((row: any[], index) => {
-            if (row.every(cell => cell === null || cell === '')) return null;
+            if (!row || row.length === 0 || row.every(cell => cell === null || cell === '')) return null;
 
             const rowNumber = index + 2;
             const rowErrors: string[] = [];
@@ -134,7 +134,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             const fullName = row[headerIndexMap['FullName']];
             const birthdayValue = row[headerIndexMap['Birthday']];
             
-            if (!fullName) {
+            if (!fullName || String(fullName).trim() === '') {
                 rowErrors.push('FullName is missing');
             }
             
@@ -220,21 +220,31 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       const existingMembers = await getMembers();
       const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
 
-      const newMembers = parsedMembers.filter(member => !existingFullNames.has(member.fullName.toLowerCase()));
-      const skippedCount = parsedMembers.length - newMembers.length;
+      const newMembers: NewMember[] = [];
+      const skippedMembers: string[] = [];
 
-      if (skippedCount > 0) {
+      parsedMembers.forEach(member => {
+        if (existingFullNames.has(member.fullName.toLowerCase())) {
+          skippedMembers.push(member.fullName);
+        } else {
+          newMembers.push(member);
+        }
+      });
+      
+      if (skippedMembers.length > 0) {
         toast({
             title: 'Duplicates Skipped',
-            description: `${skippedCount} member(s) were skipped because their full name already exists in the database.`,
+            description: `${skippedMembers.length} member(s) were skipped because their full name already exists in the database.`,
         });
       }
 
       if (newMembers.length === 0) {
-        toast({
-            title: 'No New Members',
-            description: 'All members in the file already exist.',
-        });
+        if (skippedMembers.length > 0) {
+             toast({
+                title: 'No New Members to Add',
+                description: 'All members in the file already exist.',
+            });
+        }
         setIsSubmitting(false);
         resetState();
         setOpen(false);
@@ -250,9 +260,10 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
         onSuccess?.();
         setOpen(false);
       } else {
-        throw new Error('Supabase returned a null result.');
+        throw new Error('Supabase returned a null result from addMembers.');
       }
     } catch (error) {
+       console.error("Error during submit:", error);
        toast({
         variant: 'destructive',
         title: 'Batch Add Failed',
@@ -351,7 +362,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                 Importing...
               </>
             ) : (
-                `Import ${parsedMembers.length} Members`
+                `Import ${parsedMembers.length > 0 ? parsedMembers.length : ''} Members`
             )}
           </Button>
         </DialogFooter>
