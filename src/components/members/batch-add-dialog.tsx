@@ -28,49 +28,31 @@ const isValidDate = (date: any): date is Date => {
 }
 
 const parseDate = (dateInput: string | number): Date | null => {
-    if (!dateInput) return null;
+    if (dateInput === null || dateInput === undefined || dateInput === '') return null;
     
     // Check if it's an Excel serial number
     if (typeof dateInput === 'number') {
-        const date = XLSX.SSF.parse_date_code(dateInput);
-        if (date) {
-            // JS months are 0-indexed, so subtract 1 from month
-            return new Date(date.y, date.m - 1, date.d);
+        // XLSX.SSF.parse_date_code is 1-based for month, JS Date is 0-based
+        const d = XLSX.SSF.parse_date_code(dateInput);
+        if (d) {
+            const date = new Date(Date.UTC(d.y, d.m - 1, d.d, d.H, d.M, d.S));
+            if(isValidDate(date)) return date;
         }
     }
 
     if (typeof dateInput === 'string') {
-        // Handles MM-DD-YYYY, YYYY-MM-DD, MM/DD/YYYY, M/D/YYYY
-        const parts = dateInput.split(/[-/]/);
-        if (parts.length === 3) {
-            let year, month, day;
-            if (parts[0].length === 4) { // YYYY-MM-DD
-                year = parseInt(parts[0], 10);
-                month = parseInt(parts[1], 10) - 1;
-                day = parseInt(parts[2], 10);
-            } else { // MM-DD-YYYY or MM/DD/YYYY
-                month = parseInt(parts[0], 10) - 1;
-                day = parseInt(parts[1], 10);
-                year = parseInt(parts[2], 10);
+        // Attempt to parse various string formats
+        // This handles YYYY-MM-DD, MM/DD/YYYY, and even some textual dates.
+        const date = new Date(dateInput);
+        if (isValidDate(date)) {
+            // Adjust for timezone offset if parsing a date string without time
+             if (!dateInput.match(/[:Z]/)) { // doesn't contain time or timezone info
+                return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             }
-            
-            if (String(year).length === 2) {
-                year = year >= 50 ? 1900 + year : 2000 + year;
-            }
-
-            const date = new Date(year, month, day);
-            if (!isNaN(date.getTime()) && year > 1900) {
-                return date;
-            }
+            return date;
         }
     }
     
-    // Try native Date parsing as a last resort
-    const nativeDate = new Date(dateInput);
-    if (isValidDate(nativeDate)) {
-        return nativeDate;
-    }
-
     return null;
 }
 
@@ -104,7 +86,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
