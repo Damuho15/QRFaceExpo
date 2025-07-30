@@ -78,12 +78,15 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 }
 
 export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload'> & { qrCodePayload?: string })[]): Promise<Member[] | null> => {
-    const membersToInsert = members.map(member => ({
-        ...member,
-        birthday: member.birthday ? new Date(member.birthday).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Format date for DB
-        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString().split('T')[0] : null,
-        qrCodePayload: member.fullName, // Auto-generate QR payload from full name
-    }));
+    const membersToInsert = members.map(member => {
+        const { pictureUrl, ...rest } = member; // Exclude pictureUrl
+        return {
+            ...rest,
+            birthday: member.birthday ? new Date(member.birthday).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString().split('T')[0] : null,
+            qrCodePayload: member.fullName,
+        }
+    });
 
     const { data, error } = await supabase
         .from('members')
