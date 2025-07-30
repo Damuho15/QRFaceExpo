@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -54,6 +55,8 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchData();
+        const intervalId = setInterval(fetchData, 30000); // Refresh every 30 seconds
+        return () => clearInterval(intervalId); // Cleanup on component unmount
     }, [fetchData]);
 
 

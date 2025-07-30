@@ -270,12 +270,15 @@ export const updateEventConfig = async (dates: { pre_reg_start_date: string, eve
 };
 
 
-export const addAttendanceLog = async (log: Omit<AttendanceLog, 'id' | 'timestamp'> & { member_id: string; timestamp?: Date }) => {
+export const addAttendanceLog = async (log: Omit<AttendanceLog, 'id' | 'created_at' | 'timestamp'> & { member_id: string; timestamp: Date }) => {
     const { data, error } = await supabase
         .from('attendance_logs')
         .insert({
-            ...log,
-            timestamp: (log.timestamp || new Date()).toISOString(),
+            member_id: log.member_id,
+            member_name: log.member_name,
+            type: log.type,
+            method: log.method,
+            timestamp: log.timestamp.toISOString(),
         })
         .select()
         .single();
@@ -299,5 +302,5 @@ export const getAttendanceLogs = async (): Promise<AttendanceLog[]> => {
         throw error;
     }
 
-    return data || [];
+    return (data || []).map(log => ({ ...log, id: String(log.id) }));
 };

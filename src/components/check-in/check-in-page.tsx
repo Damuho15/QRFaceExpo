@@ -38,11 +38,11 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     const preRegEndTime = new Date(eventStartTime);
     preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
 
-    if (scanDate >= preRegStart && scanDate < preRegEndTime) {
+    if (scanDate >= preRegStart && scanDate <= preRegEndTime) {
         return 'Pre-registration';
     }
     
-    if (scanDate >= eventStartTime) {
+    if (scanDate > preRegEndTime) {
         return 'Actual';
     }
 

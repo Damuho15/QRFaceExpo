@@ -1,6 +1,7 @@
 
+
 export type Member = {
-  id: string;
+  id: string; // Changed from number to string for UUID
   fullName: string;
   nickname: string;
   birthday: string;
@@ -15,12 +16,13 @@ export type Member = {
 };
 
 export type AttendanceLog = {
-  id: string;
-  member_id: string;
+  id: number;
+  member_id: string; // Changed from number to string for UUID
   member_name: string;
   timestamp: string;
   type: 'Pre-registration' | 'Actual';
   method: 'QR' | 'Face';
+  created_at: string;
 };
 
 export type EventConfig = {
