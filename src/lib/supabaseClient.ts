@@ -128,11 +128,9 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
     
-    const birthdayISO = member.birthday instanceof Date ? member.birthday.toISOString() : new Date().toISOString();
-
     const memberToUpdate = {
         ...memberData,
-        birthday: birthdayISO,
+        birthday: member.birthday.toISOString(),
         weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
         nickname: member.nickname || null,
         email: member.email || null,
