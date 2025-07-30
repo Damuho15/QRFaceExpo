@@ -10,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getMembers } from '@/lib/supabaseClient';
+import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'genkit';
 
 const RecognizeFaceInputSchema = z.object({
@@ -39,6 +40,7 @@ export async function recognizeFace(input: RecognizeFaceInput): Promise<Recogniz
 
 const prompt = ai.definePrompt({
     name: 'recognizeFacePrompt',
+    model: googleAI('gemini-pro-vision'),
     input: {
         schema: z.object({
             imageDataUri: z.string(),
