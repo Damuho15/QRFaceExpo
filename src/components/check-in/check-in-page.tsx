@@ -24,7 +24,7 @@ import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2 } f
 import jsQR from 'jsqr';
 import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 
@@ -71,6 +71,11 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     }
 
     return null;
+}
+
+// Helper to parse date strings as UTC
+const parseDateAsUTC = (dateString: string) => {
+    return new Date(`${dateString}T00:00:00Z`);
 }
 
 const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
@@ -467,7 +472,7 @@ export default function CheckInPage() {
                 const today = new Date();
                 today.setUTCHours(0, 0, 0, 0);
 
-                const dbEventDate = parseISO(config.event_date);
+                const dbEventDate = parseDateAsUTC(config.event_date);
                 
                 if (today > dbEventDate) {
                     // Event date has passed, auto-rollover
@@ -489,7 +494,7 @@ export default function CheckInPage() {
                 } else {
                     // Event date is in the future, use stored dates
                     setEventDate(dbEventDate);
-                    setPreRegStartDate(parseISO(config.pre_reg_start_date));
+                    setPreRegStartDate(parseDateAsUTC(config.pre_reg_start_date));
                 }
             } else {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
@@ -539,14 +544,14 @@ export default function CheckInPage() {
     };
     
     const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = parseISO(e.target.value);
+        const newDate = parseDateAsUTC(e.target.value);
         if(eventDate) {
             handleDateChange(newDate, eventDate);
         }
     };
 
     const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = parseISO(e.target.value);
+        const newDate = parseDateAsUTC(e.target.value);
         if(preRegStartDate) {
             handleDateChange(preRegStartDate, newDate);
         }

@@ -36,11 +36,9 @@ const parseDate = (dateInput: any): Date | null => {
     }
 
     if (typeof dateInput === 'string') {
-        const date = new Date(dateInput);
+        // For strings like '2024-08-05', treat them as UTC to avoid timezone shifts.
+        const date = new Date(`${dateInput}T00:00:00Z`);
         if (!isNaN(date.getTime())) {
-            if (!/T|Z/i.test(dateInput)) {
-                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-            }
             return date;
         }
     }
