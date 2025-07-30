@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import MemberDialog from './member-dialog';
+import BatchAddDialog from './batch-add-dialog';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -82,6 +83,7 @@ export default function MembersDataTable<TData, TValue>({
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
+            <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
                 mode="add"
                 onSuccess={onAction} 
