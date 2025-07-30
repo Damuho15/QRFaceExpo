@@ -48,19 +48,19 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
 
           const invalidRows: number[] = [];
           const members: NewMember[] = json.map((row, index) => {
-            const birthday = new Date(row.birthday);
+            const birthday = new Date(row.Birthday);
 
-            if (!row.fullName || !row.email || !row.birthday || isNaN(birthday.getTime())) {
+            if (!row.FullName || !row.Email || !row.Birthday || isNaN(birthday.getTime())) {
                 invalidRows.push(index + 2); // Excel rows are 1-based, and we have a header
             }
 
             return {
-              fullName: String(row.fullName),
-              nickname: row.nickname ? String(row.nickname) : '',
-              email: String(row.email),
-              phone: row.phone ? String(row.phone) : '',
+              fullName: String(row.FullName),
+              nickname: row.Nickname ? String(row.Nickname) : '',
+              email: String(row.Email),
+              phone: row.Phone ? String(row.Phone) : '',
               birthday: birthday,
-              weddingAnniversary: row.weddingAnniversary ? new Date(row.weddingAnniversary) : null,
+              weddingAnniversary: row.WeddingAnniversary ? new Date(row.WeddingAnniversary) : null,
             };
           });
 
@@ -68,7 +68,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             toast({
                 variant: 'destructive',
                 title: 'Invalid Data Found',
-                description: `Please check rows: ${invalidRows.join(', ')}. Ensure fullName, email, and a valid birthday are provided.`,
+                description: `Please check rows: ${invalidRows.join(', ')}. Ensure FullName, Email, and a valid Birthday are provided.`,
                 duration: 9000,
             });
             resetState();
@@ -81,7 +81,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           toast({
             variant: 'destructive',
             title: 'File Parsing Failed',
-            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has columns: fullName, email, birthday, and optionally weddingAnniversary, nickname and phone.',
+            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has columns: FullName, Email, Birthday, and optionally WeddingAnniversary, Nickname and Phone.',
           });
           resetState();
         }
@@ -155,7 +155,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv) with member data.
-            Ensure your file has columns: `fullName`, `email`, `birthday`, and optionally `nickname`, `phone`, and `weddingAnniversary`.
+            Ensure your file has columns: `FullName`, `Email`, `Birthday`, and optionally `Nickname`, `Phone`, and `WeddingAnniversary`.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
