@@ -23,27 +23,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type NewMember = Omit<Member, 'id' | 'qrCodePayload'> & { qrCodePayload?: string };
 
-const parseDate = (dateString: string | null | undefined): Date | null => {
-    if (!dateString) return null;
-    // Handles both YYYY-MM-DD and MM-DD-YYYY
-    if (typeof dateString === 'string' && (dateString.includes('-') || dateString.includes('/'))) {
-        const parts = dateString.split(/[-/]/);
-        if (parts.length === 3) {
-            // Check if it's YYYY-MM-DD
-            if (parts[0].length === 4) {
-                 return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            }
-            // Assume MM-DD-YYYY
-            return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+const parseDate = (date: any): Date | null => {
+    if (date instanceof Date && !isNaN(date.getTime())) {
+        return date;
+    }
+    if (typeof date === 'string') {
+        const parsedDate = new Date(date);
+        if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
         }
     }
-    // Fallback for dates already parsed by XLSX
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-        return date;
+    if (typeof date === 'number') {
+        // Handle Excel's numeric date format.
+        const parsedDate = new Date(Math.round((date - 25569) * 86400 * 1000));
+        if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
+        }
     }
     return null;
 }
+
 
 export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -63,7 +62,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
@@ -73,7 +72,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             const birthday = parseDate(row.Birthday);
             const weddingAnniversary = parseDate(row.WeddingAnniversary);
 
-            if (!row.FullName || !row.Email || !birthday || isNaN(birthday.getTime())) {
+            if (!row.FullName || !row.Email || !birthday) {
                 invalidRows.push(index + 2); // Excel rows are 1-based, and we have a header
             }
 
