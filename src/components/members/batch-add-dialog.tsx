@@ -21,6 +21,7 @@ import { addMembers, getMembers } from '@/lib/supabaseClient';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Member } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 type RawMemberData = {
   [key: string]: string | number | null;
@@ -175,23 +176,26 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       <DialogTrigger asChild>
         <Button variant="outline"><Users className="mr-2 h-4 w-4" />Batch Add</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className={cn(
+        "sm:max-w-md",
+        parsedData.length > 0 && "sm:max-w-4xl"
+      )}>
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv). Use the template for the correct format. `FullName` is required.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Label htmlFor="excel-upload" className="sr-only">Excel File</Label>
+        <div className="grid gap-4 py-4">
+            <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                     <Input id="excel-upload" type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={handleFileChange} disabled={isSubmitting}/>
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><Upload className="mr-2 h-4 w-4" />Choose File</Button>
-                    {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
+                    {fileName && <p className="text-sm text-muted-foreground truncate max-w-xs">{fileName}</p>}
                 </div>
-                 <div className="flex-grow"></div>
-                <Button variant="secondary" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" />Download Template</Button>
+                <div className="ml-auto flex-shrink-0">
+                    <Button variant="secondary" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" />Download Template</Button>
+                </div>
             </div>
             {parsedData.length > 0 && (
                 <div className="space-y-4">
@@ -221,13 +225,13 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                     </p>
                 </div>
             )}
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting || parsedData.length === 0}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</> : `Import ${parsedData.length > 0 ? parsedData.length : ''} Members`}
-              </Button>
-            </DialogFooter>
         </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting || parsedData.length === 0}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importing...</> : `Import ${parsedData.length > 0 ? parsedData.length : ''} Members`}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
