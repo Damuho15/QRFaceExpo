@@ -29,12 +29,12 @@ import { format } from 'date-fns';
 
 const getNextSunday = (from = new Date()) => {
     const date = new Date(from);
+    date.setHours(0, 0, 0, 0);
     const day = date.getDay();
     const nextSunday = new Date(date);
-    nextSunday.setDate(date.getDate() + (7 - day) % 7);
-    if(day === 0 && from.getTime() >= date.setHours(0,0,0,0)){ 
-         nextSunday.setDate(date.getDate() + 7);
-    }
+    const addDays = (7 - day) % 7;
+    // If today is Sunday, add 7 days to get next Sunday. Otherwise, add days to get to the upcoming Sunday.
+    nextSunday.setDate(date.getDate() + (addDays === 0 ? 7 : addDays));
     nextSunday.setHours(9, 0, 0, 0);
     return nextSunday;
 };
@@ -44,8 +44,8 @@ const getPreviousTuesday = (fromDate: Date) => {
     const date = new Date(fromDate);
     const day = date.getDay(); // Sunday is 0, Tuesday is 2
     const prevTuesday = new Date(date);
-    // Go back to the previous Tuesday. If today is Sunday (0), go back 5 days. If Monday (1), 6 days. If Tuesday (2), 0 days.
-    prevTuesday.setDate(date.getDate() - (day < 2 ? day + 5 : day - 2));
+    const subtractDays = (day + 5) % 7; // (0+5)%7=5 (Sun), (1+5)%7=6 (Mon), (2+5)%7=0 (Tue), (3+5)%7=1 (Wed)
+    prevTuesday.setDate(date.getDate() - subtractDays);
     prevTuesday.setHours(0, 0, 0, 0);
     return prevTuesday;
 };
@@ -452,22 +452,18 @@ const FaceCheckinTab = () => {
   );
 };
 
+// For testing purposes, we hardcode a "today" and calculate dates from it.
+const testToday = new Date('2025-08-01');
+const initialEventDate = getNextSunday(testToday);
+const initialPreRegDate = getPreviousTuesday(initialEventDate);
+
 export default function CheckInPage() {
     const [isMounted, setIsMounted] = useState(false);
-    const [eventDate, setEventDate] = useState<Date>(new Date());
-    const [preRegStartDate, setPreRegStartDate] = useState<Date>(new Date());
+    const [eventDate, setEventDate] = useState<Date>(initialEventDate);
+    const [preRegStartDate, setPreRegStartDate] = useState<Date>(initialPreRegDate);
     
     useEffect(() => {
         setIsMounted(true);
-        // FOR TESTING: Simulate a future date to test rollover logic
-        const today = new Date('2025-08-01');
-        today.setHours(0,0,0,0);
-
-        const newEventDate = getNextSunday(today);
-        const newPreRegDate = getPreviousTuesday(newEventDate);
-
-        setEventDate(newEventDate);
-        setPreRegStartDate(newPreRegDate);
     }, []);
 
     const handlePreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
