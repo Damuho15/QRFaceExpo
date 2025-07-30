@@ -32,7 +32,7 @@ const getNextSunday = (from = new Date()) => {
     const day = date.getDay();
     const nextSunday = new Date(date);
     nextSunday.setDate(date.getDate() + (7 - day) % 7);
-    if(day === 0 && from.getTime() > date.getTime()){ // if today is sunday but time has passed
+    if(day === 0 && from.getTime() >= date.setHours(0,0,0,0)){ 
          nextSunday.setDate(date.getDate() + 7);
     }
     nextSunday.setHours(9, 0, 0, 0);
@@ -454,78 +454,38 @@ const FaceCheckinTab = () => {
 
 export default function CheckInPage() {
     const [isMounted, setIsMounted] = useState(false);
-    
-    // State for dates
     const [eventDate, setEventDate] = useState<Date>(new Date());
     const [preRegStartDate, setPreRegStartDate] = useState<Date>(new Date());
-
-    // State for manual overrides
     const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
     
-    // Effect for initializing and managing dates from localStorage
     useEffect(() => {
         setIsMounted(true);
         // FOR TESTING: Simulate a future date to test rollover logic
         const today = new Date('2025-08-01');
         today.setHours(0,0,0,0);
 
-        const storedEventDateStr = localStorage.getItem('eventDate');
-        let currentEventDate = storedEventDateStr ? new Date(storedEventDateStr) : getNextSunday(today);
-        
-        // Automatic Weekly Cycle Logic
-        if (today > currentEventDate) {
-            // If the stored event date is in the past, reset to the next cycle
-            const nextEventDate = getNextSunday(today);
-            const nextPreRegDate = getPreviousTuesday(nextEventDate);
+        const newEventDate = getNextSunday(today);
+        const newPreRegDate = getPreviousTuesday(newEventDate);
 
-            setEventDate(nextEventDate);
-            setPreRegStartDate(nextPreRegDate);
-            setIsPreRegDateManuallySet(false);
-            
-            // Update localStorage with the new calculated dates
-            localStorage.setItem('eventDate', nextEventDate.toISOString());
-            localStorage.setItem('preRegStartDate', nextPreRegDate.toISOString());
-            localStorage.setItem('isPreRegDateManuallySet', JSON.stringify(false));
-        } else {
-            // Event date is still valid, check for manual overrides
-            const storedManualSetStr = localStorage.getItem('isPreRegDateManuallySet');
-            const manualSet = storedManualSetStr ? JSON.parse(storedManualSetStr) : false;
-            setIsPreRegDateManuallySet(manualSet);
-            setEventDate(currentEventDate);
-
-            if (manualSet) {
-                const storedPreRegDateStr = localStorage.getItem('preRegStartDate');
-                if(storedPreRegDateStr) {
-                    setPreRegStartDate(new Date(storedPreRegDateStr));
-                } else {
-                    setPreRegStartDate(getPreviousTuesday(currentEventDate));
-                }
-            } else {
-                setPreRegStartDate(getPreviousTuesday(currentEventDate));
-            }
-        }
+        setEventDate(newEventDate);
+        setPreRegStartDate(newPreRegDate);
     }, []);
 
-    // Handlers for date changes from inputs
     const handlePreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = new Date(e.target.value);
         const adjustedDate = new Date(newDate.getTime() + newDate.getTimezoneOffset() * 60000);
         setPreRegStartDate(adjustedDate);
         setIsPreRegDateManuallySet(true);
-        localStorage.setItem('preRegStartDate', adjustedDate.toISOString());
-        localStorage.setItem('isPreRegDateManuallySet', JSON.stringify(true));
     };
 
     const handleEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = new Date(e.target.value);
         const adjustedDate = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 9, 0, 0);
         setEventDate(adjustedDate);
-        localStorage.setItem('eventDate', adjustedDate.toISOString());
         
         if (!isPreRegDateManuallySet) {
             const newPreRegDate = getPreviousTuesday(adjustedDate);
             setPreRegStartDate(newPreRegDate);
-            localStorage.setItem('preRegStartDate', newPreRegDate.toISOString());
         }
     };
 
