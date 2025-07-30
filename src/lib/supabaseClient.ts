@@ -16,7 +16,47 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const BUCKET_NAME = 'member-pictures';
 
-const isValidDate = (d: any) => d instanceof Date && !isNaN(d.getTime());
+/**
+ * Robustly parses a date from various formats, including Excel's serial number format.
+ * @param dateInput - The value to parse (string, number, or null).
+ * @returns A Date object or null if parsing fails.
+ */
+const parseDate = (dateInput: any): Date | null => {
+    if (dateInput === null || dateInput === undefined || String(dateInput).trim() === '') {
+        return null;
+    }
+
+    // Handle Excel serial numbers (numbers)
+    if (typeof dateInput === 'number') {
+        // Excel's epoch starts on 1899-12-30 for compatibility with Lotus 1-2-3.
+        // The serial number represents the number of days since this epoch.
+        const excelEpoch = new Date(1899, 11, 30);
+        const msPerDay = 86400000;
+        const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
+        // JS Date object conversion from Excel serial number can be off by the timezone offset.
+        // We adjust for this to get the correct UTC date.
+        const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
+        if (!isNaN(adjustedDate.getTime())) {
+            return adjustedDate;
+        }
+    }
+
+    // Handle date strings (e.g., '2023-12-25', '12/25/2023')
+    if (typeof dateInput === 'string') {
+        const date = new Date(dateInput);
+        if (!isNaN(date.getTime())) {
+            // Adjust for timezone if only date part is present, to prevent day-off errors.
+            if (!/T|Z/i.test(dateInput)) {
+                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+            }
+            return date;
+        }
+    }
+    
+    // Return null if no valid date could be parsed
+    return null;
+};
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
@@ -57,6 +97,7 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
+    // This function assumes `member.birthday` is a valid Date object
     const memberToInsert = {
         fullName: member.fullName,
         nickname: member.nickname || null,
@@ -84,43 +125,58 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 }
 
-export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' | 'pictureUrl'>)[]): Promise<Member[] | null> => {
-    if (!members || members.length === 0) {
+/**
+ * Handles batch insertion of members. This function is responsible for all validation and data formatting.
+ * @param rawMembers - An array of raw objects, typically from a file parser.
+ * @returns An array of successfully inserted members, or null on a major failure.
+ */
+export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<Member[] | null> => {
+    if (!rawMembers || rawMembers.length === 0) {
         return [];
     }
 
-    const membersToInsert = members.map(member => {
-        const birthdayISO = isValidDate(member.birthday) ? member.birthday.toISOString() : null;
-        if (!birthdayISO) {
-            console.error('Invalid birthday for member:', member.fullName);
-            // Or throw an error, depending on desired behavior for invalid data
+    const validMembersToInsert = rawMembers.map(rawMember => {
+        // 1. Validate required fields
+        const fullName = String(rawMember.FullName || '').trim();
+        if (!fullName) {
+            console.warn('Skipping row due to missing FullName:', rawMember);
             return null;
         }
 
-        const weddingAnniversaryISO = isValidDate(member.weddingAnniversary) ? member.weddingAnniversary.toISOString() : null;
+        // 2. Parse and validate birthday
+        const birthday = parseDate(rawMember.Birthday);
+        if (!birthday) {
+            console.warn('Skipping row due to invalid or missing Birthday:', rawMember);
+            return null;
+        }
 
+        // 3. Parse optional wedding anniversary
+        const weddingAnniversary = parseDate(rawMember.WeddingAnniversary);
+        
+        // 4. Build the final, clean object for insertion
         return {
-            fullName: member.fullName,
-            nickname: member.nickname || null,
-            email: member.email || null,
-            phone: member.phone || null,
-            birthday: birthdayISO,
-            weddingAnniversary: weddingAnniversaryISO,
-            qrCodePayload: member.fullName, // Default QR payload
-            ministries: member.ministries || null,
-            lg: member.lg || null,
+            fullName: fullName,
+            nickname: String(rawMember.Nickname || '').trim() || null,
+            email: String(rawMember.Email || '').trim() || null,
+            phone: String(rawMember.Phone || '').trim() || null,
+            birthday: birthday.toISOString(), // Format valid date
+            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null, // Format valid date or null
+            qrCodePayload: fullName, // Default QR payload to the full name
+            ministries: String(rawMember.Ministries || '').trim() || null,
+            lg: String(rawMember.LG || '').trim() || null,
             pictureUrl: null, // Batch add does not include pictures
         };
-    }).filter(m => m !== null); // Filter out any members that had invalid data
+    }).filter((m): m is Exclude<typeof m, null> => m !== null);
 
-    if (membersToInsert.length === 0) {
-        console.log("No valid members to insert after filtering.");
+    if (validMembersToInsert.length === 0) {
+        console.log("No valid members to insert after cleaning and validation.");
         return [];
     }
 
+    // 5. Perform the batch insert
     const { data, error } = await supabase
         .from('members')
-        .insert(membersToInsert as any)
+        .insert(validMembersToInsert)
         .select();
 
     if (error) {
@@ -128,17 +184,28 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
         return null;
     }
 
+    // Convert date strings back to Date objects for consistency with other functions
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
 
-
 export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
+    
+    // Ensure birthday is a valid Date object before converting
+    const birthdayISO = member.birthday instanceof Date ? member.birthday.toISOString() : new Date(member.birthday).toISOString();
+
      const memberToUpdate = {
         ...memberData,
-        birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+        birthday: birthdayISO,
+        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
+        // Ensure optional text fields are null if empty
+        nickname: member.nickname || null,
+        email: member.email || null,
+        phone: member.phone || null,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
     };
+
     const { data, error } = await supabase
         .from('members')
         .update(memberToUpdate)
@@ -153,5 +220,3 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
 
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 };
-
-    
