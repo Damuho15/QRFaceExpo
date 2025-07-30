@@ -23,12 +23,23 @@ export default function QrCodeDialog({ member, children }: QrCodeDialogProps) {
   const [open, setOpen] = useState(false);
 
   if (!member.qrCodePayload) {
-    return null;
+    return <>{children}</>;
+  }
+  
+  const handleOpenChange = (isOpen: boolean) => {
+    // This allows clicking the item in the dropdown to trigger it.
+    if (!isOpen) {
+      setTimeout(() => {
+        const event = new Event("mousedown", { bubbles: true, cancelable: true });
+        document.dispatchEvent(event);
+      }, 150);
+    }
+     setOpen(isOpen);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>QR Code for {member.fullName}</DialogTitle>
