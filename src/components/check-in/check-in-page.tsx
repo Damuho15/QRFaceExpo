@@ -30,19 +30,18 @@ import { Skeleton } from '../ui/skeleton';
 
 
 const getNextSunday = (from: Date): Date => {
-    const date = new Date(from.valueOf());
-    const day = date.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
-    const daysToAdd = 7 - day;
-    date.setUTCDate(date.getUTCDate() + (daysToAdd % 7)); // If today is Sunday, add 0 days to get this Sunday. If any other day, get next Sunday.
+    const date = new Date(from);
+    const day = date.getUTCDay(); // 0 for Sunday, 6 for Saturday
+    const daysToAdd = day === 0 ? 0 : 7 - day;
+    date.setUTCDate(date.getUTCDate() + daysToAdd);
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
-    const date = new Date(from.valueOf());
-    const day = date.getUTCDay(); // 0 for Sunday
-    // Days to subtract to get to the previous Tuesday (day 2)
-    // from is always a Sunday (day 0)
-    // We want to go back to the previous Tuesday, which is 5 days before Sunday.
+    const date = new Date(from); // from is always a Sunday
+    const day = date.getUTCDay(); // which is 0
+    // To get to the previous Tuesday (day 2) from a Sunday (day 0), we need to go back 5 days.
+    // Sunday (0) -> Saturday (6) -> Friday (5) -> Thursday (4) -> Wednesday (3) -> Tuesday (2)
     date.setUTCDate(date.getUTCDate() - 5);
     return date;
 };
@@ -686,3 +685,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
