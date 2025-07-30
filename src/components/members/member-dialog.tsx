@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -73,22 +73,40 @@ export default function MemberDialog({
   const { toast } = useToast();
   const isEditMode = mode === 'edit';
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(memberToEdit?.pictureUrl || null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
-    defaultValues: isEditMode && memberToEdit
-      ? {
+    defaultValues: {
+      fullName: '',
+      nickname: '',
+      email: '',
+      phone: '',
+      birthday: undefined,
+      weddingAnniversary: null,
+      ministries: '',
+      lg: '',
+      picture: null,
+    },
+  });
+
+  useEffect(() => {
+    if (open) {
+      if (isEditMode && memberToEdit) {
+        form.reset({
           fullName: memberToEdit.fullName,
           nickname: memberToEdit.nickname || '',
           email: memberToEdit.email || '',
           phone: memberToEdit.phone || '',
-          birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
+          birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : new Date(),
           weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
           ministries: memberToEdit.ministries || '',
           lg: memberToEdit.lg || '',
-        }
-      : {
+          picture: null,
+        });
+        setPreviewImage(memberToEdit.pictureUrl || null);
+      } else {
+        form.reset({
           fullName: '',
           nickname: '',
           email: '',
@@ -97,31 +115,10 @@ export default function MemberDialog({
           weddingAnniversary: null,
           ministries: '',
           lg: '',
-        },
-  });
-
-  React.useEffect(() => {
-    if (open && isEditMode && memberToEdit) {
-      form.reset({
-        fullName: memberToEdit.fullName,
-        nickname: memberToEdit.nickname || '',
-        email: memberToEdit.email || '',
-        phone: memberToEdit.phone || '',
-        birthday: new Date(memberToEdit.birthday),
-        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
-        ministries: memberToEdit.ministries || '',
-        lg: memberToEdit.lg || '',
-      });
-      setPreviewImage(memberToEdit.pictureUrl || null);
-    }
-    if (!open) {
-      setTimeout(() => {
-        form.reset();
-        setShowQr(false);
-        setNewMember(null);
-        setIsSubmitting(false);
+          picture: null,
+        });
         setPreviewImage(null);
-      }, 300);
+      }
     }
   }, [open, isEditMode, memberToEdit, form]);
 

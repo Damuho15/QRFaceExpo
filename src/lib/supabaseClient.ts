@@ -89,7 +89,7 @@ export const getMembers = async (): Promise<Member[]> => {
 
     if (error) {
         console.error('Error fetching members:', error);
-        return [];
+        throw error;
     }
 
     return data.map((member: any) => ({
@@ -155,7 +155,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         pictureUrl: pictureUrl,
         ministries: formData.ministries || null,
         lg: formData.lg || null,
-        qrCodePayload: formData.fullName, // Ensure qrCodePayload is included in the update
+        qrCodePayload: formData.fullName, // Ensure qrCodePayload is based on the new name
     };
 
     const { data, error } = await supabase
