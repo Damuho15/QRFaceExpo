@@ -24,15 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, PlusCircle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { PlusCircle, Loader2 } from 'lucide-react';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -44,13 +36,13 @@ const memberSchema = z.object({
   nickname: z.string().optional(),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   phone: z.string().optional(),
-  birthday: z.date({
-    required_error: 'A date of birth is required.',
+  birthday: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: 'A valid date of birth is required.',
   }),
-  weddingAnniversary: z.date().optional().nullable(),
+  weddingAnniversary: z.string().optional().nullable(),
   picture: z.any().optional(),
   ministries: z.string().optional(),
-lg: z.string().optional(),
+  lg: z.string().optional(),
 });
 
 export type MemberFormValues = z.infer<typeof memberSchema>;
@@ -61,28 +53,6 @@ interface MemberDialogProps {
   onSuccess?: () => void;
   children?: React.ReactNode;
 }
-
-/**
- * Safely parses a 'YYYY-MM-DD' string into a local Date object.
- * This prevents timezone from shifting the date upon object creation.
- * @param dateString The date string to parse.
- * @returns A Date object or null if the string is invalid.
- */
-const parseDateString = (dateString: string | null | undefined): Date | null => {
-    if (!dateString) return null;
-  
-    // The 'T00:00:00' part is crucial. It tells the constructor to parse the date in the local timezone
-    // rather than UTC, which is the default for 'YYYY-MM-DD' strings.
-    const date = new Date(`${dateString}T00:00:00`);
-  
-    // Check if the resulting date is valid
-    if (isNaN(date.getTime())) {
-      return null;
-    }
-  
-    return date;
-};
-
 
 export default function MemberDialog({
   mode,
@@ -105,8 +75,8 @@ export default function MemberDialog({
       nickname: '',
       email: '',
       phone: '',
-      birthday: undefined,
-      weddingAnniversary: null,
+      birthday: '',
+      weddingAnniversary: '',
       ministries: '',
       lg: '',
       picture: null,
@@ -120,15 +90,14 @@ export default function MemberDialog({
         nickname: memberToEdit.nickname || '',
         email: memberToEdit.email || '',
         phone: memberToEdit.phone || '',
-        birthday: parseDateString(memberToEdit.birthday) || undefined,
-        weddingAnniversary: parseDateString(memberToEdit.weddingAnniversary),
+        birthday: memberToEdit.birthday || '',
+        weddingAnniversary: memberToEdit.weddingAnniversary || '',
         ministries: memberToEdit.ministries || '',
         lg: memberToEdit.lg || '',
         picture: null,
       });
       setPreviewImage(memberToEdit.pictureUrl || null);
     } else if (!open) {
-      // Reset form and preview when dialog closes
       form.reset();
       setPreviewImage(null);
       setShowQr(false);
@@ -151,19 +120,15 @@ export default function MemberDialog({
     try {
         let pictureUrlToSave = isEditMode ? memberToEdit?.pictureUrl : null;
         if (data.picture && data.picture instanceof File) {
-            pictureUrlToSave = await uploadMemberPicture(data.picture);
-            if (!pictureUrlToSave) {
+            const uploadedUrl = await uploadMemberPicture(data.picture);
+            if (!uploadedUrl) {
                 throw new Error('Could not upload the member picture. Please try again.');
             }
+            pictureUrlToSave = uploadedUrl;
         }
-        
-        const payload = {
-            ...data,
-            pictureUrl: pictureUrlToSave,
-        };
 
         if (isEditMode && memberToEdit) {
-            const result = await updateMember(memberToEdit.id, payload);
+            const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
             toast({
                 title: 'Member Updated',
                 description: `${result.fullName} has been successfully updated.`,
@@ -172,7 +137,7 @@ export default function MemberDialog({
             setOpen(false);
 
         } else {
-            const result = await addMember(payload);
+            const result = await addMember(data, pictureUrlToSave);
             toast({
                 title: 'Member Added',
                 description: `${result.fullName} has been successfully added.`,
@@ -286,40 +251,11 @@ export default function MemberDialog({
                         control={form.control}
                         name="birthday"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
+                            <FormItem>
                             <FormLabel>Date of birth</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                    disabled={isSubmitting}
-                                    >
-                                    {field.value ? (
-                                        format(field.value, "PPP")
-                                    ) : (
-                                        <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    disabled={(date) =>
-                                    date > new Date() || date < new Date("1900-01-01")
-                                    }
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
+                            <FormControl>
+                                <Input type="date" {...field} disabled={isSubmitting} />
+                            </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -328,40 +264,11 @@ export default function MemberDialog({
                         control={form.control}
                         name="weddingAnniversary"
                         render={({ field }) => (
-                            <FormItem className="flex flex-col">
+                            <FormItem>
                             <FormLabel>Wedding Anniversary (Optional)</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full pl-3 text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                    disabled={isSubmitting}
-                                    >
-                                    {field.value ? (
-                                        format(field.value, "PPP")
-                                    ) : (
-                                        <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value || undefined}
-                                    onSelect={field.onChange}
-                                    disabled={(date) =>
-                                    date > new Date()
-                                    }
-                                    initialFocus
-                                />
-                                </PopoverContent>
-                            </Popover>
+                            <FormControl>
+                                <Input type="date" {...field} value={field.value ?? ''} disabled={isSubmitting} />
+                            </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
