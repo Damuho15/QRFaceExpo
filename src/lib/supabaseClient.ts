@@ -59,8 +59,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: member.birthday.toISOString().split('T')[0],
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString().split('T')[0] : null,
+        birthday: member.birthday.toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.fullName,
         ministries: member.ministries || null,
@@ -81,13 +81,18 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 }
 
-export const addMembers = async (members: (Omit<Member, 'id' | 'pictureUrl'>)[]): Promise<Member[] | null> => {
+export const addMembers = async (members: (Omit<Member, 'id' | 'pictureUrl' | 'qrCodePayload'>)[]): Promise<Member[] | null> => {
     const membersToInsert = members.map(member => {
         return {
-            ...member,
-            birthday: member.birthday ? new Date(member.birthday).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString().split('T')[0] : null,
+            fullName: member.fullName,
+            nickname: member.nickname || null,
+            email: member.email || null,
+            phone: member.phone || null,
+            birthday: member.birthday ? new Date(member.birthday).toISOString() : new Date().toISOString(),
+            weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
             qrCodePayload: member.fullName,
+            ministries: member.ministries || null,
+            lg: member.lg || null,
         }
     });
 
@@ -109,8 +114,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
      const memberToUpdate = {
         ...memberData,
-        birthday: memberData.birthday ? new Date(memberData.birthday).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Format date for DB
-        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString().split('T')[0] : null,
+        birthday: memberData.birthday ? new Date(memberData.birthday).toISOString() : new Date().toISOString(),
+        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
     };
     const { data, error } = await supabase
         .from('members')
