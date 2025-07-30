@@ -155,6 +155,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         pictureUrl: pictureUrl,
         ministries: formData.ministries || null,
         lg: formData.lg || null,
+        qrCodePayload: formData.fullName, // Ensure qrCodePayload is included in the update
     };
 
     const { data, error } = await supabase
@@ -237,5 +238,3 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     // 4. On success, return the data, ensuring dates are converted back for consistency.
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
-
-    
