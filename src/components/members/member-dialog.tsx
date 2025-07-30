@@ -73,22 +73,46 @@ export default function MemberDialog({
   const { toast } = useToast();
   const isEditMode = mode === 'edit';
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(memberToEdit?.pictureUrl || null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      fullName: memberToEdit?.fullName || '',
-      nickname: memberToEdit?.nickname || '',
-      email: memberToEdit?.email || '',
-      phone: memberToEdit?.phone || '',
-      birthday: memberToEdit?.birthday ? new Date(memberToEdit.birthday) : undefined,
-      weddingAnniversary: memberToEdit?.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
-      ministries: memberToEdit?.ministries || '',
-      lg: memberToEdit?.lg || '',
+      fullName: '',
+      nickname: '',
+      email: '',
+      phone: '',
+      birthday: undefined,
+      weddingAnniversary: null,
+      ministries: '',
+      lg: '',
       picture: null,
     },
   });
+
+  useEffect(() => {
+    if (open && isEditMode && memberToEdit) {
+      form.reset({
+        fullName: memberToEdit.fullName || '',
+        nickname: memberToEdit.nickname || '',
+        email: memberToEdit.email || '',
+        phone: memberToEdit.phone || '',
+        birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
+        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
+        ministries: memberToEdit.ministries || '',
+        lg: memberToEdit.lg || '',
+        picture: null,
+      });
+      setPreviewImage(memberToEdit.pictureUrl || null);
+    } else if (!open) {
+      // Reset form and preview when dialog closes
+      form.reset();
+      setPreviewImage(null);
+      setShowQr(false);
+      setNewMember(null);
+    }
+  }, [open, isEditMode, memberToEdit, form]);
+
 
   const handlePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -157,7 +181,7 @@ export default function MemberDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {TriggerComponent}
-      <DialogContent key={memberToEdit?.id || 'add-new'} className="sm:max-w-md" onInteractOutside={(e) => {
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
           if (showQr || isSubmitting) {
             e.preventDefault();
           }
