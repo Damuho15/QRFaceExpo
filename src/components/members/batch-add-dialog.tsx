@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -28,21 +29,26 @@ const isValidDate = (date: any): date is Date => {
 }
 
 const parseDate = (dateInput: string | number): Date | null => {
-    if (dateInput === null || dateInput === undefined || dateInput === '') return null;
+    if (dateInput === null || dateInput === undefined || String(dateInput).trim() === '') return null;
     
-    // Check if it's an Excel serial number
+    // Handle Excel serial numbers
     if (typeof dateInput === 'number') {
+        // The date code from XLSX.SSF.parse_date_code is UTC-based
         const d = XLSX.SSF.parse_date_code(dateInput);
         if (d) {
+            // Create a Date object from UTC components
             const date = new Date(Date.UTC(d.y, d.m - 1, d.d, d.H, d.M, d.S));
             if(isValidDate(date)) return date;
         }
     }
 
     if (typeof dateInput === 'string') {
+        // Attempt to parse common date formats
         const date = new Date(dateInput);
         if (isValidDate(date)) {
-             if (!dateInput.match(/[:Z]/)) {
+            // If no time component is present, JS might assume UTC midnight.
+            // We adjust for the timezone offset to correctly represent the local date.
+            if (!/T|Z/i.test(dateInput)) {
                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
             }
             return date;
@@ -353,3 +359,5 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
     </Dialog>
   );
 }
+
+    
