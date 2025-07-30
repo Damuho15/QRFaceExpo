@@ -19,12 +19,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon } from 'lucide-react';
+import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { recognizeFace } from '@/ai/flows/face-recognition-flow';
+
 
 const getNextSunday = () => {
     const today = new Date();
@@ -315,106 +317,134 @@ const QRCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegS
 };
 
 const FaceCheckinTab = () => {
-    const { toast } = useToast();
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const { toast } = useToast();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-     useEffect(() => {
-        const getCameraPermission = async () => {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({video: true});
-            setHasCameraPermission(true);
+  useEffect(() => {
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setHasCameraPermission(true);
 
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-            }
-          } catch (error) {
-            console.error('Error accessing camera:', error);
-            setHasCameraPermission(false);
-            toast({
-              variant: 'destructive',
-              title: 'Camera Access Denied',
-              description: 'Please enable camera permissions in your browser settings to use this app.',
-            });
-          }
-        };
-
-        getCameraPermission();
-        
-        return () => {
-             if (videoRef.current && videoRef.current.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                stream.getTracks().forEach(track => track.stop());
-            }
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
         }
-      }, [toast]);
-
-    const simulateCheckIn = (success: boolean) => {
-        if (!hasCameraPermission) {
-            toast({
-                variant: 'destructive',
-                title: 'Cannot Check-in',
-                description: 'Camera access is required for face recognition.',
-            });
-            return;
-        }
-
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
         toast({
-            title: 'Simulating Face Recognition...',
-            description: 'Matching face with database.',
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please enable camera permissions in your browser settings to use this app.',
         });
-
-        setTimeout(() => {
-            if (success) {
-                toast({
-                    title: 'Check-in Successful',
-                    description: 'Member "John Doe" recognized and checked in.',
-                });
-            } else {
-                toast({
-                    title: 'Check-in Failed',
-                    description: 'Face not recognized or match not found.',
-                    variant: 'destructive',
-                });
-            }
-        }, 1500);
+      }
     };
 
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Face Recognition Check-in</CardTitle>
-                <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                 <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                    {hasCameraPermission === false && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-                             <Camera className="h-16 w-16 text-muted-foreground" />
-                             <p className="mt-2 text-muted-foreground">Camera not available</p>
-                        </div>
-                    )}
-                </div>
-                 {hasCameraPermission === false && (
-                    <Alert variant="destructive">
-                        <AlertTitle>Camera Access Required</AlertTitle>
-                        <AlertDescription>
-                            Please allow camera access in your browser settings to use this feature.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" onClick={() => simulateCheckIn(true)}>
-                        <UserCheck className="mr-2 h-4 w-4" /> Simulate Success
-                    </Button>
-                    <Button variant="destructive" onClick={() => simulateCheckIn(false)}>
-                        <UserX className="mr-2 h-4 w-4" /> Simulate Fail
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-    );
+    getCameraPermission();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [toast]);
+
+  const handleCheckIn = async () => {
+    if (!videoRef.current || !hasCameraPermission) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Check-in',
+        description: 'Camera access is required for face recognition.',
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    toast({
+      title: 'Processing Image...',
+      description: 'Capturing frame and analyzing face.',
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setIsProcessing(false);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not process video frame.' });
+      return;
+    }
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const imageDataUri = canvas.toDataURL('image/jpeg');
+
+    try {
+      const result = await recognizeFace({ imageDataUri });
+      if (result.matchFound && result.member) {
+        toast({
+          title: 'Check-in Successful',
+          description: `Welcome, ${result.member.fullName}!`,
+        });
+      } else {
+        toast({
+          title: 'Check-in Failed',
+          description: 'Face not recognized. Please try again or use QR code.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Face recognition error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'AI Error',
+        description: 'An error occurred during face recognition analysis.',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Face Recognition Check-in</CardTitle>
+        <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+          <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+          {hasCameraPermission === false && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+              <Camera className="h-16 w-16 text-muted-foreground" />
+              <p className="mt-2 text-muted-foreground">Camera not available</p>
+            </div>
+          )}
+        </div>
+        {hasCameraPermission === false && (
+          <Alert variant="destructive">
+            <AlertTitle>Camera Access Required</AlertTitle>
+            <AlertDescription>
+              Please allow camera access in your browser settings to use this feature.
+            </AlertDescription>
+          </Alert>
+        )}
+        <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Recognizing...
+            </>
+          ) : (
+            <>
+              <UserCheck className="mr-2 h-4 w-4" /> Check In
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
 };
 
 export default function CheckInPage() {
