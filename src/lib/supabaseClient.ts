@@ -158,11 +158,6 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         qrCodePayload: formData.fullName,
     };
 
-    // TEMPORARY: Log the payload for debugging
-    alert(`DEBUG: Payload to be sent to database:\n\n${JSON.stringify(safePayload, null, 2)}`);
-    console.log("UPDATE PAYLOAD SENT TO SUPABASE:", JSON.stringify(safePayload, null, 2));
-
-
     const { data, error } = await supabase
         .from('members')
         .update(safePayload)
