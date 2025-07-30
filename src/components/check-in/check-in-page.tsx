@@ -472,20 +472,19 @@ export default function CheckInPage() {
     // Effect for initializing and managing dates from localStorage
     useEffect(() => {
         setIsMounted(true);
-        //const today = new Date();
-        const today = new Date('2025-08-01')
+        const today = new Date('2025-08-01');
         today.setHours(0,0,0,0);
 
         const storedEventDateStr = localStorage.getItem('eventDate');
         const storedPreRegDateStr = localStorage.getItem('preRegStartDate');
         const storedManualSetStr = localStorage.getItem('isPreRegDateManuallySet');
         
-        let currentEventDate = storedEventDateStr ? new Date(storedEventDateStr) : getNextSunday();
+        let currentEventDate = storedEventDateStr ? new Date(storedEventDateStr) : getNextSunday(today);
         
         // Automatic Weekly Cycle Logic
         if (today > currentEventDate) {
             // If the stored event date is in the past, reset to the next cycle
-            currentEventDate = getNextSunday();
+            currentEventDate = getNextSunday(today);
             localStorage.setItem('eventDate', currentEventDate.toISOString());
             localStorage.removeItem('preRegStartDate'); // Clear old override
             localStorage.removeItem('isPreRegDateManuallySet'); // Clear override flag
