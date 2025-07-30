@@ -78,6 +78,8 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const [scanResult, setScanResult] = useState<{ memberName: string; found: boolean } | null>(null);
     const [isScanning, setIsScanning] = useState(true);
+    const animationFrameId = useRef<number>();
+
 
     const handleCheckIn = useCallback(async (qrData: string) => {
         setIsScanning(false);
@@ -101,6 +103,33 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
             setScanResult(null);
         }, 2000);
     }, [members, onCheckInSuccess, toast]);
+
+    const tick = useCallback(() => {
+        if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
+            return;
+        }
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            if (context) {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'dontInvert',
+                });
+                if (code) {
+                    handleCheckIn(code.data);
+                }
+            }
+        }
+        animationFrameId.current = requestAnimationFrame(tick);
+    }, [isScanning, hasCameraPermission, handleCheckIn]);
+
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -127,45 +156,25 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
                 const stream = videoRef.current.srcObject as MediaStream;
                 stream.getTracks().forEach(track => track.stop());
             }
+            if(animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
         };
     }, [toast]);
 
     useEffect(() => {
-        if (!isScanning || !hasCameraPermission) {
-            return;
+        if (isScanning && hasCameraPermission) {
+            animationFrameId.current = requestAnimationFrame(tick);
+        } else if (animationFrameId.current) {
+            cancelAnimationFrame(animationFrameId.current);
         }
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (!video || !canvas) {
-            return;
-        }
-
-        const context = canvas.getContext('2d');
-        if (!context) {
-            return;
-        }
-
-        const intervalId = setInterval(() => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: 'dontInvert',
-                });
-
-                if (code) {
-                    handleCheckIn(code.data);
-                }
-            }
-        }, 200); // Scan every 200ms
-
         return () => {
-            clearInterval(intervalId);
+            if(animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
         };
-    }, [isScanning, hasCameraPermission, handleCheckIn]);
+    }, [isScanning, hasCameraPermission, tick]);
+
 
     return (
         <div className="space-y-4">
@@ -489,7 +498,7 @@ export default function CheckInPage() {
                     const newPreRegDate = getPreviousTuesday(newEventDate);
                     
                     await updateEventConfig({
-                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
+                        pre_reg_start_date: newEventDate.toISOString().split('T')[0],
                         event_date: newEventDate.toISOString().split('T')[0],
                     });
                     
@@ -700,5 +709,7 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
 
     
