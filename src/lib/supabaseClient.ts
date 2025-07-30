@@ -94,8 +94,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+        birthday: new Date(member.birthday).toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -121,8 +121,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     
     const memberToUpdate = {
         ...memberData,
-        birthday: memberData.birthday.toISOString(),
-        weddingAnniversary: memberData.weddingAnniversary ? memberData.weddingAnniversary.toISOString() : null,
+        birthday: new Date(memberData.birthday).toISOString(),
+        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
     };
 
     const { data, error } = await supabase
