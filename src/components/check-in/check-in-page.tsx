@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2, CheckCircle } from 'lucide-react';
 import jsQR from 'jsqr';
 import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
@@ -238,7 +238,7 @@ const UploadTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStar
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        const code = jsQR(imageData.data, imageData.width, canvas.width, canvas.height);
                         if (code) {
                             handleCheckIn(code.data);
                         } else {
@@ -470,6 +470,11 @@ export default function CheckInPage() {
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
     
+    // Temporary state for staged date changes
+    const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
+    const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
+
+
     const fetchAndSetDates = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -492,6 +497,9 @@ export default function CheckInPage() {
                     
                     setEventDate(newEventDate);
                     setPreRegStartDate(newPreRegDate);
+                    setTempEventDate(newEventDate);
+                    setTempPreRegStartDate(newPreRegDate);
+
                      toast({
                         title: 'Event Dates Updated',
                         description: 'The event has been automatically rolled over to the next week.',
@@ -499,8 +507,12 @@ export default function CheckInPage() {
 
                 } else {
                     // Event date is in the future, use stored dates
-                    setEventDate(dbEventDate);
-                    setPreRegStartDate(parseDateAsUTC(config.pre_reg_start_date));
+                    const storedEventDate = parseDateAsUTC(config.event_date);
+                    const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
+                    setEventDate(storedEventDate);
+                    setPreRegStartDate(storedPreRegDate);
+                    setTempEventDate(storedEventDate);
+                    setTempPreRegStartDate(storedPreRegDate);
                 }
             } else {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
@@ -518,17 +530,6 @@ export default function CheckInPage() {
     }, [fetchAndSetDates]);
 
     const handleDateChange = async (newPreRegDate: Date, newEventDate: Date) => {
-         if (newPreRegDate >= newEventDate) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Dates',
-                description: 'The pre-registration date must be before the event date.',
-            });
-            // Revert UI to valid state
-            fetchAndSetDates(); 
-            return;
-        }
-
         try {
             setIsLoading(true);
             await updateEventConfig({
@@ -537,34 +538,56 @@ export default function CheckInPage() {
             });
             setPreRegStartDate(newPreRegDate);
             setEventDate(newEventDate);
+            setTempPreRegStartDate(newPreRegDate);
+            setTempEventDate(newEventDate);
             toast({
                 title: 'Dates Updated',
                 description: 'The event dates have been successfully saved.',
             });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
-            fetchAndSetDates(); // Revert on failure
+            // Revert temp dates to the last saved state on failure
+            if(preRegStartDate && eventDate) {
+                setTempPreRegStartDate(preRegStartDate);
+                setTempEventDate(eventDate);
+            }
         } finally {
             setIsLoading(false);
         }
     };
+
+    const onApplyChanges = () => {
+         if (!tempPreRegStartDate || !tempEventDate) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Dates cannot be empty.' });
+            return;
+         }
+
+         if (tempPreRegStartDate >= tempEventDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Dates',
+                description: 'The pre-registration date must be before the event date.',
+            });
+            return;
+        }
+        handleDateChange(tempPreRegStartDate, tempEventDate);
+    };
     
     const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = parseDateAsUTC(e.target.value);
-        if(eventDate) {
-            handleDateChange(newDate, eventDate);
-        }
+        setTempPreRegStartDate(newDate);
     };
 
     const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = parseDateAsUTC(e.target.value);
-        if(preRegStartDate) {
-            handleDateChange(preRegStartDate, newDate);
-        }
+        setTempEventDate(newDate);
     };
 
+    const areDatesChanged =
+    (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
+    (tempEventDate?.getTime() !== eventDate?.getTime());
 
-  if (isLoading || !eventDate || !preRegStartDate) {
+  if (isLoading || !eventDate || !preRegStartDate || !tempEventDate || !tempPreRegStartDate) {
     return (
         <div className="space-y-6">
              <div>
@@ -611,12 +634,12 @@ export default function CheckInPage() {
                     Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="grid gap-6 md:grid-cols-2">
                 <div className="flex flex-col space-y-2">
                      <Label>Pre-registration Start Date</Label>
                       <Input
                         type="date"
-                        value={format(preRegStartDate, 'yyyy-MM-dd')}
+                        value={format(tempPreRegStartDate, 'yyyy-MM-dd')}
                         onChange={onPreRegDateChange}
                         className="w-full"
                         disabled={isLoading}
@@ -626,13 +649,19 @@ export default function CheckInPage() {
                      <Label>Event Date (Sunday @ 9:00 AM)</Label>
                      <Input
                         type="date"
-                        value={format(eventDate, 'yyyy-MM-dd')}
+                        value={format(tempEventDate, 'yyyy-MM-dd')}
                         onChange={onEventDateChange}
                         className="w-full"
                         disabled={isLoading}
                       />
                 </div>
             </CardContent>
+             <CardFooter>
+                <Button onClick={onApplyChanges} disabled={!areDatesChanged || isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    Apply Changes
+                </Button>
+            </CardFooter>
         </Card>
 
       <Tabs defaultValue="qr" className="w-full max-w-2xl mx-auto">
@@ -650,3 +679,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
