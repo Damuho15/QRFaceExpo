@@ -16,7 +16,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const BUCKET_NAME = 'member-pictures';
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
-    const fileName = `${Date.now()}-${file.name}`;
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const fileName = `${Date.now()}-${sanitizedFileName}`;
     const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(fileName, file);
