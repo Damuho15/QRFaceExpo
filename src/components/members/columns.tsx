@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Member } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,20 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import QrCodeDialog from './qr-code-dialog';
 import PictureDialog from './picture-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { deleteMember } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+
 
 const formatDate = (dateValue: string | null | undefined): string => {
     if (!dateValue) return 'N/A';
@@ -156,9 +171,28 @@ export const columns: ColumnDef<Member>[] = [
     id: 'actions',
     cell: ({ row, table }) => {
       const member = row.original;
+      const { toast } = useToast();
+
+      const handleDelete = async () => {
+          try {
+              await deleteMember(member.id, member.pictureUrl);
+              toast({
+                  title: 'Member Deleted',
+                  description: `${member.fullName} has been successfully deleted.`,
+              });
+              table.options.meta?.onAction(); // This refreshes the table
+          } catch (error: any) {
+              toast({
+                  variant: 'destructive',
+                  title: 'Delete Failed',
+                  description: error.message || 'Could not delete the member.',
+              });
+          }
+      };
 
       return (
         <div className="text-right">
+          <AlertDialog>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 p-0">
@@ -184,9 +218,31 @@ export const columns: ColumnDef<Member>[] = [
                   <div className="w-full">View QR Code</div>
                 </QrCodeDialog>
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+
+                <AlertDialogTrigger asChild>
+                   <DropdownMenuItem
+                    className="text-red-600"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
             </DropdownMenuContent>
           </DropdownMenu>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the
+                        member record for {member.fullName} and remove their data from our servers.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         </div>
       );
     },

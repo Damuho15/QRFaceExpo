@@ -141,6 +141,36 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
     return data;
 };
 
+export const deleteMember = async (id: string, pictureUrl?: string | null) => {
+    // 1. Delete picture from storage if it exists
+    if (pictureUrl) {
+        try {
+            const urlParts = pictureUrl.split('/');
+            const fileName = urlParts[urlParts.length - 1];
+            const { error: storageError } = await supabase.storage
+                .from(BUCKET_NAME)
+                .remove([fileName]);
+            
+            if (storageError) {
+                console.error('Error deleting picture from storage:', storageError.message);
+                // Non-fatal, we can still proceed to delete the DB record
+            }
+        } catch (e) {
+             console.error('Could not parse picture URL to delete from storage:', e);
+        }
+    }
+
+    // 2. Delete member record from the database
+    const { error } = await supabase.from('members').delete().eq('id', id);
+
+    if (error) {
+        console.error('Error deleting member:', error);
+        throw error;
+    }
+
+    return true;
+};
+
 export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<Member[] | null> => {
     if (!rawMembers || rawMembers.length === 0) {
         return [];
