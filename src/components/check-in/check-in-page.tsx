@@ -483,13 +483,13 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 const actualMember = members.find(m => m.id === result.member.id);
 
                 if (actualMember) {
-                    await addAttendanceLog({
-                        member_id: actualMember.id,
-                        member_name: actualMember.fullName,
-                        type: registrationType,
-                        method: 'Face',
-                        timestamp: new Date()
-                    });
+                    // await addAttendanceLog({
+                    //     member_id: actualMember.id,
+                    //     member_name: actualMember.fullName,
+                    //     type: registrationType,
+                    //     method: 'Face',
+                    //     timestamp: new Date()
+                    // });
                     toast({
                         title: 'Check-in Successful!',
                         description: `Welcome, ${actualMember.fullName}!`,
