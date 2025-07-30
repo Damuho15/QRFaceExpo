@@ -270,7 +270,13 @@ export const updateEventConfig = async (dates: { pre_reg_start_date: string, eve
 };
 
 
-export const addAttendanceLog = async (log: Omit<AttendanceLog, 'id' | 'created_at' | 'timestamp'> & { member_id: string; timestamp: Date }) => {
+export const addAttendanceLog = async (log: {
+    member_id: string;
+    member_name: string;
+    type: 'Pre-registration' | 'Actual';
+    method: 'QR' | 'Face';
+    timestamp: Date;
+}) => {
     const { data, error } = await supabase
         .from('attendance_logs')
         .insert({
