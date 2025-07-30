@@ -28,23 +28,29 @@ import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
 
 
-const getNextSunday = () => {
-    const today = new Date();
-    const day = today.getDay();
-    const nextSunday = new Date(today);
-    nextSunday.setDate(today.getDate() + (7 - day) % 7);
-    nextSunday.setHours(9,0,0,0);
+const getNextSunday = (from = new Date()) => {
+    const date = new Date(from);
+    const day = date.getDay();
+    const nextSunday = new Date(date);
+    nextSunday.setDate(date.getDate() + (7 - day) % 7);
+    if(day === 0 && from.getTime() > date.getTime()){ // if today is sunday but time has passed
+         nextSunday.setDate(date.getDate() + 7);
+    }
+    nextSunday.setHours(9, 0, 0, 0);
     return nextSunday;
-}
+};
+
 
 const getPreviousTuesday = (fromDate: Date) => {
     const date = new Date(fromDate);
-    const day = date.getDay();
+    const day = date.getDay(); // Sunday is 0, Tuesday is 2
     const prevTuesday = new Date(date);
+    // Go back to the previous Tuesday. If today is Sunday (0), go back 5 days. If Monday (1), 6 days. If Tuesday (2), 0 days.
     prevTuesday.setDate(date.getDate() - (day < 2 ? day + 5 : day - 2));
-    prevTuesday.setHours(0,0,0,0);
+    prevTuesday.setHours(0, 0, 0, 0);
     return prevTuesday;
-}
+};
+
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -450,73 +456,85 @@ const FaceCheckinTab = () => {
 export default function CheckInPage() {
     const [isMounted, setIsMounted] = useState(false);
     
-    const [eventDate, setEventDate] = useState<Date>(() => getNextSunday());
-    const [preRegStartDate, setPreRegStartDate] = useState<Date>(() => getPreviousTuesday(getNextSunday()));
-    const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
+    // State for dates
+    const [eventDate, setEventDate] = useState<Date>(new Date());
+    const [preRegStartDate, setPreRegStartDate] = useState<Date>(new Date());
 
+    // State for manual overrides
+    const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
+    
+    // State for popovers and temporary date selections
     const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
     const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
-
     const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
     const [tempEventDate, setTempEventDate] = useState<Date | undefined>(eventDate);
 
+    // Effect for initializing and managing dates from localStorage
     useEffect(() => {
         setIsMounted(true);
-        const storedEventDate = localStorage.getItem('eventDate');
-        const storedPreRegDate = localStorage.getItem('preRegStartDate');
-        const storedManualSet = localStorage.getItem('isPreRegDateManuallySet');
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const storedEventDateStr = localStorage.getItem('eventDate');
+        const storedPreRegDateStr = localStorage.getItem('preRegStartDate');
+        const storedManualSetStr = localStorage.getItem('isPreRegDateManuallySet');
         
-        const initialEventDate = storedEventDate ? new Date(storedEventDate) : getNextSunday();
-        setEventDate(initialEventDate);
-
-        const manualSet = storedManualSet ? JSON.parse(storedManualSet) : false;
-        setIsPreRegDateManuallySet(manualSet);
-
-        if (manualSet && storedPreRegDate) {
-            setPreRegStartDate(new Date(storedPreRegDate));
+        let currentEventDate = storedEventDateStr ? new Date(storedEventDateStr) : getNextSunday();
+        
+        // Automatic Weekly Cycle Logic
+        if (today > currentEventDate) {
+            // If the stored event date is in the past, reset to the next cycle
+            currentEventDate = getNextSunday();
+            localStorage.setItem('eventDate', currentEventDate.toISOString());
+            localStorage.removeItem('preRegStartDate'); // Clear old override
+            localStorage.removeItem('isPreRegDateManuallySet'); // Clear override flag
+            setEventDate(currentEventDate);
+            setPreRegStartDate(getPreviousTuesday(currentEventDate));
+            setIsPreRegDateManuallySet(false);
         } else {
-            setPreRegStartDate(getPreviousTuesday(initialEventDate));
-        }
+            // Event date is still valid, use stored values
+            const manualSet = storedManualSetStr ? JSON.parse(storedManualSetStr) : false;
+            setIsPreRegDateManuallySet(manualSet);
+            setEventDate(currentEventDate);
 
+            if (manualSet && storedPreRegDateStr) {
+                setPreRegStartDate(new Date(storedPreRegDateStr));
+            } else {
+                setPreRegStartDate(getPreviousTuesday(currentEventDate));
+            }
+        }
     }, []);
 
+    // Save changes to localStorage whenever dates are updated
     useEffect(() => {
         if (isMounted) {
             localStorage.setItem('eventDate', eventDate.toISOString());
-            if (!isPreRegDateManuallySet) {
-                 const newPreRegDate = getPreviousTuesday(eventDate);
-                 setPreRegStartDate(newPreRegDate);
-            }
-        }
-    }, [eventDate, isMounted, isPreRegDateManuallySet]);
-
-    useEffect(() => {
-        if (isMounted) {
             localStorage.setItem('preRegStartDate', preRegStartDate.toISOString());
-        }
-    }, [preRegStartDate, isMounted]);
-    
-    useEffect(() => {
-        if (isMounted) {
             localStorage.setItem('isPreRegDateManuallySet', JSON.stringify(isPreRegDateManuallySet));
         }
-    }, [isPreRegDateManuallySet, isMounted]);
-    
+    }, [eventDate, preRegStartDate, isPreRegDateManuallySet, isMounted]);
+
+    // Handlers for applying date changes from popovers
     const handlePreRegApply = () => {
         if (tempPreRegDate) {
             setPreRegStartDate(tempPreRegDate);
-            setIsPreRegDateManuallySet(true);
+            setIsPreRegDateManuallySet(true); // Mark as manual override
         }
         setPreRegPopoverOpen(false);
-    }
+    };
 
     const handleEventDateApply = () => {
         if (tempEventDate) {
             setEventDate(tempEventDate);
+            // If event date changes, recalculate pre-reg date only if it wasn't manually set
+            if (!isPreRegDateManuallySet) {
+                setPreRegStartDate(getPreviousTuesday(tempEventDate));
+            }
         }
         setEventPopoverOpen(false);
-    }
+    };
 
+    // Sync temporary dates in popovers with main state when opened
     useEffect(() => {
         setTempPreRegDate(preRegStartDate);
     }, [preRegStartDate, preRegPopoverOpen]);
@@ -525,8 +543,9 @@ export default function CheckInPage() {
         setTempEventDate(eventDate);
     }, [eventDate, eventPopoverOpen]);
 
+
     if (!isMounted) {
-        return null;
+        return null; // Render nothing until client-side hydration is complete
     }
 
   return (
