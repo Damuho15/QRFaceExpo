@@ -482,6 +482,15 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
         try {
             const result = await recognizeFace({ imageDataUri });
             if (result.matchFound && result.member) {
+                 if (!result.member.id) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Check-in Failed',
+                        description: 'Recognized member is missing a valid ID.',
+                    });
+                    setIsProcessing(false);
+                    return;
+                }
                 await addAttendanceLog({
                     member_id: result.member.id,
                     member_name: result.member.fullName,
