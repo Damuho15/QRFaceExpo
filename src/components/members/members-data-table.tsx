@@ -33,17 +33,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import MemberDialog from './member-dialog';
 import BatchAddDialog from './batch-add-dialog';
+import { Skeleton } from '../ui/skeleton';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onAction: () => void;
+  isLoading: boolean;
 }
 
 export default function MembersDataTable<TData, TValue>({
   columns,
   data,
-  onAction
+  onAction,
+  isLoading
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -72,9 +75,6 @@ export default function MembersDataTable<TData, TValue>({
     }
   });
 
-  // This is the correct way to handle debounced filtering.
-  // We use local state for the input fields and then update the table state
-  // in a useEffect hook with a timeout.
   const [fullNameFilter, setFullNameFilter] = React.useState('');
   const [nicknameFilter, setNicknameFilter] = React.useState('');
 
@@ -145,7 +145,17 @@ export default function MembersDataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={`skeleton-${i}`}>
+                        {columns.map((column, j) => (
+                            <TableCell key={`skeleton-cell-${i}-${j}`}>
+                                <Skeleton className="h-8 w-full" />
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
