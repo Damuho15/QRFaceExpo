@@ -81,7 +81,7 @@ export const columns: ColumnDef<Member>[] = [
     header: 'Birthday',
     cell: ({ row }) => {
       const birthday = row.original.birthday;
-      return birthday ? format(new Date(birthday), 'PPP') : 'N/A';
+      return birthday ? format(new Date(birthday), 'MM-dd-yyyy') : 'N/A';
     }
   },
   {
@@ -89,7 +89,7 @@ export const columns: ColumnDef<Member>[] = [
     header: 'Wedding Anniversary',
      cell: ({ row }) => {
       const anniversary = row.original.weddingAnniversary;
-      return anniversary ? format(new Date(anniversary), 'PPP') : 'N/A';
+      return anniversary ? format(new Date(anniversary), 'MM-dd-yyyy') : 'N/A';
     }
   },
   {
