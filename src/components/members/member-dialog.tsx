@@ -62,6 +62,26 @@ interface MemberDialogProps {
   children?: React.ReactNode;
 }
 
+/**
+ * Safely parses a 'YYYY-MM-DD' string into a Date object in UTC.
+ * This prevents local timezone from shifting the date.
+ * @param dateString The date string to parse.
+ * @returns A Date object or null if the string is invalid.
+ */
+const parseDateStringAsUtc = (dateString: string | null | undefined): Date | null => {
+  if (!dateString) return null;
+  const parts = dateString.split('-');
+  if (parts.length !== 3) return null;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JS
+  const day = parseInt(parts[2], 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+
+  return new Date(Date.UTC(year, month, day));
+};
+
 export default function MemberDialog({
   mode,
   memberToEdit,
@@ -93,16 +113,13 @@ export default function MemberDialog({
 
   useEffect(() => {
     if (open && isEditMode && memberToEdit) {
-      // When opening in edit mode, parse the string dates from the DB
-      // into Date objects for the form and the date picker.
-      // Appending T00:00:00 treats the date as local time and avoids timezone shifts.
       form.reset({
         fullName: memberToEdit.fullName || '',
         nickname: memberToEdit.nickname || '',
         email: memberToEdit.email || '',
         phone: memberToEdit.phone || '',
-        birthday: memberToEdit.birthday ? new Date(`${memberToEdit.birthday}T00:00:00`) : undefined,
-        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(`${memberToEdit.weddingAnniversary}T00:00:00`) : null,
+        birthday: parseDateStringAsUtc(memberToEdit.birthday) || undefined,
+        weddingAnniversary: parseDateStringAsUtc(memberToEdit.weddingAnniversary),
         ministries: memberToEdit.ministries || '',
         lg: memberToEdit.lg || '',
         picture: null,
@@ -438,5 +455,3 @@ export default function MemberDialog({
     </Dialog>
   );
 }
-
-    
