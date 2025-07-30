@@ -105,7 +105,13 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
     useEffect(() => {
         const getCameraPermission = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 } 
+                    } 
+                });
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                 }
