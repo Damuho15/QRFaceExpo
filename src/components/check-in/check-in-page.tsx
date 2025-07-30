@@ -50,18 +50,14 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
 const getNextSunday = (from: Date): Date => {
     const date = new Date(from);
-    const day = date.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
-    const diff = (7 - day) % 7;
-    date.setUTCDate(date.getUTCDate() + (diff === 0 ? 7 : diff)); // If today is Sunday, get next Sunday
+    date.setUTCDate(date.getUTCDate() + (7 - date.getUTCDay()) % 7);
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
     const date = new Date(from); // from is a Sunday
     const day = date.getUTCDay(); // Sunday is 0
-    // Days to subtract to get to the previous Tuesday (day 2)
-    // If from is Sunday (0), we subtract 5 days. (0 - 2 + 7) mod 7 = 5
-    const diff = (day + 5) % 7; 
+    const diff = (day + 5) % 7;
     date.setUTCDate(date.getUTCDate() - diff);
     return date;
 };
@@ -591,17 +587,19 @@ export default function CheckInPage() {
                 Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
             </CardDescription>
         </CardHeader>
-        {isLoading || !tempEventDate || !tempPreRegStartDate ? (
-            <CardContent className="grid gap-4 md:grid-cols-2">
-                <div className="flex flex-col space-y-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="flex flex-col space-y-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-        </CardContent>
+        {isLoading ? (
+             <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="flex flex-col space-y-2">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                </div>
+            </CardContent>
         ) : (
             <>
                 <CardContent className="grid gap-6 md:grid-cols-2">
@@ -609,7 +607,7 @@ export default function CheckInPage() {
                             <Label>Pre-registration Start Date</Label>
                             <Input
                             type="date"
-                            value={format(tempPreRegStartDate, 'yyyy-MM-dd')}
+                            value={tempPreRegStartDate ? format(tempPreRegStartDate, 'yyyy-MM-dd') : ''}
                             onChange={onPreRegDateChange}
                             className="w-full"
                             disabled={isSaving}
@@ -619,21 +617,21 @@ export default function CheckInPage() {
                             <Label>Event Date (Sunday @ 9:00 AM)</Label>
                             <Input
                             type="date"
-                            value={format(tempEventDate, 'yyyy-MM-dd')}
+                            value={tempEventDate ? format(tempEventDate, 'yyyy-MM-dd') : ''}
                             onChange={onEventDateChange}
                             className="w-full"
                             disabled={isSaving}
                             />
                     </div>
                 </CardContent>
-                <CardFooter>
-                    {areDatesChanged && (
+                {areDatesChanged && (
+                    <CardFooter>
                         <Button onClick={onApplyChanges} disabled={isSaving}>
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                             Apply Changes
                         </Button>
-                    )}
-                </CardFooter>
+                    </CardFooter>
+                )}
             </>
         )}
     </Card>
@@ -644,16 +642,45 @@ export default function CheckInPage() {
           <TabsTrigger value="face">Face Recognition</TabsTrigger>
         </TabsList>
         <TabsContent value="qr">
-            {eventDate && preRegStartDate && !isLoading ? (
-                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
+            {isLoading || !eventDate || !preRegStartDate ? (
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex border-b">
+                            <Skeleton className="h-10 flex-1 rounded-none" />
+                            <Skeleton className="h-10 flex-1 rounded-none" />
+                        </div>
+                        <div className="pt-6">
+                            <Skeleton className="w-full aspect-video rounded-lg" />
+                        </div>
+                    </CardContent>
+                </Card>
             ) : (
-                <Card><CardHeader><CardTitle>Loading Check-in...</CardTitle></CardHeader><CardContent><Skeleton className="h-64 w-full" /></CardContent></Card>
+                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
             )}
         </TabsContent>
         <TabsContent value="face">
-            <FaceCheckinTab />
+             {isLoading ? (
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-64" />
+                        <Skeleton className="h-4 w-full" />
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <Skeleton className="w-full aspect-video rounded-lg" />
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                </Card>
+             ) : (
+                <FaceCheckinTab />
+             )}
         </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+    
