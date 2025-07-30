@@ -72,7 +72,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     const [isScanning, setIsScanning] = useState(true);
 
     const handleCheckIn = useCallback(async (qrData: string) => {
-        setIsScanning(false);
+        setIsScanning(false); // Stop scanning to show result
         const scanTime = new Date();
         const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
     
@@ -124,6 +124,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
             });
         }
         
+        // Re-enable scanning after a delay
         setTimeout(() => {
             setIsScanning(true);
             setScanResult(null);
@@ -179,14 +180,18 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
 
                     if (code) {
                         handleCheckIn(code.data);
-                        return; // Stop scanning once a code is found
+                        // No need to request another frame here, handleCheckIn will stop scanning.
+                        return; 
                     }
                 }
             }
-            animationFrameId = requestAnimationFrame(tick);
+            // Request the next frame if still scanning
+            if (isScanning) {
+                 animationFrameId = requestAnimationFrame(tick);
+            }
         };
 
-        if (hasCameraPermission) {
+        if (hasCameraPermission && isScanning) {
             animationFrameId = requestAnimationFrame(tick);
         }
 
@@ -790,6 +795,8 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
 
     
 
