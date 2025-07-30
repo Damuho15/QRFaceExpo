@@ -90,7 +90,7 @@ export default function MemberDialog({
     },
   });
 
-  useEffect(() => {
+   useEffect(() => {
     if (open && isEditMode && memberToEdit) {
       form.reset({
         fullName: memberToEdit.fullName || '',
@@ -126,7 +126,7 @@ export default function MemberDialog({
     setIsSubmitting(true);
     
     try {
-        let pictureUrlToSave = memberToEdit?.pictureUrl || null;
+        let pictureUrlToSave = isEditMode ? memberToEdit?.pictureUrl : null;
         if (data.picture && data.picture instanceof File) {
             pictureUrlToSave = await uploadMemberPicture(data.picture);
             if (!pictureUrlToSave) {
@@ -135,7 +135,20 @@ export default function MemberDialog({
         }
         
         if (isEditMode && memberToEdit) {
-            const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
+            const updatePayload = {
+                fullName: data.fullName,
+                nickname: data.nickname || null,
+                email: data.email || null,
+                phone: data.phone || null,
+                birthday: new Date(data.birthday).toISOString(),
+                weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary).toISOString() : null,
+                pictureUrl: pictureUrlToSave,
+                ministries: data.ministries || null,
+                lg: data.lg || null,
+                qrCodePayload: data.fullName,
+            };
+
+            const result = await updateMember(memberToEdit.id, updatePayload);
             toast({
                 title: 'Member Updated',
                 description: `${result.fullName} has been successfully updated.`,
@@ -144,6 +157,7 @@ export default function MemberDialog({
             setOpen(false);
 
         } else {
+             // This is the Add Member logic, which is working correctly.
             const result = await addMember(data, pictureUrlToSave);
             toast({
                 title: 'Member Added',

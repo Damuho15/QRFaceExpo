@@ -137,30 +137,14 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
 
 /**
  * Updates an existing member in the database.
- * This function is now the single source of truth for creating the payload.
- * It will throw an error on failure with the database message.
  * @param id The ID of the member to update.
- * @param formData The raw data from the react-hook-form.
- * @param pictureUrl The new URL of the uploaded picture, or the existing one.
+ * @param payload The pre-constructed, validated data payload from the form.
  * @returns The updated Member object.
  */
-export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
-    const safePayload = {
-        fullName: formData.fullName,
-        nickname: formData.nickname || null,
-        email: formData.email || null,
-        phone: formData.phone || null,
-        birthday: new Date(formData.birthday).toISOString(),
-        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
-        pictureUrl: pictureUrl,
-        ministries: formData.ministries || null,
-        lg: formData.lg || null,
-        qrCodePayload: formData.fullName,
-    };
-
+export const updateMember = async (id: string, payload: Omit<Member, 'id' | 'birthday' | 'weddingAnniversary'> & { birthday: string; weddingAnniversary: string | null; }): Promise<Member> => {
     const { data, error } = await supabase
         .from('members')
-        .update(safePayload)
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
