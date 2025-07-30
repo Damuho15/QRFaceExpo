@@ -23,24 +23,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type NewMember = Omit<Member, 'id' | 'qrCodePayload'> & { qrCodePayload?: string };
 
-const parseDate = (date: any): Date | null => {
-    if (date instanceof Date && !isNaN(date.getTime())) {
-        return date;
-    }
-    if (typeof date === 'string') {
-        const parsedDate = new Date(date);
-        if (!isNaN(parsedDate.getTime())) {
-            return parsedDate;
-        }
-    }
-    if (typeof date === 'number') {
-        // Handle Excel's numeric date format.
-        const parsedDate = new Date(Math.round((date - 25569) * 86400 * 1000));
-        if (!isNaN(parsedDate.getTime())) {
-            return parsedDate;
-        }
-    }
-    return null;
+const isValidDate = (date: any): date is Date => {
+    return date instanceof Date && !isNaN(date.getTime());
 }
 
 
@@ -65,15 +49,50 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
-          const invalidRows: number[] = [];
-          const members: NewMember[] = json.map((row, index) => {
-            const birthday = parseDate(row.Birthday);
-            const weddingAnniversary = parseDate(row.WeddingAnniversary);
+          if (json.length < 2) {
+             toast({
+                variant: 'destructive',
+                title: 'Empty File',
+                description: 'The uploaded file appears to be empty or has no data rows.',
+            });
+            resetState();
+            return;
+          }
 
-            if (!row.FullName || !row.Email || !birthday) {
-                invalidRows.push(index + 2); // Excel rows are 1-based, and we have a header
+          const header: string[] = json[0];
+          const rows = json.slice(1);
+          
+          const validationErrors: string[] = [];
+
+          const members: NewMember[] = rows.map((rowArray, index) => {
+            const row: any = {};
+            header.forEach((h, i) => {
+                row[h] = rowArray[i];
+            });
+
+            const rowErrors: string[] = [];
+            
+            if (!row.FullName) {
+                rowErrors.push('FullName is missing');
+            }
+            if (!row.Email) {
+                rowErrors.push('Email is missing');
+            }
+             if (!row.Birthday) {
+                rowErrors.push('Birthday is missing');
+            } else if (!isValidDate(row.Birthday)) {
+                rowErrors.push('Birthday is not a valid date');
+            }
+            
+            if(row.WeddingAnniversary && !isValidDate(row.WeddingAnniversary)) {
+                rowErrors.push('WeddingAnniversary is not a valid date');
+            }
+
+            if (rowErrors.length > 0) {
+                 // Excel rows are 1-based, +1 for header
+                validationErrors.push(`Row ${index + 2}: ${rowErrors.join(', ')}`);
             }
 
             return {
@@ -81,17 +100,24 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
               nickname: row.Nickname ? String(row.Nickname) : '',
               email: String(row.Email || ''),
               phone: row.Phone ? String(row.Phone) : '',
-              birthday: birthday!,
-              weddingAnniversary: weddingAnniversary,
+              birthday: row.Birthday,
+              weddingAnniversary: row.WeddingAnniversary,
             };
-          }).filter(member => member.fullName && member.email && member.birthday);
+          }).filter((_, index) => validationErrors.find(err => err.startsWith(`Row ${index + 2}`)) === undefined);
 
 
-          if (invalidRows.length > 0) {
+          if (validationErrors.length > 0) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid Data Found',
-                description: `Please check rows: ${invalidRows.join(', ')}. Ensure FullName, Email, and a valid Birthday are provided.`,
+                description: (
+                    <div className="flex flex-col">
+                        <p>Please check the following errors in your file:</p>
+                        <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
+                            <code className="text-white">{validationErrors.join('\n')}</code>
+                        </pre>
+                    </div>
+                ),
                 duration: 9000,
             });
             resetState();
@@ -104,7 +130,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           toast({
             variant: 'destructive',
             title: 'File Parsing Failed',
-            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has columns: FullName, Email, Birthday, and optionally WeddingAnniversary, Nickname and Phone.',
+            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has the correct columns.',
           });
           resetState();
         }
@@ -219,8 +245,8 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                     <TableRow key={index}>
                                         <TableCell className="font-medium">{member.fullName}</TableCell>
                                         <TableCell>{member.email}</TableCell>
-                                        <TableCell>{member.birthday.toLocaleDateString()}</TableCell>
-                                        <TableCell>{member.weddingAnniversary ? member.weddingAnniversary.toLocaleDateString() : 'N/A'}</TableCell>
+                                        <TableCell>{isValidDate(member.birthday) ? member.birthday.toLocaleDateString() : 'Invalid Date'}</TableCell>
+                                        <TableCell>{member.weddingAnniversary && isValidDate(member.weddingAnniversary) ? member.weddingAnniversary.toLocaleDateString() : 'N/A'}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
