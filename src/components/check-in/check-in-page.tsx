@@ -133,7 +133,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     useEffect(() => {
         const getCameraPermission = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                 }
@@ -483,13 +483,13 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 const actualMember = members.find(m => m.id === result.member.id);
 
                 if (actualMember) {
-                    // await addAttendanceLog({
-                    //     member_id: actualMember.id,
-                    //     member_name: actualMember.fullName,
-                    //     type: registrationType,
-                    //     method: 'Face',
-                    //     timestamp: new Date()
-                    // });
+                    await addAttendanceLog({
+                        member_id: actualMember.id,
+                        member_name: actualMember.fullName,
+                        type: registrationType,
+                        method: 'Face',
+                        timestamp: new Date()
+                    });
                     toast({
                         title: 'Check-in Successful!',
                         description: `Welcome, ${actualMember.fullName}!`,
