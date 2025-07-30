@@ -316,7 +316,49 @@ const QRCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegS
 
 const FaceCheckinTab = () => {
     const { toast } = useToast();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+
+     useEffect(() => {
+        const getCameraPermission = async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({video: true});
+            setHasCameraPermission(true);
+
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+            }
+          } catch (error) {
+            console.error('Error accessing camera:', error);
+            setHasCameraPermission(false);
+            toast({
+              variant: 'destructive',
+              title: 'Camera Access Denied',
+              description: 'Please enable camera permissions in your browser settings to use this app.',
+            });
+          }
+        };
+
+        getCameraPermission();
+        
+        return () => {
+             if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+      }, [toast]);
+
     const simulateCheckIn = (success: boolean) => {
+        if (!hasCameraPermission) {
+            toast({
+                variant: 'destructive',
+                title: 'Cannot Check-in',
+                description: 'Camera access is required for face recognition.',
+            });
+            return;
+        }
+
         toast({
             title: 'Simulating Face Recognition...',
             description: 'Matching face with database.',
@@ -345,9 +387,23 @@ const FaceCheckinTab = () => {
                 <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <Camera className="h-16 w-16 text-muted-foreground" />
+                 <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                    {hasCameraPermission === false && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                             <Camera className="h-16 w-16 text-muted-foreground" />
+                             <p className="mt-2 text-muted-foreground">Camera not available</p>
+                        </div>
+                    )}
                 </div>
+                 {hasCameraPermission === false && (
+                    <Alert variant="destructive">
+                        <AlertTitle>Camera Access Required</AlertTitle>
+                        <AlertDescription>
+                            Please allow camera access in your browser settings to use this feature.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                     <Button variant="outline" onClick={() => simulateCheckIn(true)}>
                         <UserCheck className="mr-2 h-4 w-4" /> Simulate Success
