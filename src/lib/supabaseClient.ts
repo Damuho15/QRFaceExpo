@@ -33,7 +33,6 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         .from('members')
         .insert([
             {
-                id: `mem_${Date.now()}`,
                 ...member,
                 birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
             },
@@ -50,13 +49,14 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 }
 
 export const updateMember = async (member: Member): Promise<Member | null> => {
+    const { id, ...memberData } = member;
     const { data, error } = await supabase
         .from('members')
         .update({
-            ...member,
-            birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
+            ...memberData,
+            birthday: memberData.birthday.toISOString().split('T')[0], // Format date for DB
         })
-        .eq('id', member.id)
+        .eq('id', id)
         .select()
         .single();
 

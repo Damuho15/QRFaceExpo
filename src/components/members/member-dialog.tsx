@@ -134,7 +134,7 @@ export default function MemberDialog({
                 });
             }
         } else {
-            const memberData = {
+            const memberData: Omit<Member, 'id'> = {
                 ...data,
                 nickname: data.nickname || '',
                 qrCodePayload: data.fullName,
