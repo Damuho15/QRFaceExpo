@@ -48,9 +48,9 @@ export const columns: ColumnDef<Member>[] = [
         const member = row.original;
         const fallback = member.fullName ? member.fullName.charAt(0) : '';
         return (
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 rounded-md">
                 <AvatarImage src={member.pictureUrl || ''} alt={member.fullName} data-ai-hint="member picture" className="object-cover" />
-                <AvatarFallback>{fallback}</AvatarFallback>
+                <AvatarFallback className="rounded-md">{fallback}</AvatarFallback>
             </Avatar>
         )
     },
