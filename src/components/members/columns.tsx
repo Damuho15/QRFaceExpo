@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteMember } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 
 const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const rowValue = row.getValue(columnId) as string;
