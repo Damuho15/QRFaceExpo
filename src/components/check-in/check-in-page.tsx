@@ -29,20 +29,24 @@ import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 
 
-const getNextSunday = (from = new Date()) => {
-    const date = new Date(from);
-    date.setUTCHours(0, 0, 0, 0);
-    const day = date.getUTCDay(); // 0 is Sunday
-    const daysToAdd = day === 0 ? 7 : 7 - day;
-    date.setUTCDate(date.getUTCDate() + daysToAdd);
+const getNextSunday = (from: Date): Date => {
+    const date = new Date(from.valueOf());
+    date.setUTCDate(date.getUTCDate() + ((7 - date.getUTCDay()) % 7 || 7));
     return date;
 };
 
-const getPreviousTuesday = (fromDate: Date) => {
-    const date = new Date(fromDate); // fromDate is always a Sunday
-    date.setUTCHours(0, 0, 0, 0);
-    const daysToSubtract = 5; // Sunday (0) - 5 days -> Tuesday.
-    date.setUTCDate(date.getUTCDate() - daysToSubtract);
+const getPreviousTuesday = (from: Date): Date => {
+    const date = new Date(from.valueOf());
+    const day = date.getUTCDay();
+    // Sunday is 0, Tuesday is 2. We want to subtract days to get to the previous Tuesday.
+    // If today is Sunday (0), subtract 5 days.
+    // If today is Monday (1), subtract 6 days.
+    // If today is Tuesday (2), subtract 7 days to get previous week's.
+    // If today is Wednesday(3), subtract 1 day.
+    // The formula is (day + 7 - 2) % 7 + 1, but we need previous, so lets make it simpler
+    const daysToSubtract = (day + 7 - 2) % 7;
+    // from is always a sunday
+    date.setUTCDate(date.getUTCDate() - 5);
     return date;
 };
 
@@ -475,7 +479,8 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                const today = new Date('2026-01-01');
+                 // Hardcoded for testing rollover
+                const today = new Date('2026-01-01T12:00:00Z');
                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
