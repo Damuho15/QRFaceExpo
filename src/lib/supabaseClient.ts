@@ -83,9 +83,12 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
 
 const parseSupabaseDate = (dateString: string | null): Date | null => {
     if (!dateString) return null;
-    const date = new Date(dateString);
-    const timezoneOffset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() + timezoneOffset);
+    // The date from Supabase is a string like '2025-03-04'. 
+    // new Date() will parse this as UTC midnight.
+    // To prevent timezone shifts, we construct the date from its parts.
+    const parts = dateString.split('-').map(part => parseInt(part, 10));
+    // new Date(year, monthIndex, day)
+    return new Date(parts[0], parts[1] - 1, parts[2]);
 }
 
 export const getMembers = async (): Promise<Member[]> => {
