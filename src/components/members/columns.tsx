@@ -99,7 +99,6 @@ export const columns: ColumnDef<Member>[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem asChild>
                 <MemberDialog
                     mode="edit"
                     memberToEdit={member}
@@ -107,7 +106,6 @@ export const columns: ColumnDef<Member>[] = [
                 >
                     <button className="w-full text-left">Edit</button>
                 </MemberDialog>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>View QR Code</DropdownMenuItem>
               <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>

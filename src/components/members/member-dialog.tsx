@@ -31,12 +31,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, PlusCircle } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { addMember, updateMember } from '@/lib/supabaseClient';
 
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -54,18 +55,21 @@ interface MemberDialogProps {
   mode: 'add' | 'edit';
   memberToEdit?: Member;
   onSuccess?: () => void;
+  children?: React.ReactNode;
 }
 
 export default function MemberDialog({
   mode,
   memberToEdit,
   onSuccess,
+  children,
 }: MemberDialogProps) {
   const [open, setOpen] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [newMember, setNewMember] = useState<Member | null>(null);
   const { toast } = useToast();
   const isEditMode = mode === 'edit';
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
@@ -75,7 +79,7 @@ export default function MemberDialog({
           nickname: memberToEdit.nickname,
           email: memberToEdit.email,
           phone: memberToEdit.phone,
-          birthday: memberToEdit.birthday,
+          birthday: new Date(memberToEdit.birthday),
         }
       : {
           fullName: '',
@@ -88,50 +92,85 @@ export default function MemberDialog({
 
   React.useEffect(() => {
     if (open && isEditMode && memberToEdit) {
-      form.reset(memberToEdit)
+      form.reset({
+        ...memberToEdit,
+        birthday: new Date(memberToEdit.birthday),
+      })
     }
     if (!open) {
       setTimeout(() => {
         form.reset();
         setShowQr(false);
         setNewMember(null);
+        setIsSubmitting(false);
       }, 300);
     }
   }, [open, isEditMode, memberToEdit, form]);
 
-  const onSubmit = (data: MemberFormValues) => {
-    // In a real app, you would send this to your backend API.
-    const memberData: Member = {
-      id: isEditMode && memberToEdit ? memberToEdit.id : `mem_${Date.now()}`,
-      ...data,
-      nickname: data.nickname || '',
-      qrCodePayload: data.fullName,
-    };
+  const onSubmit = async (data: MemberFormValues) => {
+    setIsSubmitting(true);
     
-    // Simulate API call
-    console.log('Submitting member data:', memberData);
-
-    toast({
-      title: isEditMode ? 'Member Updated' : 'Member Added',
-      description: `${data.fullName} has been successfully ${
-        isEditMode ? 'updated' : 'added'
-      }.`,
-    });
-    
-    onSuccess?.();
-
-    if (isEditMode) {
-      setOpen(false);
-    } else {
-      setNewMember(memberData);
-      setShowQr(true);
+    try {
+        if (isEditMode && memberToEdit) {
+            const memberData: Member = {
+                id: memberToEdit.id,
+                ...data,
+                nickname: data.nickname || '',
+                qrCodePayload: data.fullName,
+            };
+            const result = await updateMember(memberData);
+            if (result) {
+                toast({
+                    title: 'Member Updated',
+                    description: `${data.fullName} has been successfully updated.`,
+                });
+                onSuccess?.();
+                setOpen(false);
+            } else {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Update Failed',
+                    description: 'Could not update the member. Please try again.',
+                });
+            }
+        } else {
+            const memberData = {
+                ...data,
+                nickname: data.nickname || '',
+                qrCodePayload: data.fullName,
+            };
+            const result = await addMember(memberData);
+            if (result) {
+                toast({
+                    title: 'Member Added',
+                    description: `${data.fullName} has been successfully added.`,
+                });
+                setNewMember(result);
+                setShowQr(true);
+                onSuccess?.();
+            } else {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Add Failed',
+                    description: 'Could not add the member. Please try again.',
+                });
+            }
+        }
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'An Error Occurred',
+            description: 'Something went wrong. Please try again.',
+        });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   const TriggerComponent = isEditMode ? (
-    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpen(true); }}>
-      Edit
-    </DropdownMenuItem>
+    <div onClick={() => setOpen(true)} className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+        {children}
+    </div>
   ) : (
     <DialogTrigger asChild>
       <Button>
@@ -145,7 +184,7 @@ export default function MemberDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {TriggerComponent}
       <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
-          if (showQr) {
+          if (showQr || isSubmitting) {
             e.preventDefault();
           }
       }}>
@@ -168,7 +207,7 @@ export default function MemberDialog({
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="John Doe" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -181,7 +220,7 @@ export default function MemberDialog({
                     <FormItem>
                       <FormLabel>Nickname (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Johnny" {...field} />
+                        <Input placeholder="Johnny" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -202,6 +241,7 @@ export default function MemberDialog({
                                 "w-full pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
+                              disabled={isSubmitting}
                             >
                               {field.value ? (
                                 format(field.value, "PPP")
@@ -235,7 +275,7 @@ export default function MemberDialog({
                     <FormItem>
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
-                        <Input placeholder="member@example.com" {...field} />
+                        <Input placeholder="member@example.com" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -248,14 +288,17 @@ export default function MemberDialog({
                     <FormItem>
                       <FormLabel>Telephone Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="123-456-7890" {...field} />
+                        <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit">{isEditMode ? 'Save Changes' : 'Create Member'}</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isEditMode ? 'Save Changes' : 'Create Member'}
+                  </Button>
                 </DialogFooter>
               </form>
             </Form>

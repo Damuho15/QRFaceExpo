@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const getMembers = async (): Promise<Member[]> => {
-    const { data, error } = await supabase.from('members').select('*');
+    const { data, error } = await supabase.from('members').select('*').order('fullName', { ascending: true });
 
     if (error) {
         console.error('Error fetching members:', error);
@@ -26,4 +26,44 @@ export const getMembers = async (): Promise<Member[]> => {
         ...member,
         birthday: new Date(member.birthday),
     }));
+};
+
+export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
+    const { data, error } = await supabase
+        .from('members')
+        .insert([
+            {
+                id: `mem_${Date.now()}`,
+                ...member,
+                birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
+            },
+        ])
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error adding member:', error);
+        return null;
+    }
+    
+    return data ? { ...data, birthday: new Date(data.birthday) } : null;
+}
+
+export const updateMember = async (member: Member): Promise<Member | null> => {
+    const { data, error } = await supabase
+        .from('members')
+        .update({
+            ...member,
+            birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
+        })
+        .eq('id', member.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating member:', error);
+        return null;
+    }
+
+    return data ? { ...data, birthday: new Date(data.birthday) } : null;
 };
