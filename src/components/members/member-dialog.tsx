@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { addMember, getMembers, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
+import { addMember, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
 import { ScrollArea } from '../ui/scroll-area';
 
 const memberSchema = z.object({
@@ -80,13 +80,13 @@ export default function MemberDialog({
     defaultValues: isEditMode && memberToEdit
       ? {
           fullName: memberToEdit.fullName,
-          nickname: memberToEdit.nickname,
-          email: memberToEdit.email,
-          phone: memberToEdit.phone,
+          nickname: memberToEdit.nickname || '',
+          email: memberToEdit.email || '',
+          phone: memberToEdit.phone || '',
           birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
           weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
-          ministries: memberToEdit.ministries,
-          lg: memberToEdit.lg,
+          ministries: memberToEdit.ministries || '',
+          lg: memberToEdit.lg || '',
         }
       : {
           fullName: '',
@@ -103,9 +103,14 @@ export default function MemberDialog({
   React.useEffect(() => {
     if (open && isEditMode && memberToEdit) {
       form.reset({
-        ...memberToEdit,
+        fullName: memberToEdit.fullName,
+        nickname: memberToEdit.nickname || '',
+        email: memberToEdit.email || '',
+        phone: memberToEdit.phone || '',
         birthday: new Date(memberToEdit.birthday),
         weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
+        ministries: memberToEdit.ministries || '',
+        lg: memberToEdit.lg || '',
       });
       setPreviewImage(memberToEdit.pictureUrl || null);
     }
@@ -132,34 +137,11 @@ export default function MemberDialog({
     setIsSubmitting(true);
     
     try {
-        if (!isEditMode) {
-            const existingMembers = await getMembers();
-            const isDuplicate = existingMembers.some(
-                (member) => member.fullName.toLowerCase() === data.fullName.toLowerCase()
-            );
-
-            if (isDuplicate) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Duplicate Member',
-                    description: 'A member with this name already exists.',
-                });
-                setIsSubmitting(false);
-                return;
-            }
-        }
-
         let pictureUrlToSave = memberToEdit?.pictureUrl || null;
         if (data.picture && data.picture instanceof File) {
             pictureUrlToSave = await uploadMemberPicture(data.picture);
             if (!pictureUrlToSave) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Picture Upload Failed',
-                    description: 'Could not upload the member picture. Please try again.',
-                });
-                setIsSubmitting(false);
-                return;
+                throw new Error('Could not upload the member picture. Please try again.');
             }
         }
         
@@ -186,7 +168,7 @@ export default function MemberDialog({
         console.error("Error submitting form", error)
         toast({
             variant: 'destructive',
-            title: 'An Error Occurred',
+            title: isEditMode ? 'Update Failed' : 'Add Failed',
             description: error.message || 'Something went wrong. Please check the console and try again.',
         });
     } finally {
