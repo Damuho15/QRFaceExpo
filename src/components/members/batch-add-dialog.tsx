@@ -44,23 +44,36 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
 
-          const members: NewMember[] = json.map((row) => {
-            // Basic validation
-            if (!row.fullName || !row.email || !row.birthday) {
-              throw new Error('Missing required fields (fullName, email, birthday) in a row.');
+          const invalidRows: number[] = [];
+          const members: NewMember[] = json.map((row, index) => {
+            const birthday = new Date(row.birthday);
+
+            if (!row.fullName || !row.email || !row.birthday || isNaN(birthday.getTime())) {
+                invalidRows.push(index + 2); // Excel rows are 1-based, and we have a header
             }
+
             return {
               fullName: String(row.fullName),
               nickname: row.nickname ? String(row.nickname) : '',
               email: String(row.email),
               phone: row.phone ? String(row.phone) : '',
-              // Excel dates can be tricky, this is a common way to handle them
-              birthday: new Date(row.birthday),
+              birthday: birthday,
               weddingAnniversary: row.weddingAnniversary ? new Date(row.weddingAnniversary) : null,
             };
           });
+
+          if (invalidRows.length > 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Data Found',
+                description: `Please check rows: ${invalidRows.join(', ')}. Ensure fullName, email, and a valid birthday are provided.`,
+                duration: 9000,
+            });
+            resetState();
+            return;
+          }
 
           setParsedMembers(members);
         } catch (error) {
