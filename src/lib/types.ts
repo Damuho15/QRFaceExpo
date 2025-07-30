@@ -2,8 +2,8 @@ export type Member = {
   id: string;
   fullName: string;
   nickname: string;
-  birthday: Date;
-  weddingAnniversary?: Date | null;
+  birthday: string; // Keep as string to prevent timezone issues
+  weddingAnniversary?: string | null; // Keep as string
   email?: string | null;
   phone?: string | null;
   qrCodePayload: string;

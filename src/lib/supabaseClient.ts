@@ -81,16 +81,6 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
     return publicUrl;
 };
 
-const parseSupabaseDate = (dateString: string | null): Date | null => {
-    if (!dateString) return null;
-    // The date from Supabase is a string like '2025-03-04'. 
-    // new Date() will parse this as UTC midnight.
-    // To prevent timezone shifts, we construct the date from its parts.
-    const parts = dateString.split('-').map(part => parseInt(part, 10));
-    // new Date(year, monthIndex, day)
-    return new Date(parts[0], parts[1] - 1, parts[2]);
-}
-
 export const getMembers = async (): Promise<Member[]> => {
     const { data, error } = await supabase
         .from('members')
@@ -102,11 +92,8 @@ export const getMembers = async (): Promise<Member[]> => {
         throw error;
     }
 
-    return data.map((member: any) => ({
-        ...member,
-        birthday: parseSupabaseDate(member.birthday) || new Date(),
-        weddingAnniversary: parseSupabaseDate(member.weddingAnniversary),
-    }));
+    // Keep dates as strings to avoid timezone conversions
+    return data;
 };
 
 /**
@@ -123,8 +110,8 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
         nickname: formData.nickname || null,
         email: formData.email || null,
         phone: formData.phone || null,
-        birthday: new Date(formData.birthday).toISOString(),
-        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
+        birthday: new Date(formData.birthday).toISOString().split('T')[0],
+        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString().split('T')[0] : null,
         pictureUrl: pictureUrl,
         qrCodePayload: formData.fullName,
         ministries: formData.ministries || null,
@@ -142,7 +129,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
         throw error;
     }
     
-    return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
+    return data;
 }
 
 /**
@@ -181,7 +168,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         throw error;
     }
 
-    return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
+    return data;
 };
 
 
@@ -220,8 +207,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
             nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
             email: rawMember.Email ? String(rawMember.Email).trim() : null,
             phone: rawMember.Phone ? String(rawMember.Phone).trim() : null,
-            birthday: birthday.toISOString(),
-            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+            birthday: birthday.toISOString().split('T')[0],
+            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString().split('T')[0] : null,
             qrCodePayload: fullName, // QR Code payload is based on full name.
             ministries: rawMember.Ministries ? String(rawMember.Ministries).trim() : null,
             lg: rawMember.LG ? String(rawMember.LG).trim() : null,
@@ -247,7 +234,5 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     }
     
     // 4. On success, return the data, ensuring dates are converted back for consistency.
-    return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
+    return data ? data : [];
 };
-
-    

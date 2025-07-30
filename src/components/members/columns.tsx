@@ -20,28 +20,21 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import QrCodeDialog from './qr-code-dialog';
 import PictureDialog from './picture-dialog';
 
-const formatDate = (dateValue: string | Date | null | undefined): string => {
+const formatDate = (dateValue: string | null | undefined): string => {
     if (!dateValue) return 'N/A';
     
-    // Convert Date object to 'YYYY-MM-DD' string if needed
-    const dateString = dateValue instanceof Date ? dateValue.toISOString().split('T')[0] : dateValue;
-
+    // Assumes dateValue is a string in 'YYYY-MM-DD' format.
+    // This avoids creating a Date object and triggering timezone conversions.
     try {
-        // Ensure it's a string in the expected format
-        if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
-             // Fallback for unexpected formats, though this shouldn't happen with our data
-             if (dateValue instanceof Date) {
-                return `${String(dateValue.getMonth() + 1).padStart(2, '0')}-${String(dateValue.getDate()).padStart(2, '0')}-${dateValue.getFullYear()}`;
-             }
+        if (typeof dateValue !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
              return 'Invalid Date';
         }
-
-        const [year, month, day] = dateString.substring(0, 10).split('-');
+        const [year, month, day] = dateValue.substring(0, 10).split('-');
         if (!year || !month || !day) return 'Invalid Date';
         
         return `${month}-${day}-${year}`;
     } catch (error) {
-        console.error("Error formatting date:", dateString, error);
+        console.error("Error formatting date string:", dateValue, error);
         return 'Invalid Date';
     }
 };
