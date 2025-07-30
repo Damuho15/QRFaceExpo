@@ -89,7 +89,7 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
         phone: member.phone || null,
         birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
         weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
-        qrCodePayload: member.fullName, // Use fullName as QR code payload
+        qrCodePayload: member.fullName,
         ministries: member.ministries || null,
         lg: member.lg || null,
     }));

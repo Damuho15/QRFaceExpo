@@ -100,12 +100,21 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const headerRow: string[] = json[0].map((h: any) => String(h).trim());
           const headerIndexMap: { [key: string]: number } = {};
           
-          expectedHeaders.forEach(header => {
-            const index = headerRow.findIndex(cell => cell === header);
-            if (index !== -1) {
+          headerRow.forEach((header, index) => {
+            if (expectedHeaders.includes(header)) {
               headerIndexMap[header] = index;
             }
           });
+
+          if (headerIndexMap['FullName'] === undefined || headerIndexMap['Birthday'] === undefined) {
+             toast({
+                variant: 'destructive',
+                title: 'Missing Required Columns',
+                description: 'The uploaded file must contain "FullName" and "Birthday" columns.',
+            });
+            resetState();
+            return;
+          }
 
           const validationErrors: string[] = [];
           const dataRows = json.slice(1);
@@ -130,7 +139,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                 rowErrors.push(`Birthday ('${birthdayValue}') is not a valid date`);
             }
 
-            const weddingAnniversaryValue = row[headerIndexMap['WeddingAnniversary']];
+            const weddingAnniversaryValue = headerIndexMap['WeddingAnniversary'] !== undefined ? row[headerIndexMap['WeddingAnniversary']] : null;
             const weddingAnniversary = weddingAnniversaryValue ? parseDate(weddingAnniversaryValue) : null;
             if(weddingAnniversaryValue && !weddingAnniversary) {
                 rowErrors.push(`WeddingAnniversary ('${weddingAnniversaryValue}') is not a valid date`);
@@ -143,13 +152,13 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
 
             return {
               fullName: String(fullName || ''),
-              nickname: row[headerIndexMap['Nickname']] ? String(row[headerIndexMap['Nickname']]) : '',
-              email: row[headerIndexMap['Email']] ? String(row[headerIndexMap['Email']]) : '',
-              phone: row[headerIndexMap['Phone']] ? String(row[headerIndexMap['Phone']]) : '',
+              nickname: headerIndexMap['Nickname'] !== undefined ? String(row[headerIndexMap['Nickname']] || '') : '',
+              email: headerIndexMap['Email'] !== undefined ? String(row[headerIndexMap['Email']] || '') : '',
+              phone: headerIndexMap['Phone'] !== undefined ? String(row[headerIndexMap['Phone']] || '') : '',
               birthday: birthday!,
               weddingAnniversary: weddingAnniversary,
-              ministries: row[headerIndexMap['Ministries']] ? String(row[headerIndexMap['Ministries']]) : '',
-              lg: row[headerIndexMap['LG']] ? String(row[headerIndexMap['LG']]) : '',
+              ministries: headerIndexMap['Ministries'] !== undefined ? String(row[headerIndexMap['Ministries']] || '') : '',
+              lg: headerIndexMap['LG'] !== undefined ? String(row[headerIndexMap['LG']] || '') : '',
             };
           }).filter(member => member !== null) as NewMember[];
 
@@ -277,8 +286,8 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
-            Upload an Excel file (.xlsx, .xls, .csv) with member data.
-            Ensure your file has columns: `FullName`, `Birthday`, and optionally `Nickname`, `Email`, `Phone`, `WeddingAnniversary`, `Ministries`, and `LG`.
+            Upload an Excel file (.xlsx, .xls, .csv). It must contain `FullName` and `Birthday` columns.
+            Optional columns: `Nickname`, `Email`, `Phone`, `WeddingAnniversary`, `Ministries`, and `LG`.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
