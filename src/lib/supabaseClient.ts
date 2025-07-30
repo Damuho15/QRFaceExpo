@@ -155,8 +155,11 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         pictureUrl: pictureUrl,
         ministries: formData.ministries || null,
         lg: formData.lg || null,
-        qrCodePayload: formData.fullName, // Ensure qrCodePayload is based on the new name
+        qrCodePayload: formData.fullName,
     };
+
+    // TEMPORARY: Log the payload for debugging
+    console.log("UPDATE PAYLOAD SENT TO SUPABASE:", JSON.stringify(safePayload, null, 2));
 
     const { data, error } = await supabase
         .from('members')
@@ -207,8 +210,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
         return {
             fullName: fullName,
             nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
-            email: rawMember.Email ? String(rawMember.Email).trim() : null,
-            phone: rawMember.Phone ? String(rawMember.Phone).trim() : null,
+            email: rawMember.Email ? String(raw.Email).trim() : null,
+            phone: rawMember.Phone ? String(raw.Phone).trim() : null,
             birthday: birthday.toISOString(),
             weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
             qrCodePayload: fullName, // QR Code payload is based on full name.
