@@ -25,14 +25,20 @@ const BUCKET_NAME = 'member-pictures';
 const formatDateForSupabase = (date: Date | string | null | undefined): string | null => {
     if (!date) return null;
     try {
+        // Ensure we are working with a Date object
         const d = new Date(date);
+        
         // Check if the date is valid
         if (isNaN(d.getTime())) {
+            console.error("Invalid date provided to formatDateForSupabase:", date);
             return null;
         }
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        
+        // Use UTC methods to prevent timezone shifts
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        
         return `${year}-${month}-${day}`;
     } catch (error) {
         console.error("Could not format date:", date, error);
@@ -56,9 +62,13 @@ const parseDate = (dateInput: any): Date | null => {
     }
 
     if (typeof dateInput === 'number') {
-        const excelEpoch = new Date(1899, 11, 30);
+        // Handle Excel's serial number date format.
+        // It's the number of days since 1900-01-01, but Excel has a bug where it thinks 1900 is a leap year.
+        // So we subtract 1 for dates after Feb 1900. The standard JS conversion handles this well.
+        const excelEpoch = new Date(1899, 11, 30); // Excel's epoch starts on day 1, which is Dec 31, 1899. JS epoch is day 0.
         const msPerDay = 86400000;
         const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
+        // The excel date is in UTC, we need to adjust for the local timezone offset
         const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
         return !isNaN(adjustedDate.getTime()) ? adjustedDate : null;
@@ -66,7 +76,10 @@ const parseDate = (dateInput: any): Date | null => {
 
     if (typeof dateInput === 'string') {
         const date = new Date(dateInput);
+        // If the string does not contain timezone info, treat it as local time but convert to UTC date parts
         if (isNaN(date.getTime())) return null;
+        // If the date string does not contain 'T' or 'Z', it might be a simple 'YYYY-MM-DD' or 'MM/DD/YYYY'
+        // which JS parses as UTC midnight. To avoid timezone shifting it to the previous day, we need to adjust.
         if (!/T|Z/i.test(dateInput)) {
              return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
         }
@@ -129,7 +142,7 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     
     const { data, error } = await supabase
         .from('members')
-        .insert([memberToInsert])
+        .insert(memberToInsert)
         .select()
         .single();
     
