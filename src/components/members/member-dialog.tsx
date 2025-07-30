@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { addMember, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
+import { addMember, getMembers, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
 import { ScrollArea } from '../ui/scroll-area';
 
 const memberSchema = z.object({
@@ -130,70 +130,88 @@ export default function MemberDialog({
 
   const onSubmit = async (data: MemberFormValues) => {
     setIsSubmitting(true);
-    let pictureUrl = memberToEdit?.pictureUrl || null;
-
+    
     try {
-      // Upload picture if a new one is selected
-      if (data.picture && data.picture instanceof File) {
-        pictureUrl = await uploadMemberPicture(data.picture);
-        if (!pictureUrl) {
-          toast({
-            variant: 'destructive',
-            title: 'Picture Upload Failed',
-            description: 'Could not upload the member picture. Please try again.',
-          });
-          setIsSubmitting(false);
-          return;
+        if (!isEditMode) {
+            const existingMembers = await getMembers();
+            const isDuplicate = existingMembers.some(
+                (member) => member.fullName.toLowerCase() === data.fullName.toLowerCase()
+            );
+
+            if (isDuplicate) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Duplicate Member',
+                    description: 'A member with this name already exists.',
+                });
+                setIsSubmitting(false);
+                return;
+            }
         }
-      }
 
-      const memberPayload = {
-          fullName: data.fullName,
-          nickname: data.nickname || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          birthday: data.birthday,
-          weddingAnniversary: data.weddingAnniversary || null,
-          pictureUrl: pictureUrl,
-          qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
-          ministries: data.ministries || '',
-          lg: data.lg || '',
-      }
+        let pictureUrl = memberToEdit?.pictureUrl || null;
 
-      if (isEditMode && memberToEdit) {
-          const result = await updateMember({ ...memberPayload, id: memberToEdit.id });
-          if (result) {
-              toast({
-                  title: 'Member Updated',
-                  description: `${data.fullName} has been successfully updated.`,
-              });
-              onSuccess?.();
-              setOpen(false);
-          } else {
-               toast({
-                  variant: 'destructive',
-                  title: 'Update Failed',
-                  description: 'Could not update the member. Please try again.',
-              });
-          }
-      } else {
-          const result = await addMember(memberPayload);
-          if (result) {
-              toast({
-                  title: 'Member Added',
-                  description: `${data.fullName} has been successfully added.`,
-              });
-              setNewMember(result);
-              setShowQr(true);
-              onSuccess?.();
-          } else {
-               toast({
-                  variant: 'destructive',
-                  title: 'Add Failed',
-                  description: 'Could not add the member. Please try again.',
-              });
-          }
-      }
+        // Upload picture if a new one is selected
+        if (data.picture && data.picture instanceof File) {
+            pictureUrl = await uploadMemberPicture(data.picture);
+            if (!pictureUrl) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Picture Upload Failed',
+                    description: 'Could not upload the member picture. Please try again.',
+                });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
+        const memberPayload = {
+            fullName: data.fullName,
+            nickname: data.nickname || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            birthday: data.birthday,
+            weddingAnniversary: data.weddingAnniversary || null,
+            pictureUrl: pictureUrl,
+            qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
+            ministries: data.ministries || '',
+            lg: data.lg || '',
+        };
+
+        if (isEditMode && memberToEdit) {
+            const result = await updateMember({ ...memberPayload, id: memberToEdit.id });
+            if (result) {
+                toast({
+                    title: 'Member Updated',
+                    description: `${data.fullName} has been successfully updated.`,
+                });
+                onSuccess?.();
+                setOpen(false);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Update Failed',
+                    description: 'Could not update the member. Please try again.',
+                });
+            }
+        } else {
+            const result = await addMember(memberPayload);
+            if (result) {
+                toast({
+                    title: 'Member Added',
+                    description: `${data.fullName} has been successfully added.`,
+                });
+                setNewMember(result);
+                setShowQr(true);
+                onSuccess?.();
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Add Failed',
+                    description: 'Could not add the member. Please try again.',
+                });
+            }
+        }
     } catch (error) {
         toast({
             variant: 'destructive',
