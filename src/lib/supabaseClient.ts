@@ -1,6 +1,4 @@
 
-'use client';
-
 import { createClient } from '@supabase/supabase-js';
 import type { Member } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
