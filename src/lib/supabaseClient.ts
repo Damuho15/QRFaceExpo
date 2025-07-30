@@ -121,8 +121,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     
     const memberToUpdate = {
         ...memberData,
-        birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+        birthday: memberData.birthday.toISOString(),
+        weddingAnniversary: memberData.weddingAnniversary ? memberData.weddingAnniversary.toISOString() : null,
     };
 
     const { data, error } = await supabase
