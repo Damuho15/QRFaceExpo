@@ -15,34 +15,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const BUCKET_NAME = 'member-pictures';
 
+// This function now correctly handles Excel numeric dates and string dates,
+// ensuring they are parsed into a valid Date object without timezone issues.
 const parseDate = (dateInput: any): Date | null => {
     if (dateInput === null || dateInput === undefined || String(dateInput).trim() === '') {
         return null;
     }
     
-    if (dateInput instanceof Date) {
-        return !isNaN(dateInput.getTime()) ? dateInput : null;
+    // If it's already a valid Date object, return it.
+    if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
+        return dateInput;
     }
 
+    // Handle Excel's numeric date format
     if (typeof dateInput === 'number') {
+        // Excel's epoch starts on 1899-12-30. JavaScript's is 1970-01-01.
+        // The calculation converts the number of days from Excel's epoch to milliseconds for JS.
         const excelEpoch = new Date(1899, 11, 30);
-        const msPerDay = 86400000;
-        const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
-        
-        const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
-        const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
-        
-        return !isNaN(adjustedDate.getTime()) ? adjustedDate : null;
+        const jsDate = new Date(excelEpoch.getTime() + dateInput * 86400000);
+        // We must also account for the timezone offset of the resulting date.
+        const timezoneOffset = jsDate.getTimezoneOffset() * 60000;
+        const correctedDate = new Date(jsDate.getTime() + timezoneOffset);
+
+        return !isNaN(correctedDate.getTime()) ? correctedDate : null;
     }
 
+    // Handle string dates (e.g., 'YYYY-MM-DD' or from date picker)
     if (typeof dateInput === 'string') {
-        // For strings like '2024-08-05', treat them as UTC to avoid timezone shifts.
-        const date = new Date(`${dateInput}T00:00:00Z`);
+        // Add 'T00:00:00Z' to treat the date as UTC, preventing timezone shifts.
+        const date = new Date(dateInput.split('T')[0] + 'T00:00:00Z');
         if (!isNaN(date.getTime())) {
             return date;
         }
     }
     
+    // Return null if no valid date could be parsed.
+    console.warn('Could not parse a valid date from input:', dateInput);
     return null;
 };
 

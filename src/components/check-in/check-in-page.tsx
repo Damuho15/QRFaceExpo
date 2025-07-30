@@ -20,9 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2, CheckCircle } from 'lucide-react';
+import { Camera, Upload, UserCheck, UserX, Loader2, CheckCircle } from 'lucide-react';
 import jsQR from 'jsqr';
-import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
 import { format } from 'date-fns';
 import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
@@ -30,19 +29,25 @@ import { Skeleton } from '../ui/skeleton';
 
 const getNextSunday = (from: Date): Date => {
     const date = new Date(from.getTime());
-    const day = date.getUTCDay();
-    const diff = day === 0 ? 7 : 7 - day;
+    const day = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
+    const diff = (7 - day) % 7;
     date.setUTCDate(date.getUTCDate() + diff);
+    // If today is Sunday, it should find the *next* Sunday
+    if (diff === 0) {
+        date.setUTCDate(date.getUTCDate() + 7);
+    }
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
     const date = new Date(from.getTime());
-    const day = date.getUTCDay();
+    const day = date.getUTCDay(); // 0 = Sunday, ..., 2 = Tuesday
+    // Days to subtract to get to the previous Tuesday
     const daysToSubtract = (day + 7 - 2) % 7;
     date.setUTCDate(date.getUTCDate() - daysToSubtract);
+    // If today is Tuesday, get the one from the week before
     if (daysToSubtract === 0) {
-        date.setUTCDate(date.getUTCDate() - 7);
+       date.setUTCDate(date.getUTCDate() - 7);
     }
     return date;
 };
@@ -72,9 +77,9 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
 // Helper to parse date strings as UTC
 const parseDateAsUTC = (dateString: string) => {
-    const date = new Date(dateString);
-    const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() + userTimezoneOffset);
+    // The 'Z' suffix ensures the date is parsed in UTC, not the user's local timezone.
+    const date = new Date(dateString + 'T00:00:00Z');
+    return date;
 }
 
 const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
@@ -416,43 +421,43 @@ const FaceCheckinTab = () => {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Face Recognition Check-in</CardTitle>
-                <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                    {hasCameraPermission === false && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-                            <Camera className="h-16 w-16 text-muted-foreground" />
-                            <p className="mt-2 text-muted-foreground">Camera not available</p>
-                        </div>
-                    )}
+    <Card>
+      <CardHeader>
+        <CardTitle>Face Recognition Check-in</CardTitle>
+        <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+            <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+            {hasCameraPermission === false && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                    <Camera className="h-16 w-16 text-muted-foreground" />
+                    <p className="mt-2 text-muted-foreground">Camera not available</p>
                 </div>
-                {hasCameraPermission === false && (
-                    <Alert variant="destructive">
-                        <AlertTitle>Camera Access Required</AlertTitle>
-                        <AlertDescription>
-                            Please allow camera access in your browser settings to use this feature.
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
-                    {isProcessing ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Recognizing...
-                        </>
-                    ) : (
-                        <>
-                            <UserCheck className="mr-2 h-4 w-4" /> Check In
-                        </>
-                    )}
-                </Button>
-            </CardContent>
-        </Card>
+            )}
+        </div>
+        {hasCameraPermission === false && (
+            <Alert variant="destructive">
+                <AlertTitle>Camera Access Required</AlertTitle>
+                <AlertDescription>
+                    Please allow camera access in your browser settings to use this feature.
+                </AlertDescription>
+            </Alert>
+        )}
+        <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
+            {isProcessing ? (
+                <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recognizing...
+                </>
+            ) : (
+                <>
+                    <UserCheck className="mr-2 h-4 w-4" /> Check In
+                </>
+            )}
+        </Button>
+      </CardContent>
+    </Card>
     );
 };
 
@@ -472,8 +477,8 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                 const today = new Date();
-                 today.setUTCHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
                 
