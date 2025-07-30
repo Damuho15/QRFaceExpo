@@ -17,6 +17,7 @@ import MemberDialog from './member-dialog';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import QrCodeDialog from './qr-code-dialog';
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -45,14 +46,19 @@ export const columns: ColumnDef<Member>[] = [
     accessorKey: 'pictureUrl',
     header: 'Picture',
     cell: ({ row }) => {
-        const member = row.original;
-        const fallback = member.fullName ? member.fullName.charAt(0) : '';
-        return (
-            <Avatar className="h-16 w-16 rounded-md">
-                <AvatarImage src={member.pictureUrl || ''} alt={member.fullName} data-ai-hint="member picture" className="object-cover" />
-                <AvatarFallback className="rounded-md">{fallback}</AvatarFallback>
-            </Avatar>
-        )
+      const member = row.original;
+      const fallback = member.fullName ? member.fullName.charAt(0) : '';
+      return (
+        <Avatar className="h-16 w-16 rounded-md">
+          <AvatarImage
+            src={member.pictureUrl || ''}
+            alt={member.fullName}
+            data-ai-hint="member picture"
+            className="object-cover"
+          />
+          <AvatarFallback className="rounded-md">{fallback}</AvatarFallback>
+        </Avatar>
+      );
     },
     enableSorting: false,
   },
@@ -60,17 +66,19 @@ export const columns: ColumnDef<Member>[] = [
     accessorKey: 'qrCodePayload',
     header: 'QR Code',
     cell: ({ row }) => {
-        const member = row.original;
-        if (!member.qrCodePayload) return null;
-        return (
-            <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(member.qrCodePayload)}`}
-                alt={`QR Code for ${member.fullName}`}
-                width={80}
-                height={80}
-                data-ai-hint="qr code"
-            />
-        )
+      const member = row.original;
+      if (!member.qrCodePayload) return null;
+      return (
+        <Image
+          src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(
+            member.qrCodePayload
+          )}`}
+          alt={`QR Code for ${member.fullName}`}
+          width={80}
+          height={80}
+          data-ai-hint="qr code"
+        />
+      );
     },
     enableSorting: false,
   },
@@ -98,15 +106,15 @@ export const columns: ColumnDef<Member>[] = [
     cell: ({ row }) => {
       const birthday = row.original.birthday;
       return birthday ? format(new Date(birthday), 'MM-dd-yyyy') : 'N/A';
-    }
+    },
   },
   {
     accessorKey: 'weddingAnniversary',
     header: 'Wedding Anniversary',
-     cell: ({ row }) => {
+    cell: ({ row }) => {
       const anniversary = row.original.weddingAnniversary;
       return anniversary ? format(new Date(anniversary), 'MM-dd-yyyy') : 'N/A';
-    }
+    },
   },
   {
     accessorKey: 'email',
@@ -132,15 +140,19 @@ export const columns: ColumnDef<Member>[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <MemberDialog
-                    mode="edit"
-                    memberToEdit={member}
-                    onSuccess={() => table.options.meta?.onAction()}
-                >
-                    <button className="w-full text-left">Edit</button>
-                </MemberDialog>
+              <MemberDialog
+                mode="edit"
+                memberToEdit={member}
+                onSuccess={() => table.options.meta?.onAction()}
+              >
+                <button className="w-full text-left">Edit</button>
+              </MemberDialog>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>View QR Code</DropdownMenuItem>
+              <QrCodeDialog member={member}>
+                <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full">
+                  View QR Code
+                </button>
+              </QrCodeDialog>
               <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
