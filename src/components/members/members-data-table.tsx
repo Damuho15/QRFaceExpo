@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -70,7 +71,10 @@ export default function MembersDataTable<TData, TValue>({
       onAction: onAction
     }
   });
-  
+
+  // This is the correct way to handle debounced filtering.
+  // We use local state for the input fields and then update the table state
+  // in a useEffect hook with a timeout.
   const [fullNameFilter, setFullNameFilter] = React.useState('');
   const [nicknameFilter, setNicknameFilter] = React.useState('');
 
