@@ -27,30 +27,58 @@ const isValidDate = (date: any): date is Date => {
     return date instanceof Date && !isNaN(date.getTime());
 }
 
-const parseDate = (dateString: string): Date | null => {
-    if (!dateString || typeof dateString !== 'string') return null;
+const parseDate = (dateInput: string | number): Date | null => {
+    if (!dateInput) return null;
     
-    // Handles both MM-DD-YYYY and YYYY-MM-DD and MM/DD/YYYY
-    const parts = dateString.split(/[-/]/);
-    if (parts.length === 3) {
-        let year, month, day;
-        if (parts[0].length === 4) { // YYYY-MM-DD
-            year = parseInt(parts[0], 10);
-            month = parseInt(parts[1], 10) - 1;
-            day = parseInt(parts[2], 10);
-        } else { // MM-DD-YYYY or MM/DD/YYYY
-            year = parseInt(parts[2], 10);
-            month = parseInt(parts[0], 10) - 1;
-            day = parseInt(parts[1], 10);
-        }
-        
-        const date = new Date(year, month, day);
-        if (!isNaN(date.getTime()) && year > 1900) {
-            return date;
+    // Check if it's an Excel serial number
+    if (typeof dateInput === 'number') {
+        const date = XLSX.SSF.parse_date_code(dateInput);
+        if (date) {
+            // JS months are 0-indexed, so subtract 1 from month
+            return new Date(date.y, date.m - 1, date.d);
         }
     }
+
+    if (typeof dateInput === 'string') {
+        // Handles MM-DD-YYYY, YYYY-MM-DD, MM/DD/YYYY
+        const parts = dateInput.split(/[-/]/);
+        if (parts.length === 3) {
+            let year, month, day;
+            if (parts[0].length === 4) { // YYYY-MM-DD
+                year = parseInt(parts[0], 10);
+                month = parseInt(parts[1], 10) - 1;
+                day = parseInt(parts[2], 10);
+            } else { // MM-DD-YYYY or MM/DD/YYYY
+                year = parseInt(parts[2], 10);
+                month = parseInt(parts[0], 10) - 1;
+                day = parseInt(parts[1], 10);
+            }
+            
+            const date = new Date(year, month, day);
+            if (!isNaN(date.getTime()) && year > 1900) {
+                return date;
+            }
+        }
+    }
+    
+    // Try native Date parsing as a last resort
+    const nativeDate = new Date(dateInput);
+    if (isValidDate(nativeDate)) {
+        return nativeDate;
+    }
+
     return null;
 }
+
+const expectedHeaders = [
+  'FullName',
+  'Nickname',
+  'Email',
+  'Phone',
+  'Birthday',
+  'WeddingAnniversary',
+];
+
 
 export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -73,54 +101,68 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const rows: any[] = XLSX.utils.sheet_to_json(worksheet, {
-            defval: null,
-          });
+          const json: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
           
-          if (rows.length < 1) {
+          if (json.length < 2) {
              toast({
                 variant: 'destructive',
                 title: 'Empty File',
-                description: 'The uploaded file appears to be empty or has no data rows.',
+                description: 'The uploaded file has no data rows.',
             });
             resetState();
             return;
           }
 
+          const headerRow = json[0];
+          const headerIndexMap: { [key: string]: number } = {};
+          expectedHeaders.forEach(header => {
+            const index = headerRow.findIndex(cell => typeof cell === 'string' && cell.trim() === header);
+            if (index !== -1) {
+              headerIndexMap[header] = index;
+            }
+          });
+          
           const validationErrors: string[] = [];
+          const dataRows = json.slice(1);
 
-          const members: NewMember[] = rows.map((row: any, index) => {
+          const members: NewMember[] = dataRows.map((row: any[], index) => {
+            const rowNumber = index + 2;
             const rowErrors: string[] = [];
             
-            if (!row.FullName) {
+            const fullName = row[headerIndexMap['FullName']];
+            const email = row[headerIndexMap['Email']];
+            const birthdayValue = row[headerIndexMap['Birthday']];
+            
+            if (!fullName) {
                 rowErrors.push('FullName is missing');
             }
-            if (!row.Email) {
+            if (!email) {
                 rowErrors.push('Email is missing');
             }
             
-            const birthday = parseDate(row.Birthday);
-            if (!row.Birthday) {
+            const birthday = parseDate(birthdayValue);
+            if (!birthdayValue) {
                 rowErrors.push('Birthday is missing');
             } else if (!birthday) {
-                rowErrors.push('Birthday is not a valid date');
+                rowErrors.push(`Birthday ('${birthdayValue}') is not a valid date`);
             }
 
-            const weddingAnniversary = row.WeddingAnniversary ? parseDate(row.WeddingAnniversary) : null;
-            if(row.WeddingAnniversary && !weddingAnniversary) {
-                rowErrors.push('WeddingAnniversary is not a valid date');
+            const weddingAnniversaryValue = row[headerIndexMap['WeddingAnniversary']];
+            const weddingAnniversary = weddingAnniversaryValue ? parseDate(weddingAnniversaryValue) : null;
+            if(weddingAnniversaryValue && !weddingAnniversary) {
+                rowErrors.push(`WeddingAnniversary ('${weddingAnniversaryValue}') is not a valid date`);
             }
 
             if (rowErrors.length > 0) {
-                validationErrors.push(`Row ${index + 2}: ${rowErrors.join(', ')}`);
+                validationErrors.push(`Row ${rowNumber}: ${rowErrors.join(', ')}`);
                  return null;
             }
 
             return {
-              fullName: String(row.FullName || ''),
-              nickname: row.Nickname ? String(row.Nickname) : '',
-              email: String(row.Email || ''),
-              phone: row.Phone ? String(row.Phone) : '',
+              fullName: String(fullName || ''),
+              nickname: row[headerIndexMap['Nickname']] ? String(row[headerIndexMap['Nickname']]) : '',
+              email: String(email || ''),
+              phone: row[headerIndexMap['Phone']] ? String(row[headerIndexMap['Phone']]) : '',
               birthday: birthday!,
               weddingAnniversary: weddingAnniversary,
             };
@@ -134,9 +176,11 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                 description: (
                     <div className="flex flex-col">
                         <p>Please check the following errors in your file:</p>
-                        <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
-                            <code className="text-white">{validationErrors.join('\n')}</code>
-                        </pre>
+                        <ScrollArea className="h-40 mt-2">
+                            <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
+                                <code className="text-white">{validationErrors.join('\n')}</code>
+                            </pre>
+                        </ScrollArea>
                     </div>
                 ),
                 duration: 9000,
