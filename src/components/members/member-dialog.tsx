@@ -148,7 +148,7 @@ export default function MemberDialog({
           birthday: data.birthday,
           weddingAnniversary: data.weddingAnniversary || null,
           pictureUrl: pictureUrl,
-          qrCodePayload: data.fullName,
+          qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
       }
 
       if (isEditMode && memberToEdit) {

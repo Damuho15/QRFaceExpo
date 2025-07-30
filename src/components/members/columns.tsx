@@ -46,10 +46,10 @@ export const columns: ColumnDef<Member>[] = [
     header: 'Picture',
     cell: ({ row }) => {
         const member = row.original;
-        const fallback = member.fullName.charAt(0);
+        const fallback = member.fullName ? member.fullName.charAt(0) : '';
         return (
-            <Avatar>
-                <AvatarImage src={member.pictureUrl || ''} alt={member.fullName} data-ai-hint="member picture" />
+            <Avatar className="h-16 w-16">
+                <AvatarImage src={member.pictureUrl || ''} alt={member.fullName} data-ai-hint="member picture" className="object-cover" />
                 <AvatarFallback>{fallback}</AvatarFallback>
             </Avatar>
         )
