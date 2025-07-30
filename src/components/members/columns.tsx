@@ -25,9 +25,8 @@ import PictureDialog from './picture-dialog';
 const formatDate = (dateString: string | Date | null | undefined): string => {
     if (!dateString) return 'N/A';
     try {
-        // Supabase stores date strings in UTC 'YYYY-MM-DD'.
-        // To avoid timezone shifts, we treat it as a UTC date and format it.
         const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+        // Treat the date as UTC and format it in UTC to prevent timezone shifts.
         return formatInTimeZone(date, 'UTC', 'MM-dd-yyyy');
     } catch (error) {
         console.error("Error formatting date:", dateString, error);
