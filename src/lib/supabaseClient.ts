@@ -14,7 +14,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const getMembers = async (): Promise<Member[]> => {
-    const { data, error } = await supabase.from('members').select('*').order('fullName', { ascending: true });
+    // When fetching data on the server-side (which is what Next.js does during build and for server components),
+    // it's better to create a new client with the service_role key to bypass RLS.
+    // This key should be stored securely in environment variables and NOT exposed to the browser.
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!serviceKey) {
+        console.error('Supabase service key is not defined. Falling back to anon key.');
+        const { data, error } = await supabase.from('members').select('*').order('fullName', { ascending: true });
+        if (error) {
+            console.error('Error fetching members with anon key:', error);
+            return [];
+        }
+        return data.map((member: any) => ({ ...member, birthday: new Date(member.birthday) }));
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+    const { data, error } = await supabaseAdmin.from('members').select('*').order('fullName', { ascending: true });
 
     if (error) {
         console.error('Error fetching members:', error);
