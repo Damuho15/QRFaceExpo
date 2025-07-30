@@ -71,7 +71,7 @@ const getPreviousTuesday = (from: Date): Date => {
     return date;
 };
 
-const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date; preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
+const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,13 +80,11 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     const [isScanning, setIsScanning] = useState(true);
     const animationFrameId = useRef<number>();
 
-
-    const handleCheckIn = useCallback(async (qrData: string) => {
+    const handleCheckIn = useCallback((qrData: string) => {
         setIsScanning(false);
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
-            alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
             setScanResult({ memberName: matchedMember.fullName, found: true });
             onCheckInSuccess();
         } else {
@@ -99,37 +97,10 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
         }
 
         setTimeout(() => {
-            setIsScanning(true);
             setScanResult(null);
+            setIsScanning(true);
         }, 2000);
     }, [members, onCheckInSuccess, toast]);
-
-    const tick = useCallback(() => {
-        if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
-            return;
-        }
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            if (context) {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: 'dontInvert',
-                });
-                if (code) {
-                    handleCheckIn(code.data);
-                }
-            }
-        }
-        animationFrameId.current = requestAnimationFrame(tick);
-    }, [isScanning, hasCameraPermission, handleCheckIn]);
-
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -163,18 +134,56 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
     }, [toast]);
 
     useEffect(() => {
+        let lastScanTime = 0;
+        const scanInterval = 300; // Scan every 300ms
+
+        const tick = (time: number) => {
+            if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
+                animationFrameId.current = requestAnimationFrame(tick);
+                return;
+            }
+
+            const video = videoRef.current;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                if (time - lastScanTime > scanInterval) {
+                    lastScanTime = time;
+                    const canvas = canvasRef.current;
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    const context = canvas.getContext('2d', { willReadFrequently: true });
+                    if (context) {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        try {
+                            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                inversionAttempts: 'dontInvert',
+                            });
+                            if (code && code.data) {
+                                handleCheckIn(code.data);
+                            }
+                        } catch (e) {
+                            console.error("jsQR error", e)
+                        }
+                    }
+                }
+            }
+            animationFrameId.current = requestAnimationFrame(tick);
+        };
+
         if (isScanning && hasCameraPermission) {
             animationFrameId.current = requestAnimationFrame(tick);
-        } else if (animationFrameId.current) {
-            cancelAnimationFrame(animationFrameId.current);
+        } else {
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
         }
+
         return () => {
-            if(animationFrameId.current) {
+            if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [isScanning, hasCameraPermission, tick]);
-
+    }, [isScanning, hasCameraPermission, handleCheckIn]);
 
     return (
         <div className="space-y-4">
@@ -218,7 +227,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
 };
 
 
-const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date; preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
+const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
@@ -315,10 +324,10 @@ const QRCheckinTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }:
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={onCheckInSuccess} />
+                        <ScanTab members={members} onCheckInSuccess={onCheckInSuccess} />
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={onCheckInSuccess}/>
+                        <UploadTab members={members} onCheckInSuccess={onCheckInSuccess}/>
                     </TabsContent>
                 </Tabs>
             </CardContent>
