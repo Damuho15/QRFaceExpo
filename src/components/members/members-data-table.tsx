@@ -74,14 +74,24 @@ export default function MembersDataTable<TData, TValue>({
   return (
     <div>
       <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Filter by full name..."
-          value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('fullName')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+        <div className="flex items-center gap-2">
+            <Input
+            placeholder="Filter by full name..."
+            value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+                table.getColumn('fullName')?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+            />
+            <Input
+            placeholder="Filter by nickname..."
+            value={(table.getColumn('nickname')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+                table.getColumn('nickname')?.setFilterValue(event.target.value)
+            }
+            className="max-w-sm"
+            />
+        </div>
         <div className="flex items-center gap-2">
             <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
