@@ -26,35 +26,26 @@ const parseDate = (dateInput: any): Date | null => {
         return null;
     }
     
-    // If it's already a Date object, just return it
     if (dateInput instanceof Date) {
-        if (!isNaN(dateInput.getTime())) {
-            return dateInput;
-        }
-        return null;
+        return !isNaN(dateInput.getTime()) ? dateInput : null;
     }
 
-    // Handle Excel serial numbers (numbers)
     if (typeof dateInput === 'number') {
         const excelEpoch = new Date(1899, 11, 30);
         const msPerDay = 86400000;
         const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
         const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
-        if (!isNaN(adjustedDate.getTime())) {
-            return adjustedDate;
-        }
+        return !isNaN(adjustedDate.getTime()) ? adjustedDate : null;
     }
 
-    // Handle date strings (e.g., '2023-12-25', '12/25/2023')
     if (typeof dateInput === 'string') {
         const date = new Date(dateInput);
-        if (!isNaN(date.getTime())) {
-            if (!/T|Z/i.test(dateInput)) {
-                 return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-            }
-            return date;
+        if (isNaN(date.getTime())) return null;
+        if (!/T|Z/i.test(dateInput)) {
+             return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
         }
+        return date;
     }
     
     return null;
@@ -104,7 +95,7 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         email: member.email || null,
         phone: member.phone || null,
         birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -131,12 +122,7 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     const memberToUpdate = {
         ...memberData,
         birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : null,
-        nickname: member.nickname || null,
-        email: member.email || null,
-        phone: member.phone || null,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
+        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
     };
 
     const { data, error } = await supabase
@@ -173,7 +159,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
         const birthday = parseDate(rawMember.Birthday);
         if (!birthday) {
-            console.warn('Skipping row due to invalid or missing Birthday:', rawMember);
+            console.warn('Skipping row due to invalid or missing Birthday for', fullName);
             return null;
         }
 
@@ -181,14 +167,14 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
         
         return {
             fullName: fullName,
-            nickname: String(rawMember.Nickname || '').trim() || null,
-            email: String(rawMember.Email || '').trim() || null,
-            phone: String(rawMember.Phone || '').trim() || null,
+            nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
+            email: rawMember.Email ? String(rawMember.Email).trim() : null,
+            phone: rawMember.Phone ? String(rawMember.Phone).trim() : null,
             birthday: birthday.toISOString(),
             weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
             qrCodePayload: fullName,
-            ministries: String(rawMember.Ministries || '').trim() || null,
-            lg: String(rawMember.LG || '').trim() || null,
+            ministries: rawMember.Ministries ? String(rawMember.Ministries).trim() : null,
+            lg: rawMember.LG ? String(rawMember.LG).trim() : null,
         };
     }).filter((m): m is Exclude<typeof m, null> => m !== null);
 
