@@ -32,8 +32,7 @@ const getNextSunday = (from: Date): Date => {
     const day = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
     const diff = (7 - day) % 7;
     date.setUTCDate(date.getUTCDate() + diff);
-    // If today is Sunday, it should find the *next* Sunday
-    if (diff === 0) {
+    if (diff === 0) { // If today is Sunday, get next Sunday
         date.setUTCDate(date.getUTCDate() + 7);
     }
     return date;
@@ -42,13 +41,8 @@ const getNextSunday = (from: Date): Date => {
 const getPreviousTuesday = (from: Date): Date => {
     const date = new Date(from.getTime());
     const day = date.getUTCDay(); // 0 = Sunday, ..., 2 = Tuesday
-    // Days to subtract to get to the previous Tuesday
-    const daysToSubtract = (day + 7 - 2) % 7;
+    const daysToSubtract = (day + 5) % 7; // (day - 2 + 7) % 7 -> (day + 5) % 7
     date.setUTCDate(date.getUTCDate() - daysToSubtract);
-    // If today is Tuesday, get the one from the week before
-    if (daysToSubtract === 0) {
-       date.setUTCDate(date.getUTCDate() - 7);
-    }
     return date;
 };
 
@@ -154,9 +148,9 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [hasCameraPermission, isScanning]);
+    }, [hasCameraPermission, isScanning, handleCheckIn]);
 
-    const handleCheckIn = (qrData: string) => {
+    const handleCheckIn = useCallback((qrData: string) => {
         const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
 
         if (!registrationType) {
@@ -182,7 +176,7 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
             });
             setTimeout(() => setIsScanning(true), 2000); // Allow scanning again
         }, 1500);
-    };
+    }, [eventDate, preRegStartDate, toast]);
 
     return (
         <div className="space-y-4">
@@ -477,7 +471,7 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                const today = new Date();
+                const today = new Date('2026-01-01T12:00:00Z');
                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
