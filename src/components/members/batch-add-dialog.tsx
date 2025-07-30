@@ -49,9 +49,11 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          const rows: any[] = XLSX.utils.sheet_to_json(worksheet, {
+            defval: null, // Use null for empty cells
+          });
           
-          if (json.length < 2) {
+          if (rows.length < 1) {
              toast({
                 variant: 'destructive',
                 title: 'Empty File',
@@ -61,17 +63,9 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             return;
           }
 
-          const header: string[] = json[0];
-          const rows = json.slice(1);
-          
           const validationErrors: string[] = [];
 
-          const members: NewMember[] = rows.map((rowArray, index) => {
-            const row: any = {};
-            header.forEach((h, i) => {
-                row[h] = rowArray[i];
-            });
-
+          const members: NewMember[] = rows.map((row: any, index) => {
             const rowErrors: string[] = [];
             
             if (!row.FullName) {
@@ -80,7 +74,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             if (!row.Email) {
                 rowErrors.push('Email is missing');
             }
-             if (!row.Birthday) {
+            if (!row.Birthday) {
                 rowErrors.push('Birthday is missing');
             } else if (!isValidDate(row.Birthday)) {
                 rowErrors.push('Birthday is not a valid date');
