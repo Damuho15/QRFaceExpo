@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -94,15 +95,14 @@ export default function MemberDialog({
     if (open && isEditMode && memberToEdit) {
       // When opening in edit mode, parse the string dates from the DB
       // into Date objects for the form and the date picker.
-      // The `new Date()` constructor correctly handles 'YYYY-MM-DD' strings
-      // by interpreting them as UTC, which avoids timezone shifts.
+      // Appending T00:00:00 treats the date as local time and avoids timezone shifts.
       form.reset({
         fullName: memberToEdit.fullName || '',
         nickname: memberToEdit.nickname || '',
         email: memberToEdit.email || '',
         phone: memberToEdit.phone || '',
-        birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
-        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
+        birthday: memberToEdit.birthday ? new Date(`${memberToEdit.birthday}T00:00:00`) : undefined,
+        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(`${memberToEdit.weddingAnniversary}T00:00:00`) : null,
         ministries: memberToEdit.ministries || '',
         lg: memberToEdit.lg || '',
         picture: null,
@@ -438,7 +438,5 @@ export default function MemberDialog({
     </Dialog>
   );
 }
-
-    
 
     
