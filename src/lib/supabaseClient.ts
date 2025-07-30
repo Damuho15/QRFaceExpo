@@ -59,6 +59,11 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         ...rest,
         birthday: birthday.toISOString(),
         weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
+        phone: member.phone || null,
+        email: member.email || null,
+        nickname: member.nickname || null,
     };
     
     const { data, error } = await supabase
@@ -105,11 +110,16 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
 
 
 export const updateMember = async (member: Member): Promise<Member | null> => {
-    const { id, ...memberData } = member;
+    const { id, birthday, weddingAnniversary, ...memberData } = member;
      const memberToUpdate = {
         ...memberData,
-        birthday: new Date(memberData.birthday).toISOString(),
-        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
+        birthday: birthday.toISOString(),
+        weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
+        phone: member.phone || null,
+        email: member.email || null,
+        nickname: member.nickname || null,
     };
     const { data, error } = await supabase
         .from('members')
