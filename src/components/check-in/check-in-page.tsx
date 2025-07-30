@@ -63,7 +63,7 @@ const getPreviousTuesday = (from: Date): Date => {
     return date;
 };
 
-const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; preRegStartDate: Date, members: Member[] }) => {
+const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date; preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -102,6 +102,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
                     title: 'Check-in Successful',
                     description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
                 });
+                onCheckInSuccess();
             } catch (error) {
                  toast({
                     title: 'Database Error',
@@ -123,7 +124,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
             setScanResult(null);
         }, 2000);
     
-    }, [eventDate, preRegStartDate, toast, members]);
+    }, [eventDate, preRegStartDate, toast, members, onCheckInSuccess]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -232,7 +233,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; pre
 };
 
 
-const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; preRegStartDate: Date, members: Member[] }) => {
+const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date; preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
@@ -273,6 +274,7 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
                     title: 'Check-in Successful',
                     description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
                 });
+                onCheckInSuccess();
             } catch(error) {
                  toast({
                     title: 'Database Error',
@@ -345,7 +347,7 @@ const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; p
 };
 
 
-const QRCheckinTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date, preRegStartDate: Date, members: Member[] }) => {
+const QRCheckinTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date, preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
     return (
         <Card>
             <CardHeader>
@@ -359,10 +361,10 @@ const QRCheckinTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} />
+                        <ScanTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={onCheckInSuccess} />
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members}/>
+                        <UploadTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={onCheckInSuccess}/>
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -370,7 +372,7 @@ const QRCheckinTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date
     );
 };
 
-const FaceCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegStartDate: Date }) => {
+const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { eventDate: Date, preRegStartDate: Date, onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -460,6 +462,7 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRe
                     title: 'Check-in Successful',
                     description: `Welcome, ${result.member.fullName}! You've been checked in for ${registrationType}.`,
                 });
+                onCheckInSuccess();
             } else {
                 toast({
                     title: 'Check-in Failed',
@@ -535,6 +538,12 @@ export default function CheckInPage() {
     const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
     const [members, setMembers] = useState<Member[]>([]);
+    
+    // This is a simple counter to trigger a re-fetch on the dashboard
+    const [checkInCounter, setCheckInCounter] = useState(0);
+    const handleCheckInSuccess = () => {
+        setCheckInCounter(prev => prev + 1);
+    }
 
      const fetchAndSetDates = useCallback(async () => {
         setIsLoading(true);
@@ -544,6 +553,9 @@ export default function CheckInPage() {
             setMembers(allMembers);
 
             if (config) {
+                // This is a test block to simulate a past date for rollover testing
+                // In a real scenario, you'd use the actual current date.
+                // const today = new Date('2026-01-01T12:00:00Z');
                 const today = new Date();
                 today.setUTCHours(0, 0, 0, 0);
 
@@ -742,7 +754,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} />
+                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={handleCheckInSuccess} />
             )}
         </TabsContent>
         <TabsContent value="face">
@@ -758,7 +770,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
              ) : (
-                <FaceCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                <FaceCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} onCheckInSuccess={handleCheckInSuccess} />
              )}
         </TabsContent>
       </Tabs>
