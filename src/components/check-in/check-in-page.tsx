@@ -105,13 +105,7 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
     useEffect(() => {
         const getCameraPermission = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 } 
-                    } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                 }
@@ -196,6 +190,12 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
             <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                 <canvas ref={canvasRef} className="hidden" />
+                {hasCameraPermission === null && (
+                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                         <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
+                         <p className="mt-2 text-muted-foreground">Initializing camera...</p>
+                    </div>
+                )}
                 {hasCameraPermission === false && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
                          <Camera className="h-16 w-16 text-muted-foreground" />
@@ -316,7 +316,7 @@ const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckIn
 };
 
 
-const QRCheckinTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { eventDate: Date, preRegStartDate: Date, members: Member[], onCheckInSuccess: () => void }) => {
+const QRCheckinTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
     return (
         <Card>
             <CardHeader>
@@ -701,7 +701,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} onCheckInSuccess={handleCheckInSuccess} />
+                <QRCheckinTab members={members} onCheckInSuccess={handleCheckInSuccess} />
             )}
         </TabsContent>
         <TabsContent value="face">
@@ -724,9 +724,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
