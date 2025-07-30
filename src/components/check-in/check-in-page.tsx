@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -156,7 +157,7 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
                         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
                         try {
                             const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                                inversionAttempts: 'dontInvert',
+                                inversionAttempts: 'attemptBoth',
                             });
                             if (code && code.data) {
                                 handleCheckIn(code.data);
