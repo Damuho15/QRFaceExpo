@@ -71,7 +71,7 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
 
     if (error) {
         console.error('Error uploading picture:', error);
-        return null;
+        throw error;
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -129,7 +129,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
     
     if (error) {
         console.error('Error adding member:', error);
-        throw new Error(error.message);
+        throw error;
     }
     
     return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
@@ -166,7 +166,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
 
     if (error) {
         console.error('Error updating member:', error);
-        throw new Error(error.message);
+        throw error;
     }
 
     return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
@@ -230,8 +230,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
     if (error) {
         console.error('Error batch adding members:', error);
-        // On failure, return null to indicate to the UI that the operation failed.
-        return null;
+        // On failure, throw the error so the UI can catch it.
+        throw error;
     }
     
     // 4. On success, return the data, ensuring dates are converted back for consistency.
