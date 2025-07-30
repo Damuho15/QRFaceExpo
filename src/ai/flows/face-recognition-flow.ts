@@ -50,25 +50,26 @@ const prompt = ai.definePrompt({
         }),
     },
     output: { schema: RecognizeFaceOutputSchema },
-    prompt: `You are an advanced AI security agent responsible for face recognition at an event.
-    Your task is to compare the live image provided by the user with the profile pictures of registered members.
+    prompt: `You are an AI security agent performing face recognition for event check-in.
 
-    Live Image:
-    {{media url=imageDataUri}}
+Your task is to determine if the person in the provided live image matches any of the registered members' profile photos.
 
-    Registered Members:
-    {{#each members}}
-    - Member ID: {{this.id}}
-      Name: {{this.fullName}}
-      Photo: {{media url=this.pictureUrl}}
-    {{/each}}
+Live Image to check:
+{{media url=imageDataUri}}
 
-    Instructions:
-    1. Carefully examine the live image.
-    2. Compare the person in the live image against each registered member's photo.
-    3. If you find a clear match, set 'matchFound' to true and return the ID and full name of the matched member.
-    4. If there is no clear match, set 'matchFound' to false.
-    5. Prioritize accuracy. If you are not confident in a match, it is better to report no match.`,
+Registered Member Photos:
+{{#each members}}
+- Member ID: {{this.id}}
+  Name: {{this.fullName}}
+  Photo: {{media url=this.pictureUrl}}
+{{/each}}
+
+Instructions:
+1.  Analyze the face in the live image.
+2.  Compare it against the profile photo of each registered member.
+3.  If you find a definitive match with one of the members, set 'matchFound' to true and provide the 'id' and 'fullName' of that member.
+4.  If you do not find a clear match, set 'matchFound' to false. Do not provide member details if no match is found.
+5.  Accuracy is critical. If you are not highly confident in a match, err on the side of caution and report 'matchFound: false'.`,
 });
 
 

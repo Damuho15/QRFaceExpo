@@ -72,7 +72,7 @@ const getPreviousTuesday = (from: Date): Date => {
     return date;
 };
 
-const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
+const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,13 +81,44 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
     const [isScanning, setIsScanning] = useState(true);
     const animationFrameId = useRef<number>();
 
-    const handleCheckIn = useCallback((qrData: string) => {
-        setIsScanning(false);
+    const handleCheckIn = useCallback(async (qrData: string) => {
+        setIsScanning(false); // Stop scanning immediately
+
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            setTimeout(() => {
+                setIsScanning(true);
+            }, 2000);
+            return;
+        }
+
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
-            setScanResult({ memberName: matchedMember.fullName, found: true });
-            onCheckInSuccess();
+            try {
+                await addAttendanceLog({
+                    member_id: matchedMember.id,
+                    member_name: matchedMember.fullName,
+                    type: registrationType,
+                    method: 'QR',
+                    timestamp: new Date()
+                });
+                setScanResult({ memberName: matchedMember.fullName, found: true });
+                onCheckInSuccess();
+            } catch (error) {
+                console.error("Error adding attendance log:", error);
+                toast({
+                    title: 'Check-in Failed',
+                    description: 'Could not save attendance. Please check the logs.',
+                    variant: 'destructive',
+                });
+            }
         } else {
             setScanResult({ memberName: 'Not Found', found: false });
             toast({
@@ -99,9 +130,9 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
 
         setTimeout(() => {
             setScanResult(null);
-            setIsScanning(true);
+            setIsScanning(true); // Resume scanning
         }, 2000);
-    }, [members, onCheckInSuccess, toast]);
+    }, [members, onCheckInSuccess, toast, eventDate, preRegStartDate]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -234,7 +265,7 @@ const ScanTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSu
 };
 
 
-const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
+const UploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
@@ -247,11 +278,41 @@ const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckIn
     }
     
     const handleCheckIn = async (qrData: string) => {
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            resetInput();
+            return;
+        }
+
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
-            alert(`QR Code Scanned Successfully!\n\nMember: ${matchedMember.fullName}`);
-            onCheckInSuccess();
+            try {
+                await addAttendanceLog({
+                    member_id: matchedMember.id,
+                    member_name: matchedMember.fullName,
+                    type: registrationType,
+                    method: 'QR',
+                    timestamp: new Date()
+                });
+                 toast({
+                    title: 'Check-in Successful',
+                    description: `${matchedMember.fullName} has been checked in.`,
+                });
+                onCheckInSuccess();
+            } catch (error) {
+                 toast({
+                    title: 'Check-in Failed',
+                    description: 'Could not save attendance. Please check the logs.',
+                    variant: 'destructive',
+                });
+            }
         } else {
              toast({
                 title: 'Check-in Failed',
@@ -277,8 +338,10 @@ const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckIn
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, canvas.width, canvas.height);
-                        if (code) {
+                        const code = jsQR(imageData.data, imageData.width, canvas.height, {
+                            inversionAttempts: 'attemptBoth',
+                        });
+                        if (code && code.data) {
                             handleCheckIn(code.data);
                         } else {
                              toast({
@@ -317,7 +380,7 @@ const UploadTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckIn
 };
 
 
-const QRCheckinTab = ({ members, onCheckInSuccess }: { members: Member[], onCheckInSuccess: () => void }) => {
+const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     return (
         <Card>
             <CardHeader>
@@ -331,10 +394,10 @@ const QRCheckinTab = ({ members, onCheckInSuccess }: { members: Member[], onChec
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab members={members} onCheckInSuccess={onCheckInSuccess} />
+                        <ScanTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab members={members} onCheckInSuccess={onCheckInSuccess}/>
+                        <UploadTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -388,6 +451,16 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
             return;
         }
 
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setIsProcessing(true);
         toast({
             title: 'Processing Image...',
@@ -409,7 +482,17 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
         try {
             const result = await recognizeFace({ imageDataUri });
             if (result.matchFound && result.member) {
-                alert(`Face Recognized!\n\nMember: ${result.member.fullName}`);
+                await addAttendanceLog({
+                    member_id: result.member.id,
+                    member_name: result.member.fullName,
+                    type: registrationType,
+                    method: 'Face',
+                    timestamp: new Date()
+                });
+                toast({
+                    title: 'Check-in Successful!',
+                    description: `Welcome, ${result.member.fullName}!`,
+                });
                 onCheckInSuccess();
             } else {
                 toast({
@@ -514,7 +597,7 @@ export default function CheckInPage() {
                     const newPreRegDate = getPreviousTuesday(newEventDate);
                     
                     await updateEventConfig({
-                        pre_reg_start_date: newEventDate.toISOString().split('T')[0],
+                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
                         event_date: newEventDate.toISOString().split('T')[0],
                     });
                     
@@ -702,7 +785,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <QRCheckinTab members={members} onCheckInSuccess={handleCheckInSuccess} />
+                <QRCheckinTab members={members} onCheckInSuccess={handleCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
             )}
         </TabsContent>
         <TabsContent value="face">
