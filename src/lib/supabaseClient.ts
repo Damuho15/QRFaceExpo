@@ -120,9 +120,16 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
     const { id, ...memberData } = member;
     
     const memberToUpdate = {
-        ...memberData,
+        fullName: memberData.fullName,
+        nickname: memberData.nickname || null,
+        email: memberData.email || null,
+        phone: memberData.phone || null,
         birthday: new Date(memberData.birthday).toISOString(),
         weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
+        pictureUrl: memberData.pictureUrl || null,
+        qrCodePayload: memberData.qrCodePayload,
+        ministries: memberData.ministries || null,
+        lg: memberData.lg || null,
     };
 
     const { data, error } = await supabase

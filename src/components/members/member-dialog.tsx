@@ -164,21 +164,21 @@ export default function MemberDialog({
             }
         }
 
-        const memberPayload = {
-            fullName: data.fullName,
-            nickname: data.nickname,
-            email: data.email,
-            phone: data.phone,
-            birthday: data.birthday,
-            weddingAnniversary: data.weddingAnniversary,
-            pictureUrl: pictureUrl,
-            qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
-            ministries: data.ministries,
-            lg: data.lg,
-        };
-
         if (isEditMode && memberToEdit) {
-            const result = await updateMember({ ...memberPayload, id: memberToEdit.id });
+            const memberPayload: Member = {
+                id: memberToEdit.id,
+                fullName: data.fullName,
+                nickname: data.nickname || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                birthday: data.birthday,
+                weddingAnniversary: data.weddingAnniversary,
+                pictureUrl: pictureUrl,
+                qrCodePayload: memberToEdit.qrCodePayload,
+                ministries: data.ministries,
+                lg: data.lg,
+            }
+            const result = await updateMember(memberPayload);
             if (result) {
                 toast({
                     title: 'Member Updated',
@@ -187,14 +187,26 @@ export default function MemberDialog({
                 onSuccess?.();
                 setOpen(false);
             } else {
-                toast({
+                 toast({
                     variant: 'destructive',
                     title: 'Update Failed',
                     description: 'Could not update the member. Please try again.',
                 });
             }
         } else {
-             const result = await addMember(memberPayload as Omit<Member, 'id'>);
+            const memberPayload: Omit<Member, 'id'> = {
+                fullName: data.fullName,
+                nickname: data.nickname || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                birthday: data.birthday,
+                weddingAnniversary: data.weddingAnniversary,
+                pictureUrl: pictureUrl,
+                qrCodePayload: data.fullName, // Use full name for new member QR code
+                ministries: data.ministries,
+                lg: data.lg,
+            };
+             const result = await addMember(memberPayload);
 
             if (result) {
                 toast({
@@ -213,10 +225,11 @@ export default function MemberDialog({
             }
         }
     } catch (error) {
+        console.error("Error submitting form", error)
         toast({
             variant: 'destructive',
             title: 'An Error Occurred',
-            description: 'Something went wrong. Please try again.',
+            description: 'Something went wrong. Please check the console and try again.',
         });
     } finally {
         setIsSubmitting(false);
