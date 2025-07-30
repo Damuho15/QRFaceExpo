@@ -16,18 +16,30 @@ import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
 import Image from 'next/image';
-import { formatInTimeZone } from 'date-fns-tz';
-import { parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import QrCodeDialog from './qr-code-dialog';
 import PictureDialog from './picture-dialog';
 
-const formatDate = (dateString: string | Date | null | undefined): string => {
-    if (!dateString) return 'N/A';
+const formatDate = (dateValue: string | Date | null | undefined): string => {
+    if (!dateValue) return 'N/A';
+    
+    // Convert Date object to 'YYYY-MM-DD' string if needed
+    const dateString = dateValue instanceof Date ? dateValue.toISOString().split('T')[0] : dateValue;
+
     try {
-        const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-        // Treat the date as UTC and format it in UTC to prevent timezone shifts.
-        return formatInTimeZone(date, 'UTC', 'MM-dd-yyyy');
+        // Ensure it's a string in the expected format
+        if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+             // Fallback for unexpected formats, though this shouldn't happen with our data
+             if (dateValue instanceof Date) {
+                return `${String(dateValue.getMonth() + 1).padStart(2, '0')}-${String(dateValue.getDate()).padStart(2, '0')}-${dateValue.getFullYear()}`;
+             }
+             return 'Invalid Date';
+        }
+
+        const [year, month, day] = dateString.substring(0, 10).split('-');
+        if (!year || !month || !day) return 'Invalid Date';
+        
+        return `${month}-${day}-${year}`;
     } catch (error) {
         console.error("Error formatting date:", dateString, error);
         return 'Invalid Date';
