@@ -3,6 +3,7 @@ export type Member = {
   fullName: string;
   nickname: string;
   birthday: Date;
+  weddingAnniversary?: Date | null;
   email: string;
   phone: string;
   qrCodePayload: string;

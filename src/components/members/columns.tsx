@@ -15,6 +15,7 @@ import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
 import Image from 'next/image';
+import { format } from 'date-fns';
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -74,6 +75,22 @@ export const columns: ColumnDef<Member>[] = [
   {
     accessorKey: 'nickname',
     header: 'Nickname',
+  },
+  {
+    accessorKey: 'birthday',
+    header: 'Birthday',
+    cell: ({ row }) => {
+      const birthday = row.original.birthday;
+      return birthday ? format(new Date(birthday), 'PPP') : 'N/A';
+    }
+  },
+  {
+    accessorKey: 'weddingAnniversary',
+    header: 'Wedding Anniversary',
+     cell: ({ row }) => {
+      const anniversary = row.original.weddingAnniversary;
+      return anniversary ? format(new Date(anniversary), 'PPP') : 'N/A';
+    }
   },
   {
     accessorKey: 'email',

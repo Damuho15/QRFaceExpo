@@ -58,6 +58,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
               phone: row.phone ? String(row.phone) : '',
               // Excel dates can be tricky, this is a common way to handle them
               birthday: new Date(row.birthday),
+              weddingAnniversary: row.weddingAnniversary ? new Date(row.weddingAnniversary) : null,
             };
           });
 
@@ -67,7 +68,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           toast({
             variant: 'destructive',
             title: 'File Parsing Failed',
-            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has columns: fullName, email, birthday.',
+            description: error instanceof Error ? error.message : 'Could not parse the Excel file. Please ensure it has columns: fullName, email, birthday, and optionally weddingAnniversary, nickname and phone.',
           });
           resetState();
         }
@@ -141,7 +142,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv) with member data.
-            Ensure your file has columns: `fullName`, `email`, `birthday`, and optionally `nickname` and `phone`.
+            Ensure your file has columns: `fullName`, `email`, `birthday`, and optionally `nickname`, `phone`, and `weddingAnniversary`.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -174,6 +175,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                     <TableHead>Full Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Birthday</TableHead>
+                                    <TableHead>Anniversary</TableHead>
                                 </TableRow>
                             </TableHeader>
                              <TableBody>
@@ -182,6 +184,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                         <TableCell className="font-medium">{member.fullName}</TableCell>
                                         <TableCell>{member.email}</TableCell>
                                         <TableCell>{member.birthday.toLocaleDateString()}</TableCell>
+                                        <TableCell>{member.weddingAnniversary ? member.weddingAnniversary.toLocaleDateString() : 'N/A'}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

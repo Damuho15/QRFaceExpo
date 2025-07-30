@@ -11,9 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,6 +45,7 @@ const memberSchema = z.object({
   birthday: z.date({
     required_error: 'A date of birth is required.',
   }),
+  weddingAnniversary: z.date().optional().nullable(),
 });
 
 type MemberFormValues = z.infer<typeof memberSchema>;
@@ -79,7 +78,8 @@ export default function MemberDialog({
           nickname: memberToEdit.nickname,
           email: memberToEdit.email,
           phone: memberToEdit.phone,
-          birthday: new Date(memberToEdit.birthday),
+          birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
+          weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
         }
       : {
           fullName: '',
@@ -87,6 +87,7 @@ export default function MemberDialog({
           email: '',
           phone: '',
           birthday: undefined,
+          weddingAnniversary: null,
         },
   });
 
@@ -95,6 +96,7 @@ export default function MemberDialog({
       form.reset({
         ...memberToEdit,
         birthday: new Date(memberToEdit.birthday),
+        weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
       })
     }
     if (!open) {
@@ -117,6 +119,7 @@ export default function MemberDialog({
                 ...data,
                 nickname: data.nickname || '',
                 qrCodePayload: data.fullName,
+                weddingAnniversary: data.weddingAnniversary || null,
             };
             const result = await updateMember(memberData);
             if (result) {
@@ -138,6 +141,7 @@ export default function MemberDialog({
                 ...data,
                 nickname: data.nickname || '',
                 qrCodePayload: data.fullName,
+                weddingAnniversary: data.weddingAnniversary || null,
             };
             const result = await addMember(memberData);
             if (result) {
@@ -259,6 +263,48 @@ export default function MemberDialog({
                             onSelect={field.onChange}
                             disabled={(date) =>
                               date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="weddingAnniversary"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Wedding Anniversary (Optional)</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              disabled={isSubmitting}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value || undefined}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date()
                             }
                             initialFocus
                           />
