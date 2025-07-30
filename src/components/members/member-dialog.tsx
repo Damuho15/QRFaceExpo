@@ -167,15 +167,15 @@ export default function MemberDialog({
 
         const memberPayload = {
             fullName: data.fullName,
-            nickname: data.nickname || '',
-            email: data.email || '',
-            phone: data.phone || '',
+            nickname: data.nickname,
+            email: data.email,
+            phone: data.phone,
             birthday: data.birthday,
-            weddingAnniversary: data.weddingAnniversary || null,
+            weddingAnniversary: data.weddingAnniversary,
             pictureUrl: pictureUrl,
             qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
-            ministries: data.ministries || '',
-            lg: data.lg || '',
+            ministries: data.ministries,
+            lg: data.lg,
         };
 
         if (isEditMode && memberToEdit) {

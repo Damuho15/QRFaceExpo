@@ -16,7 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const BUCKET_NAME = 'member-pictures';
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
     const fileName = `${Date.now()}-${sanitizedFileName}`;
     const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
@@ -55,9 +55,16 @@ export const getMembers = async (): Promise<Member[]> => {
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
     const memberData = {
-        ...member,
+        fullName: member.fullName,
+        nickname: member.nickname || null,
+        email: member.email || null,
+        phone: member.phone || null,
         birthday: member.birthday.toISOString(),
         weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+        pictureUrl: member.pictureUrl || null,
+        qrCodePayload: member.qrCodePayload,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
     };
 
     const { data, error } = await supabase
