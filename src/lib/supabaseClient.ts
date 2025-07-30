@@ -54,17 +54,12 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
+    const { birthday, weddingAnniversary, ...restOfMember } = member;
+
     const memberData = {
-        fullName: member.fullName,
-        nickname: member.nickname || null,
-        email: member.email || null,
-        phone: member.phone || null,
-        birthday: new Date(member.birthday).toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
-        pictureUrl: member.pictureUrl || null,
-        qrCodePayload: member.qrCodePayload,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
+        ...restOfMember,
+        birthday: new Date(birthday).toISOString(),
+        weddingAnniversary: weddingAnniversary ? new Date(weddingAnniversary).toISOString() : null,
     };
 
     const { data, error } = await supabase
