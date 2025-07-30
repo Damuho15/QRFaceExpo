@@ -81,6 +81,13 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
     return publicUrl;
 };
 
+const parseSupabaseDate = (dateString: string | null): Date | null => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() + timezoneOffset);
+}
+
 export const getMembers = async (): Promise<Member[]> => {
     const { data, error } = await supabase
         .from('members')
@@ -94,8 +101,8 @@ export const getMembers = async (): Promise<Member[]> => {
 
     return data.map((member: any) => ({
         ...member,
-        birthday: member.birthday ? new Date(member.birthday) : new Date(),
-        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null,
+        birthday: parseSupabaseDate(member.birthday) || new Date(),
+        weddingAnniversary: parseSupabaseDate(member.weddingAnniversary),
     }));
 };
 
@@ -150,8 +157,8 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
         nickname: formData.nickname || null,
         email: formData.email || null,
         phone: formData.phone || null,
-        birthday: new Date(formData.birthday).toISOString(),
-        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
+        birthday: new Date(formData.birthday).toISOString().split('T')[0],
+        weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString().split('T')[0] : null,
         pictureUrl: pictureUrl,
         ministries: formData.ministries || null,
         lg: formData.lg || null,

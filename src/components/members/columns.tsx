@@ -15,10 +15,25 @@ import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
 import Image from 'next/image';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import QrCodeDialog from './qr-code-dialog';
 import PictureDialog from './picture-dialog';
+
+const formatDate = (dateString: string | Date | null | undefined): string => {
+    if (!dateString) return 'N/A';
+    try {
+        const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+        // Adjust for timezone offset before formatting
+        const timezoneOffset = date.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(date.getTime() + timezoneOffset);
+        return format(adjustedDate, 'MM-dd-yyyy');
+    } catch (error) {
+        console.error("Error formatting date:", dateString, error);
+        return 'Invalid Date';
+    }
+};
+
 
 export const columns: ColumnDef<Member>[] = [
   {
@@ -109,18 +124,12 @@ export const columns: ColumnDef<Member>[] = [
   {
     accessorKey: 'birthday',
     header: 'Birthday',
-    cell: ({ row }) => {
-      const birthday = row.original.birthday;
-      return birthday ? format(new Date(birthday), 'MM-dd-yyyy') : 'N/A';
-    },
+    cell: ({ row }) => formatDate(row.original.birthday),
   },
   {
     accessorKey: 'weddingAnniversary',
     header: 'Wedding Anniversary',
-    cell: ({ row }) => {
-      const anniversary = row.original.weddingAnniversary;
-      return anniversary ? format(new Date(anniversary), 'MM-dd-yyyy') : 'N/A';
-    },
+    cell: ({ row }) => formatDate(row.original.weddingAnniversary),
   },
   {
     accessorKey: 'email',
