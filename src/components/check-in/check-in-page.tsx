@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -20,58 +19,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, UserX, Loader2, CheckCircle } from 'lucide-react';
+import { Camera, Upload, UserCheck, Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
-import { format } from 'date-fns';
-import { getEventConfig, updateEventConfig } from '@/lib/supabaseClient';
-import { Skeleton } from '../ui/skeleton';
-
-const getNextSunday = (from: Date): Date => {
-    const date = new Date(from);
-    date.setUTCDate(date.getUTCDate() + ((7 - date.getUTCDay()) % 7));
-    date.setUTCHours(0, 0, 0, 0);
-    return date;
-};
-
-const getPreviousTuesday = (from: Date): Date => {
-    const date = new Date(from);
-    // Sunday is 0, Tuesday is 2. (0 - 2 + 7) % 7 = 5 days to subtract from Sunday.
-    const daysToSubtract = (date.getUTCDay() - 2 + 7) % 7;
-    date.setUTCDate(date.getUTCDate() - daysToSubtract);
-    date.setUTCHours(0, 0, 0, 0);
-    return date;
-};
-
-
-const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
-    const preRegStart = new Date(preRegStartDate);
-    preRegStart.setUTCHours(0, 0, 0, 0);
-
-    const eventStartTime = new Date(eventDate);
-    eventStartTime.setUTCHours(9, 0, 0, 0);
-    
-    const preRegEndTime = new Date(eventStartTime);
-    preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
-
-
-    if (scanDate >= preRegStart && scanDate < preRegEndTime) {
-        return 'Pre-registration';
-    }
-    
-    if (scanDate >= eventStartTime) {
-        return 'Actual';
-    }
-
-    return null;
-}
-
-// Helper to parse date strings as UTC
-const parseDateAsUTC = (dateString: string) => {
-    // The 'Z' suffix ensures the date is parsed in UTC, not the user's local timezone.
-    const date = new Date(dateString + 'T00:00:00Z');
-    return date;
-}
+import { getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
+import DateConfigCard, { getRegistrationType } from './date-config-card';
 
 const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
     const { toast } = useToast();
@@ -455,160 +407,29 @@ const FaceCheckinTab = () => {
 
 
 export default function CheckInPage() {
-    const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(true);
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
-    
-    const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
-    const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-
-    const fetchAndSetDates = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const config = await getEventConfig();
-            if (config) {
-                const today = new Date();
-                today.setUTCHours(0, 0, 0, 0);
-
-                const dbEventDate = parseDateAsUTC(config.event_date);
-                
-                if (today > dbEventDate) {
-                    const newEventDate = getNextSunday(today);
-                    const newPreRegDate = getPreviousTuesday(newEventDate);
-                    
-                    await updateEventConfig({
-                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
-                        event_date: newEventDate.toISOString().split('T')[0],
-                    });
-                    
-                    setEventDate(newEventDate);
-                    setPreRegStartDate(newPreRegDate);
-                    setTempEventDate(newEventDate);
-                    setTempPreRegStartDate(newPreRegDate);
-
-                     toast({
-                        title: 'Event Dates Updated',
-                        description: 'The event has been automatically rolled over to the next week.',
-                    });
-
-                } else {
-                    const storedEventDate = parseDateAsUTC(config.event_date);
-                    const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
-
-                    setEventDate(storedEventDate);
-                    setPreRegStartDate(storedPreRegDate);
-                    setTempEventDate(storedEventDate);
-                    setTempPreRegStartDate(storedPreRegDate);
+     useEffect(() => {
+        const fetchInitialDates = async () => {
+            setIsLoading(true);
+            try {
+                const config = await getEventConfig();
+                 if (config) {
+                    const eventDate = parseDateAsUTC(config.event_date);
+                    const preRegStartDate = parseDateAsUTC(config.pre_reg_start_date);
+                    setEventDate(eventDate);
+                    setPreRegStartDate(preRegStartDate);
                 }
-            } else {
-                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
+            } catch (error) {
+                 console.error('Failed to fetch initial dates', error);
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch or update event dates.' });
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
-    
-    useEffect(() => {
-        fetchAndSetDates();
-    }, [fetchAndSetDates]);
-
-    const handleManualDateUpdate = async (newPreRegDate: Date, newEventDate: Date) => {
-        setIsLoading(true);
-        try {
-            await updateEventConfig({
-                pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
-                event_date: newEventDate.toISOString().split('T')[0],
-            });
-            setPreRegStartDate(newPreRegDate);
-            setEventDate(newEventDate);
-
-            setTempPreRegStartDate(newPreRegDate);
-            setTempEventDate(newEventDate);
-            toast({
-                title: 'Dates Updated',
-                description: 'The event dates have been successfully saved.',
-            });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
-            if(preRegStartDate && eventDate) {
-                setTempPreRegStartDate(preRegStartDate);
-                setTempEventDate(eventDate);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const onApplyChanges = () => {
-         if (!tempPreRegStartDate || !tempEventDate) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Dates cannot be empty.' });
-            return;
-         }
-
-         if (tempPreRegStartDate >= tempEventDate) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Dates',
-                description: 'The pre-registration date must be before the event date.',
-            });
-            return;
-        }
-        handleManualDateUpdate(tempPreRegStartDate, tempEventDate);
-    };
-    
-    const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.value) {
-            const newDate = parseDateAsUTC(e.target.value);
-            setTempPreRegStartDate(newDate);
-        }
-    };
-
-    const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.value) {
-            const newDate = parseDateAsUTC(e.target.value);
-            setTempEventDate(newDate);
-        }
-    };
-
-    const areDatesChanged =
-    (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
-    (tempEventDate?.getTime() !== eventDate?.getTime());
-
-  if (isLoading || !eventDate || !preRegStartDate || !tempEventDate || !tempPreRegStartDate) {
-    return (
-        <div className="space-y-6">
-             <div>
-                <h1 className="text-2xl font-bold font-headline">Event Check-in</h1>
-                <p className="text-muted-foreground">
-                Select a method to record member attendance.
-                </p>
-            </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Event Configuration</CardTitle>
-                    <CardDescription>
-                         Loading event configuration...
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
-                     <div className="flex flex-col space-y-2">
-                        <Skeleton className="h-4 w-40" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <Skeleton className="h-4 w-40" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-  }
+        };
+        fetchInitialDates();
+    }, []);
 
   return (
     <div className="space-y-6">
@@ -619,44 +440,12 @@ export default function CheckInPage() {
         </p>
       </div>
 
-       <Card>
-            <CardHeader>
-                <CardTitle>Event Configuration</CardTitle>
-                <CardDescription>
-                    Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2">
-                <div className="flex flex-col space-y-2">
-                     <Label>Pre-registration Start Date</Label>
-                      <Input
-                        type="date"
-                        value={format(tempPreRegStartDate, 'yyyy-MM-dd')}
-                        onChange={onPreRegDateChange}
-                        className="w-full"
-                        disabled={isLoading}
-                      />
-                </div>
-                <div className="flex flex-col space-y-2">
-                     <Label>Event Date (Sunday @ 9:00 AM)</Label>
-                     <Input
-                        type="date"
-                        value={format(tempEventDate, 'yyyy-MM-dd')}
-                        onChange={onEventDateChange}
-                        className="w-full"
-                        disabled={isLoading}
-                      />
-                </div>
-            </CardContent>
-             <CardFooter>
-                {areDatesChanged && (
-                    <Button onClick={onApplyChanges} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                        Apply Changes
-                    </Button>
-                )}
-            </CardFooter>
-        </Card>
+       <DateConfigCard 
+         onDatesChange={(newPreRegDate, newEventDate) => {
+            setPreRegStartDate(newPreRegDate);
+            setEventDate(newEventDate);
+         }}
+       />
 
       <Tabs defaultValue="qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-2">
@@ -664,7 +453,11 @@ export default function CheckInPage() {
           <TabsTrigger value="face">Face Recognition</TabsTrigger>
         </TabsList>
         <TabsContent value="qr">
-            <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
+            {eventDate && preRegStartDate && !isLoading ? (
+                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
+            ) : (
+                <Card><CardHeader><CardTitle>Loading Check-in...</CardTitle></CardHeader></Card>
+            )}
         </TabsContent>
         <TabsContent value="face">
             <FaceCheckinTab />

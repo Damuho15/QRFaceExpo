@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js';
 import type { Member, EventConfig } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
@@ -53,6 +54,13 @@ const parseDate = (dateInput: any): Date | null => {
     console.warn('Could not parse a valid date from input:', dateInput);
     return null;
 };
+
+// Helper to parse date strings as UTC
+export const parseDateAsUTC = (dateString: string) => {
+    // The 'Z' suffix ensures the date is parsed in UTC, not the user's local timezone.
+    const date = new Date(dateString + 'T00:00:00Z');
+    return date;
+}
 
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
