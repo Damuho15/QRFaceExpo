@@ -452,9 +452,7 @@ const FaceCheckinTab = () => {
   );
 };
 
-// For testing purposes, we hardcode a "today" and calculate dates from it.
-const testToday = new Date('2025-08-01');
-const initialEventDate = getNextSunday(testToday);
+const initialEventDate = getNextSunday(new Date());
 const initialPreRegDate = getPreviousTuesday(initialEventDate);
 
 export default function CheckInPage() {
