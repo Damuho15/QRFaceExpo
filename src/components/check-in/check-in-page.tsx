@@ -75,11 +75,9 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
 
 // Helper to parse date strings as UTC
 const parseDateAsUTC = (dateString: string) => {
-    const date = new Date(dateString);
     // When a date string like '2024-07-30' is parsed, it's treated as UTC midnight.
     // However, `new Date()` might interpret it in local time. To ensure consistency,
-    // we explicitly tell it to parse as if it's a UTC date.
-    // A simple way is to add 'T00:00:00Z'
+    // we explicitly tell it to parse as if it's a UTC date by adding 'T00:00:00Z'
     const utcDate = new Date(`${dateString}T00:00:00Z`);
     return utcDate;
 }
@@ -467,10 +465,11 @@ const FaceCheckinTab = () => {
 export default function CheckInPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
+    // State for the dates saved in the DB
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
     
-    // Temporary state for staged date changes
+    // Temporary state for staged date changes in the UI
     const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
     const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
@@ -485,8 +484,8 @@ export default function CheckInPage() {
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
                 
+                // Automated Rollover Logic
                 if (today > dbEventDate) {
-                    // Event date has passed, auto-rollover
                     const newEventDate = getNextSunday(today);
                     const newPreRegDate = getPreviousTuesday(newEventDate);
                     
@@ -495,6 +494,7 @@ export default function CheckInPage() {
                         event_date: newEventDate.toISOString().split('T')[0],
                     });
                     
+                    // Set both main state and temp state to the new automated dates
                     setEventDate(newEventDate);
                     setPreRegStartDate(newPreRegDate);
                     setTempEventDate(newEventDate);
@@ -509,6 +509,8 @@ export default function CheckInPage() {
                     // Event date is in the future, use stored dates
                     const storedEventDate = parseDateAsUTC(config.event_date);
                     const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
+
+                    // Set both main state and temp state to the stored dates
                     setEventDate(storedEventDate);
                     setPreRegStartDate(storedPreRegDate);
                     setTempEventDate(storedEventDate);
@@ -529,15 +531,18 @@ export default function CheckInPage() {
         fetchAndSetDates();
     }, [fetchAndSetDates]);
 
-    const handleDateChange = async (newPreRegDate: Date, newEventDate: Date) => {
+    const handleManualDateUpdate = async (newPreRegDate: Date, newEventDate: Date) => {
         try {
             setIsLoading(true);
             await updateEventConfig({
                 pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
                 event_date: newEventDate.toISOString().split('T')[0],
             });
+            // Update main state to reflect saved changes
             setPreRegStartDate(newPreRegDate);
             setEventDate(newEventDate);
+
+            // Also update temp state to keep UI consistent
             setTempPreRegStartDate(newPreRegDate);
             setTempEventDate(newEventDate);
             toast({
@@ -546,7 +551,7 @@ export default function CheckInPage() {
             });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
-            // Revert temp dates to the last saved state on failure
+            // On failure, revert temp dates to the last known saved state
             if(preRegStartDate && eventDate) {
                 setTempPreRegStartDate(preRegStartDate);
                 setTempEventDate(eventDate);
@@ -570,9 +575,10 @@ export default function CheckInPage() {
             });
             return;
         }
-        handleDateChange(tempPreRegStartDate, tempEventDate);
+        handleManualDateUpdate(tempPreRegStartDate, tempEventDate);
     };
     
+    // Handlers for date pickers now only update temp state
     const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newDate = parseDateAsUTC(e.target.value);
         setTempPreRegStartDate(newDate);
@@ -583,6 +589,7 @@ export default function CheckInPage() {
         setTempEventDate(newDate);
     };
 
+    // Check if the temporary dates in the UI differ from the saved dates
     const areDatesChanged =
     (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
     (tempEventDate?.getTime() !== eventDate?.getTime());
@@ -631,7 +638,7 @@ export default function CheckInPage() {
             <CardHeader>
                 <CardTitle>Event Configuration</CardTitle>
                 <CardDescription>
-                    Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM.
+                    Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
@@ -679,5 +686,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
