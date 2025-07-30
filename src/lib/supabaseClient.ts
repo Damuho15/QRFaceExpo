@@ -17,6 +17,31 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const BUCKET_NAME = 'member-pictures';
 
 /**
+ * Converts a Date object to a 'YYYY-MM-DD' string, ignoring timezone.
+ * This is the correct way to send a date-only value to Supabase.
+ * @param date - The date object to format.
+ * @returns A string in 'YYYY-MM-DD' format, or null if the input is invalid.
+ */
+const formatDateForSupabase = (date: Date | string | null | undefined): string | null => {
+    if (!date) return null;
+    try {
+        const d = new Date(date);
+        // Check if the date is valid
+        if (isNaN(d.getTime())) {
+            return null;
+        }
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    } catch (error) {
+        console.error("Could not format date:", date, error);
+        return null;
+    }
+};
+
+
+/**
  * Robustly parses a date from various formats, including Excel's serial number format.
  * @param dateInput - The value to parse (string, number, Date, or null).
  * @returns A Date object or null if parsing fails.
@@ -94,8 +119,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: new Date(member.birthday).toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
+        birthday: formatDateForSupabase(member.birthday),
+        weddingAnniversary: formatDateForSupabase(member.weddingAnniversary),
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -124,8 +149,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
         nickname: memberData.nickname || null,
         email: memberData.email || null,
         phone: memberData.phone || null,
-        birthday: new Date(memberData.birthday).toISOString(),
-        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
+        birthday: formatDateForSupabase(memberData.birthday),
+        weddingAnniversary: formatDateForSupabase(memberData.weddingAnniversary),
         pictureUrl: memberData.pictureUrl || null,
         qrCodePayload: memberData.qrCodePayload,
         ministries: memberData.ministries || null,
@@ -177,8 +202,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
             nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
             email: rawMember.Email ? String(rawMember.Email).trim() : null,
             phone: rawMember.Phone ? String(rawMember.Phone).trim() : null,
-            birthday: birthday.toISOString(),
-            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+            birthday: formatDateForSupabase(birthday),
+            weddingAnniversary: formatDateForSupabase(weddingAnniversary),
             qrCodePayload: fullName,
             ministries: rawMember.Ministries ? String(rawMember.Ministries).trim() : null,
             lg: rawMember.LG ? String(rawMember.LG).trim() : null,
