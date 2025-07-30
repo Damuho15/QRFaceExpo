@@ -93,6 +93,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 variant: 'destructive',
             });
             setTimeout(() => {
+                setScanResult(null);
                 setIsScanning(true);
             }, 2000);
             return;
@@ -121,11 +122,6 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
             }
         } else {
             setScanResult({ memberName: 'Not Found', found: false });
-            toast({
-                title: 'Check-in Failed',
-                description: 'Invalid QR Code. Member not found.',
-                variant: 'destructive',
-            });
         }
 
         setTimeout(() => {
@@ -234,7 +230,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                          <p className="mt-2 text-muted-foreground">Camera not available</p>
                     </div>
                 )}
-                 {!isScanning && scanResult && (
+                 {scanResult && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 text-center px-4">
                         {scanResult.found ? (
                             <>
