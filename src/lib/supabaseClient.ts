@@ -54,16 +54,17 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
-    const { birthday, weddingAnniversary, ...rest } = member;
     const memberToInsert = {
-        ...rest,
-        birthday: birthday.toISOString(),
-        weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+        fullName: member.fullName,
+        nickname: member.nickname || null,
+        email: member.email || null,
+        phone: member.phone || null,
+        birthday: member.birthday instanceof Date ? member.birthday.toISOString() : member.birthday,
+        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString() : member.weddingAnniversary,
+        pictureUrl: member.pictureUrl || null,
+        qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
         lg: member.lg || null,
-        phone: member.phone || null,
-        email: member.email || null,
-        nickname: member.nickname || null,
     };
     
     const { data, error } = await supabase
@@ -82,22 +83,38 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
 
 export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' | 'pictureUrl'>)[]): Promise<Member[] | null> => {
     const membersToInsert = members.map(member => {
+        const birthday = member.birthday instanceof Date && !isNaN(member.birthday.getTime()) 
+            ? member.birthday.toISOString() 
+            : null;
+
+        if (!birthday) {
+            console.error('Skipping member with invalid birthday:', member.fullName);
+            return null;
+        }
+
         return {
             fullName: member.fullName,
             nickname: member.nickname || null,
             email: member.email || null,
             phone: member.phone || null,
-            birthday: member.birthday.toISOString(),
-            weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
+            birthday: birthday,
+            weddingAnniversary: member.weddingAnniversary instanceof Date && !isNaN(member.weddingAnniversary.getTime()) 
+                ? member.weddingAnniversary.toISOString() 
+                : null,
             qrCodePayload: member.fullName,
             ministries: member.ministries || null,
             lg: member.lg || null,
         }
-    });
+    }).filter(Boolean); // Remove null entries for members with invalid dates
+
+    if (membersToInsert.length === 0) {
+        console.log("No valid members to insert.");
+        return [];
+    }
 
     const { data, error } = await supabase
         .from('members')
-        .insert(membersToInsert)
+        .insert(membersToInsert as any)
         .select();
 
     if (error) {
@@ -115,6 +132,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
         ...memberData,
         birthday: birthday.toISOString(),
         weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+        ministries: member.ministries || null,
+        lg: member.lg || null,
     };
     const { data, error } = await supabase
         .from('members')
