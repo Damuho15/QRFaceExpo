@@ -47,10 +47,10 @@ export const columns: ColumnDef<Member>[] = [
         if (!member.qrCodePayload) return null;
         return (
             <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=${encodeURIComponent(member.qrCodePayload)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(member.qrCodePayload)}`}
                 alt={`QR Code for ${member.fullName}`}
-                width={50}
-                height={50}
+                width={80}
+                height={80}
                 data-ai-hint="qr code"
             />
         )
