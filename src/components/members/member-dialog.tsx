@@ -48,6 +48,8 @@ const memberSchema = z.object({
   }),
   weddingAnniversary: z.date().optional().nullable(),
   picture: z.any().optional(),
+  ministries: z.string().optional(),
+  lg: z.string().optional(),
 });
 
 type MemberFormValues = z.infer<typeof memberSchema>;
@@ -83,6 +85,8 @@ export default function MemberDialog({
           phone: memberToEdit.phone,
           birthday: memberToEdit.birthday ? new Date(memberToEdit.birthday) : undefined,
           weddingAnniversary: memberToEdit.weddingAnniversary ? new Date(memberToEdit.weddingAnniversary) : null,
+          ministries: memberToEdit.ministries,
+          lg: memberToEdit.lg,
         }
       : {
           fullName: '',
@@ -91,6 +95,8 @@ export default function MemberDialog({
           phone: '',
           birthday: undefined,
           weddingAnniversary: null,
+          ministries: '',
+          lg: '',
         },
   });
 
@@ -150,6 +156,8 @@ export default function MemberDialog({
           weddingAnniversary: data.weddingAnniversary || null,
           pictureUrl: pictureUrl,
           qrCodePayload: memberToEdit?.qrCodePayload || data.fullName,
+          ministries: data.ministries || '',
+          lg: data.lg || '',
       }
 
       if (isEditMode && memberToEdit) {
@@ -391,6 +399,32 @@ export default function MemberDialog({
                             <FormLabel>Telephone Number</FormLabel>
                             <FormControl>
                                 <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                         <FormField
+                        control={form.control}
+                        name="ministries"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Ministries (Optional)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Music, Youth" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="lg"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>LG (Optional)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Downtown Group" {...field} disabled={isSubmitting} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
