@@ -20,12 +20,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, Loader2, CheckCircle } from 'lucide-react';
+import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX } from 'lucide-react';
 import jsQR from 'jsqr';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
-import { getEventConfig, updateEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
+import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
+import { Member } from '@/lib/types';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -62,12 +63,12 @@ const getPreviousTuesday = (from: Date): Date => {
     return date;
 };
 
-const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
+const ScanTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; preRegStartDate: Date, members: Member[] }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-    const [scanResult, setScanResult] = useState<string | null>(null);
+    const [scanResult, setScanResult] = useState<{ memberName: string; found: boolean } | null>(null);
     const [isScanning, setIsScanning] = useState(true);
 
     const handleCheckIn = useCallback((qrData: string) => {
@@ -82,21 +83,30 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
             setTimeout(() => setIsScanning(true), 2000);
             return;
         }
+        
+        const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
-        toast({
-            title: `QR Code Scanned for ${registrationType}!`,
-            description: `Data: ${qrData}. Simulating check-in...`,
-        });
-
-        setTimeout(() => {
+        if (matchedMember) {
+            setScanResult({ memberName: matchedMember.fullName, found: true });
             toast({
                 title: 'Check-in Successful',
-                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
-                variant: 'default',
+                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
             });
-            setTimeout(() => setIsScanning(true), 2000); // Allow scanning again
-        }, 1500);
-    }, [eventDate, preRegStartDate, toast]);
+        } else {
+             setScanResult({ memberName: 'Not Found', found: false });
+             toast({
+                title: 'Check-in Failed',
+                description: 'Invalid QR Code. Member not found.',
+                variant: 'destructive',
+            });
+        }
+        
+        setTimeout(() => {
+            setIsScanning(true);
+            setScanResult(null);
+        }, 2000);
+
+    }, [eventDate, preRegStartDate, toast, members]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -145,9 +155,8 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
                     });
 
                     if (code) {
-                        setScanResult(code.data);
-                        handleCheckIn(code.data);
                         setIsScanning(false);
+                        handleCheckIn(code.data);
                         return;
                     }
                 }
@@ -177,10 +186,20 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
                     </div>
                 )}
                  {!isScanning && scanResult && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90">
-                        <UserCheck className="h-16 w-16 text-green-500" />
-                        <p className="mt-4 text-lg font-semibold">Scan Successful!</p>
-                        <p className="text-sm text-muted-foreground">Ready for next scan...</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 text-center px-4">
+                        {scanResult.found ? (
+                            <>
+                                <UserCheck className="h-16 w-16 text-green-500" />
+                                <p className="mt-4 text-xl font-bold">{scanResult.memberName}</p>
+                                <p className="text-sm text-muted-foreground">Check-in Successful!</p>
+                            </>
+                        ) : (
+                            <>
+                                <UserX className="h-16 w-16 text-destructive" />
+                                <p className="mt-4 text-lg font-semibold">Invalid QR Code</p>
+                                <p className="text-sm text-muted-foreground">Member not found.</p>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -197,10 +216,17 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
 };
 
 
-const UploadTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartDate: Date }) => {
+const UploadTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date; preRegStartDate: Date, members: Member[] }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
+
+    const resetInput = () => {
+        setFileName('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -226,6 +252,7 @@ const UploadTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStar
                                 description: 'Could not decode QR code from the uploaded image.',
                                 variant: 'destructive',
                             });
+                            resetInput();
                         }
                     }
                 };
@@ -244,25 +271,25 @@ const UploadTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStar
                 description: 'Check-in is not open at this time.',
                 variant: 'destructive',
             });
+            resetInput();
             return;
         }
 
-        toast({
-            title: `QR Code Decoded for ${registrationType}!`,
-            description: `Data: ${qrData}. Simulating check-in...`,
-        });
+        const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
-        setTimeout(() => {
-            toast({
+        if (matchedMember) {
+             toast({
                 title: 'Check-in Successful',
-                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
-                variant: 'default',
+                description: `${matchedMember.fullName} has been checked in for ${registrationType}.`,
             });
-             setFileName('');
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }, 1500);
+        } else {
+             toast({
+                title: 'Check-in Failed',
+                description: 'Invalid QR Code. Member not found.',
+                variant: 'destructive',
+            });
+        }
+        resetInput();
     };
 
     return (
@@ -286,7 +313,7 @@ const UploadTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStar
 };
 
 
-const QRCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegStartDate: Date }) => {
+const QRCheckinTab = ({ eventDate, preRegStartDate, members }: { eventDate: Date, preRegStartDate: Date, members: Member[] }) => {
     return (
         <Card>
             <CardHeader>
@@ -300,10 +327,10 @@ const QRCheckinTab = ({ eventDate, preRegStartDate }: { eventDate: Date, preRegS
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
+                        <ScanTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} />
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                        <UploadTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members}/>
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -456,10 +483,15 @@ export default function CheckInPage() {
     const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
     const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
+    const [members, setMembers] = useState<Member[]>([]);
+
      const fetchAndSetDates = useCallback(async () => {
         setIsLoading(true);
         try {
-            const config = await getEventConfig();
+            const [config, allMembers] = await Promise.all([getEventConfig(), getMembers()]);
+            
+            setMembers(allMembers);
+
             if (config) {
                 const today = new Date();
                 today.setUTCHours(0, 0, 0, 0);
@@ -659,7 +691,7 @@ export default function CheckInPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} />
+                <QRCheckinTab eventDate={eventDate} preRegStartDate={preRegStartDate} members={members} />
             )}
         </TabsContent>
         <TabsContent value="face">
@@ -683,4 +715,5 @@ export default function CheckInPage() {
   );
 }
 
+    
     
