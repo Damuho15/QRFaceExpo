@@ -54,10 +54,10 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
-    const memberData: Omit<Member, 'id' | 'birthday' | 'weddingAnniversary' | 'qrCodePayload'> & { birthday: string; weddingAnniversary?: string | null; qrCodePayload: string } = {
+    const memberData = {
         ...member,
         birthday: member.birthday.toISOString().split('T')[0], // Format date for DB
-        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString().split('T')[0] : null,
+        weddingAnniversary: member.weddingAnniversary instanceof Date ? member.weddingAnniversary.toISOString().split('T')[0] : null,
         qrCodePayload: member.fullName, // Auto-generate QR payload from full name
     };
 
@@ -77,9 +77,9 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 }
 
-export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload'> & { qrCodePayload?: string })[]): Promise<Member[] | null> => {
+export const addMembers = async (members: (Omit<Member, 'id'>)[]): Promise<Member[] | null> => {
     const membersToInsert = members.map(member => {
-        const { pictureUrl, ...rest } = member; // Exclude pictureUrl
+        const { pictureUrl, ...rest } = member; // Exclude pictureUrl because we don't handle batch picture uploads
         return {
             ...rest,
             birthday: member.birthday ? new Date(member.birthday).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
