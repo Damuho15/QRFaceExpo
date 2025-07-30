@@ -27,6 +27,23 @@ const isValidDate = (date: any): date is Date => {
     return date instanceof Date && !isNaN(date.getTime());
 }
 
+const parseDate = (dateString: string): Date | null => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    
+    // Handles both MM-DD-YYYY and YYYY-MM-DD and MM/DD/YYYY
+    const parts = dateString.split(/[-/]/);
+    if (parts.length === 3) {
+        const year = parts[2].length === 4 ? parseInt(parts[2], 10) : parseInt(parts[0], 10);
+        const month = parseInt(parts[0].length === 4 ? parts[1] : parts[0], 10) - 1; // month is 0-indexed
+        const day = parseInt(parts[0].length === 4 ? parts[2] : parts[1], 10);
+        
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    return null;
+}
 
 export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -46,11 +63,11 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const workbook = XLSX.read(data, { type: 'array' }); // Removed cellDates: true
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const rows: any[] = XLSX.utils.sheet_to_json(worksheet, {
-            defval: null, // Use null for empty cells
+            defval: null,
           });
           
           if (rows.length < 1) {
@@ -74,19 +91,22 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
             if (!row.Email) {
                 rowErrors.push('Email is missing');
             }
+            
+            const birthday = parseDate(row.Birthday);
             if (!row.Birthday) {
                 rowErrors.push('Birthday is missing');
-            } else if (!isValidDate(row.Birthday)) {
+            } else if (!birthday) {
                 rowErrors.push('Birthday is not a valid date');
             }
-            
-            if(row.WeddingAnniversary && !isValidDate(row.WeddingAnniversary)) {
+
+            const weddingAnniversary = row.WeddingAnniversary ? parseDate(row.WeddingAnniversary) : null;
+            if(row.WeddingAnniversary && !weddingAnniversary) {
                 rowErrors.push('WeddingAnniversary is not a valid date');
             }
 
             if (rowErrors.length > 0) {
-                 // Excel rows are 1-based, +1 for header
                 validationErrors.push(`Row ${index + 2}: ${rowErrors.join(', ')}`);
+                 return null;
             }
 
             return {
@@ -94,10 +114,10 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
               nickname: row.Nickname ? String(row.Nickname) : '',
               email: String(row.Email || ''),
               phone: row.Phone ? String(row.Phone) : '',
-              birthday: row.Birthday,
-              weddingAnniversary: row.WeddingAnniversary,
+              birthday: birthday!,
+              weddingAnniversary: weddingAnniversary,
             };
-          }).filter((_, index) => validationErrors.find(err => err.startsWith(`Row ${index + 2}`)) === undefined);
+          }).filter(member => member !== null) as NewMember[];
 
 
           if (validationErrors.length > 0) {
