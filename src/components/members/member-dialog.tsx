@@ -36,6 +36,7 @@ import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { addMember, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
+import { ScrollArea } from '../ui/scroll-area';
 
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -212,7 +213,7 @@ export default function MemberDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {TriggerComponent}
-      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
           if (showQr || isSubmitting) {
             e.preventDefault();
           }
@@ -228,172 +229,176 @@ export default function MemberDialog({
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="picture"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Member Picture</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="file" 
-                          accept="image/*"
-                          onChange={handlePictureChange} 
-                          disabled={isSubmitting} 
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                 <ScrollArea className="h-96 w-full">
+                    <div className="space-y-4 py-4 pr-6">
+                        <FormField
+                        control={form.control}
+                        name="picture"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Member Picture</FormLabel>
+                            <FormControl>
+                                <Input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={handlePictureChange} 
+                                disabled={isSubmitting} 
+                                />
+                            </FormControl>
+                            {previewImage && (
+                                <Image 
+                                    src={previewImage} 
+                                    alt="Member preview" 
+                                    width={100} 
+                                    height={100} 
+                                    className="mt-2 rounded-md object-cover"
+                                    data-ai-hint="member picture"
+                                />
+                            )}
+                            <FormMessage />
+                            </FormItem>
+                        )}
                         />
-                      </FormControl>
-                      {previewImage && (
-                          <Image 
-                              src={previewImage} 
-                              alt="Member preview" 
-                              width={100} 
-                              height={100} 
-                              className="mt-2 rounded-md object-cover"
-                              data-ai-hint="member picture"
-                          />
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nickname"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nickname (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Johnny" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="birthday"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date of birth</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              disabled={isSubmitting}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="weddingAnniversary"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Wedding Anniversary (Optional)</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              disabled={isSubmitting}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date()
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="member@example.com" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telephone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
+                        <FormField
+                        control={form.control}
+                        name="fullName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="John Doe" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="nickname"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nickname (Optional)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Johnny" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="birthday"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Date of birth</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP")
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    disabled={(date) =>
+                                    date > new Date() || date < new Date("1900-01-01")
+                                    }
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="weddingAnniversary"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Wedding Anniversary (Optional)</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP")
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value || undefined}
+                                    onSelect={field.onChange}
+                                    disabled={(date) =>
+                                    date > new Date()
+                                    }
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                                <Input placeholder="member@example.com" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Telephone Number</FormLabel>
+                            <FormControl>
+                                <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isEditMode ? 'Save Changes' : 'Create Member'}
