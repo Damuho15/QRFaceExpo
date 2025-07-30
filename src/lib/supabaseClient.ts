@@ -107,18 +107,16 @@ export const getMembers = async (): Promise<Member[]> => {
  * @returns The newly created Member object or null on failure.
  */
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member | null> => {
+    // Build a safe payload, ensuring data types are correct for Supabase
     const safePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
         email: formData.email || null,
         phone: formData.phone || null,
-        // Ensure birthday is a valid date and format it correctly.
         birthday: new Date(formData.birthday).toISOString(),
-        // Handle optional wedding anniversary
         weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
         pictureUrl: pictureUrl,
-        // QR Code is based on the full name for new members
-        qrCodePayload: formData.fullName,
+        qrCodePayload: formData.fullName, // QR Code is based on the full name for new members
         ministries: formData.ministries || null,
         lg: formData.lg || null,
     };
@@ -147,6 +145,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
  * @returns The updated Member object or null on failure.
  */
 export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member | null> => {
+     // Build a safe payload, ensuring data types are correct for Supabase
     const safePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -216,7 +215,6 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
             qrCodePayload: fullName, // QR Code payload is based on full name.
             ministries: rawMember.Ministries ? String(rawMember.Ministries).trim() : null,
             lg: rawMember.LG ? String(rawMember.LG).trim() : null,
-            // Picture URL is not included in batch add; it can be added manually.
         };
     }).filter((m): m is Exclude<typeof m, null> => m !== null); // Filter out the nulls from invalid rows.
 
@@ -241,3 +239,5 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     // 4. On success, return the data, ensuring dates are converted back for consistency.
     return data ? data.map((member: any) => ({ ...member, birthday: new Date(member.birthday), weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary) : null })) : [];
 };
+
+    
