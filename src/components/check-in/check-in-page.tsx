@@ -29,19 +29,20 @@ import { Skeleton } from '../ui/skeleton';
 
 const getNextSunday = (from: Date): Date => {
     const date = new Date(from.getTime());
+    date.setUTCHours(0, 0, 0, 0);
     const day = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
-    const diff = (7 - day) % 7;
+    const diff = day === 0 ? 7 : 7 - day; // If today is Sunday, add 7 days, else find next Sunday
     date.setUTCDate(date.getUTCDate() + diff);
-    if (diff === 0) { // If today is Sunday, get next Sunday
-        date.setUTCDate(date.getUTCDate() + 7);
-    }
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
     const date = new Date(from.getTime());
+    date.setUTCHours(0, 0, 0, 0);
     const day = date.getUTCDay(); // 0 = Sunday, ..., 2 = Tuesday
-    const daysToSubtract = (day + 5) % 7; // (day - 2 + 7) % 7 -> (day + 5) % 7
+    // From a given Sunday (day 0), Tuesday is 5 days before. (0 - 5 + 7) % 7 = 2
+    // From any other day, calculate days to subtract to get to the previous Tuesday.
+    const daysToSubtract = (day - 2 + 7) % 7;
     date.setUTCDate(date.getUTCDate() - daysToSubtract);
     return date;
 };
@@ -83,6 +84,34 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const [scanResult, setScanResult] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(true);
+
+    const handleCheckIn = useCallback((qrData: string) => {
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            setTimeout(() => setIsScanning(true), 2000);
+            return;
+        }
+
+        toast({
+            title: `QR Code Scanned for ${registrationType}!`,
+            description: `Data: ${qrData}. Simulating check-in...`,
+        });
+
+        setTimeout(() => {
+            toast({
+                title: 'Check-in Successful',
+                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
+                variant: 'default',
+            });
+            setTimeout(() => setIsScanning(true), 2000); // Allow scanning again
+        }, 1500);
+    }, [eventDate, preRegStartDate, toast]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -150,33 +179,6 @@ const ScanTab = ({ eventDate, preRegStartDate }: { eventDate: Date; preRegStartD
         };
     }, [hasCameraPermission, isScanning, handleCheckIn]);
 
-    const handleCheckIn = useCallback((qrData: string) => {
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
-
-        if (!registrationType) {
-            toast({
-                title: 'Check-in Not Allowed',
-                description: 'Check-in is not open at this time.',
-                variant: 'destructive',
-            });
-            setTimeout(() => setIsScanning(true), 2000);
-            return;
-        }
-
-        toast({
-            title: `QR Code Scanned for ${registrationType}!`,
-            description: `Data: ${qrData}. Simulating check-in...`,
-        });
-
-        setTimeout(() => {
-            toast({
-                title: 'Check-in Successful',
-                description: `Member with QR data "${qrData}" has been checked in for ${registrationType}.`,
-                variant: 'default',
-            });
-            setTimeout(() => setIsScanning(true), 2000); // Allow scanning again
-        }, 1500);
-    }, [eventDate, preRegStartDate, toast]);
 
     return (
         <div className="space-y-4">
@@ -471,7 +473,7 @@ export default function CheckInPage() {
         try {
             const config = await getEventConfig();
             if (config) {
-                const today = new Date('2026-01-01T12:00:00Z');
+                const today = new Date();
                 today.setUTCHours(0, 0, 0, 0);
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
@@ -675,3 +677,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
