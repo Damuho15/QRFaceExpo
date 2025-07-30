@@ -473,7 +473,7 @@ export default function CheckInPage() {
     useEffect(() => {
         setIsMounted(true);
         //const today = new Date();
-        const today = new Date('2024-08-01')
+        const today = new Date('2025-08-01')
         today.setHours(0,0,0,0);
 
         const storedEventDateStr = localStorage.getItem('eventDate');
