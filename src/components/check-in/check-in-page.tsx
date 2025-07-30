@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -21,11 +22,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, UserX, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import jsQR from 'jsqr';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { recognizeFace } from '@/ai/flows/face-recognition-flow';
+import { format } from 'date-fns';
 
 
 const getNextSunday = (from = new Date()) => {
@@ -463,12 +462,6 @@ export default function CheckInPage() {
     // State for manual overrides
     const [isPreRegDateManuallySet, setIsPreRegDateManuallySet] = useState(false);
     
-    // State for popovers and temporary date selections
-    const [preRegPopoverOpen, setPreRegPopoverOpen] = useState(false);
-    const [tempPreRegDate, setTempPreRegDate] = useState<Date | undefined>(preRegStartDate);
-    const [eventPopoverOpen, setEventPopoverOpen] = useState(false);
-    const [tempEventDate, setTempEventDate] = useState<Date | undefined>(eventDate);
-
     // Effect for initializing and managing dates from localStorage
     useEffect(() => {
         setIsMounted(true);
@@ -514,35 +507,25 @@ export default function CheckInPage() {
         }
     }, [eventDate, preRegStartDate, isPreRegDateManuallySet, isMounted]);
 
-    // Handlers for applying date changes from popovers
-    const handlePreRegApply = () => {
-        if (tempPreRegDate) {
-            setPreRegStartDate(tempPreRegDate);
-            setIsPreRegDateManuallySet(true); // Mark as manual override
-        }
-        setPreRegPopoverOpen(false);
+    // Handlers for date changes from inputs
+    const handlePreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = new Date(e.target.value);
+        // Adjust for timezone offset to prevent date from changing
+        const adjustedDate = new Date(newDate.getTime() + newDate.getTimezoneOffset() * 60000);
+        setPreRegStartDate(adjustedDate);
+        setIsPreRegDateManuallySet(true); // Mark as manual override
     };
 
-    const handleEventDateApply = () => {
-        if (tempEventDate) {
-            setEventDate(tempEventDate);
-            // If event date changes, recalculate pre-reg date only if it wasn't manually set
-            if (!isPreRegDateManuallySet) {
-                setPreRegStartDate(getPreviousTuesday(tempEventDate));
-            }
+    const handleEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = new Date(e.target.value);
+        // Adjust for timezone offset and set time to 9 AM
+        const adjustedDate = new Date(newDate.getFullYear(), newDate.getMonth(), newDate.getDate(), 9, 0, 0);
+        setEventDate(adjustedDate);
+        // If event date changes, recalculate pre-reg date only if it wasn't manually set
+        if (!isPreRegDateManuallySet) {
+            setPreRegStartDate(getPreviousTuesday(adjustedDate));
         }
-        setEventPopoverOpen(false);
     };
-
-    // Sync temporary dates in popovers with main state when opened
-    useEffect(() => {
-        setTempPreRegDate(preRegStartDate);
-    }, [preRegStartDate, preRegPopoverOpen]);
-
-    useEffect(() => {
-        setTempEventDate(eventDate);
-    }, [eventDate, eventPopoverOpen]);
-
 
     if (!isMounted) {
         return null; // Render nothing until client-side hydration is complete
@@ -567,75 +550,21 @@ export default function CheckInPage() {
             <CardContent className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col space-y-2">
                      <Label>Pre-registration Start Date</Label>
-                    <Popover open={preRegPopoverOpen} onOpenChange={setPreRegPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !preRegStartDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {preRegStartDate ? format(preRegStartDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={tempPreRegDate}
-                                onSelect={(date) => {
-                                    if (date) {
-                                        const newDate = new Date(date);
-                                        newDate.setHours(0,0,0,0);
-                                        setTempPreRegDate(newDate);
-                                    }
-                                }}
-                                disabled={(date) => date > eventDate}
-                                initialFocus
-                            />
-                            <CardFooter className="flex justify-end gap-2 pt-4">
-                                <Button variant="ghost" onClick={() => setPreRegPopoverOpen(false)}>Cancel</Button>
-                                <Button onClick={handlePreRegApply}>Apply</Button>
-                            </CardFooter>
-                        </PopoverContent>
-                    </Popover>
+                      <Input
+                        type="date"
+                        value={format(preRegStartDate, 'yyyy-MM-dd')}
+                        onChange={handlePreRegDateChange}
+                        className="w-full"
+                      />
                 </div>
                 <div className="flex flex-col space-y-2">
                      <Label>Event Date (Sunday @ 9:00 AM)</Label>
-                    <Popover open={eventPopoverOpen} onOpenChange={setEventPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !eventDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {eventDate ? format(eventDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={tempEventDate}
-                                onSelect={(date) => {
-                                    if (date) {
-                                        const newDate = new Date(date);
-                                        newDate.setHours(9,0,0,0);
-                                        setTempEventDate(newDate);
-                                    }
-                                }}
-                                initialFocus
-                            />
-                             <CardFooter className="flex justify-end gap-2 pt-4">
-                                <Button variant="ghost" onClick={() => setEventPopoverOpen(false)}>Cancel</Button>
-
-                                <Button onClick={handleEventDateApply}>Apply</Button>
-                            </CardFooter>
-                        </PopoverContent>
-                    </Popover>
+                     <Input
+                        type="date"
+                        value={format(eventDate, 'yyyy-MM-dd')}
+                        onChange={handleEventDateChange}
+                        className="w-full"
+                      />
                 </div>
             </CardContent>
         </Card>
@@ -655,3 +584,6 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+
+    
