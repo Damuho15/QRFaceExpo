@@ -17,37 +17,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 const BUCKET_NAME = 'member-pictures';
 
 /**
- * Converts a Date object to a 'YYYY-MM-DD' string, ignoring timezone.
- * This is the correct way to send a date-only value to Supabase.
- * @param date - The date object to format.
- * @returns A string in 'YYYY-MM-DD' format, or null if the input is invalid.
- */
-const formatDateForSupabase = (date: Date | string | null | undefined): string | null => {
-    if (!date) return null;
-    try {
-        // Ensure we are working with a Date object
-        const d = new Date(date);
-        
-        // Check if the date is valid
-        if (isNaN(d.getTime())) {
-            console.error("Invalid date provided to formatDateForSupabase:", date);
-            return null;
-        }
-        
-        // Use UTC methods to prevent timezone shifts
-        const year = d.getUTCFullYear();
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        
-        return `${year}-${month}-${day}`;
-    } catch (error) {
-        console.error("Could not format date:", date, error);
-        return null;
-    }
-};
-
-
-/**
  * Robustly parses a date from various formats, including Excel's serial number format.
  * @param dateInput - The value to parse (string, number, Date, or null).
  * @returns A Date object or null if parsing fails.
@@ -62,13 +31,9 @@ const parseDate = (dateInput: any): Date | null => {
     }
 
     if (typeof dateInput === 'number') {
-        // Handle Excel's serial number date format.
-        // It's the number of days since 1900-01-01, but Excel has a bug where it thinks 1900 is a leap year.
-        // So we subtract 1 for dates after Feb 1900. The standard JS conversion handles this well.
-        const excelEpoch = new Date(1899, 11, 30); // Excel's epoch starts on day 1, which is Dec 31, 1899. JS epoch is day 0.
+        const excelEpoch = new Date(1899, 11, 30);
         const msPerDay = 86400000;
         const excelDate = new Date(excelEpoch.getTime() + dateInput * msPerDay);
-        // The excel date is in UTC, we need to adjust for the local timezone offset
         const timezoneOffset = excelDate.getTimezoneOffset() * 60000;
         const adjustedDate = new Date(excelDate.getTime() + timezoneOffset);
         return !isNaN(adjustedDate.getTime()) ? adjustedDate : null;
@@ -76,10 +41,7 @@ const parseDate = (dateInput: any): Date | null => {
 
     if (typeof dateInput === 'string') {
         const date = new Date(dateInput);
-        // If the string does not contain timezone info, treat it as local time but convert to UTC date parts
         if (isNaN(date.getTime())) return null;
-        // If the date string does not contain 'T' or 'Z', it might be a simple 'YYYY-MM-DD' or 'MM/DD/YYYY'
-        // which JS parses as UTC midnight. To avoid timezone shifting it to the previous day, we need to adjust.
         if (!/T|Z/i.test(dateInput)) {
              return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
         }
@@ -88,6 +50,7 @@ const parseDate = (dateInput: any): Date | null => {
     
     return null;
 };
+
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
@@ -132,8 +95,8 @@ export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | nu
         nickname: member.nickname || null,
         email: member.email || null,
         phone: member.phone || null,
-        birthday: formatDateForSupabase(member.birthday),
-        weddingAnniversary: formatDateForSupabase(member.weddingAnniversary),
+        birthday: new Date(member.birthday).toISOString(),
+        weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
         pictureUrl: member.pictureUrl || null,
         qrCodePayload: member.qrCodePayload,
         ministries: member.ministries || null,
@@ -162,8 +125,8 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
         nickname: memberData.nickname || null,
         email: memberData.email || null,
         phone: memberData.phone || null,
-        birthday: formatDateForSupabase(memberData.birthday),
-        weddingAnniversary: formatDateForSupabase(memberData.weddingAnniversary),
+        birthday: new Date(memberData.birthday).toISOString(),
+        weddingAnniversary: memberData.weddingAnniversary ? new Date(memberData.weddingAnniversary).toISOString() : null,
         pictureUrl: memberData.pictureUrl || null,
         qrCodePayload: memberData.qrCodePayload,
         ministries: memberData.ministries || null,
@@ -184,6 +147,7 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
 
     return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
 };
+
 
 /**
  * Handles batch insertion of members. This function is the single source of truth for validation and data formatting.
@@ -215,8 +179,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
             nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
             email: rawMember.Email ? String(rawMember.Email).trim() : null,
             phone: rawMember.Phone ? String(rawMember.Phone).trim() : null,
-            birthday: formatDateForSupabase(birthday),
-            weddingAnniversary: formatDateForSupabase(weddingAnniversary),
+            birthday: birthday.toISOString(),
+            weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
             qrCodePayload: fullName,
             ministries: rawMember.Ministries ? String(rawMember.Ministries).trim() : null,
             lg: rawMember.LG ? String(rawMember.LG).trim() : null,
@@ -235,7 +199,6 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
     if (error) {
         console.error('Error batch adding members:', error);
-        // On failure, return null to indicate to the UI that the operation failed.
         return null;
     }
 
