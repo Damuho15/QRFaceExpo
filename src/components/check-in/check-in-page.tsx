@@ -81,22 +81,6 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
 
     const handleCheckIn = useCallback(async (qrData: string) => {
         setIsScanning(false);
-        const scanTime = new Date();
-        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
-
-        if (!registrationType) {
-            toast({
-                title: 'Check-in Not Allowed',
-                description: 'Check-in is not open at this time.',
-                variant: 'destructive',
-            });
-            setTimeout(() => {
-                setIsScanning(true);
-                setScanResult(null);
-            }, 2000);
-            return;
-        }
-
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
@@ -116,7 +100,7 @@ const ScanTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { ev
             setIsScanning(true);
             setScanResult(null);
         }, 2000);
-    }, [eventDate, preRegStartDate, members, onCheckInSuccess, toast]);
+    }, [members, onCheckInSuccess, toast]);
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -238,19 +222,6 @@ const UploadTab = ({ eventDate, preRegStartDate, members, onCheckInSuccess }: { 
     }
     
     const handleCheckIn = async (qrData: string) => {
-        const scanTime = new Date();
-        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
-
-        if (!registrationType) {
-            toast({
-                title: 'Check-in Not Allowed',
-                description: 'Check-in is not open at this time.',
-                variant: 'destructive',
-            });
-            resetInput();
-            return;
-        }
-
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
 
         if (matchedMember) {
@@ -388,18 +359,6 @@ const FaceCheckinTab = ({ eventDate, preRegStartDate, onCheckInSuccess }: { even
                 variant: 'destructive',
                 title: 'Cannot Check-in',
                 description: 'Camera access is required for face recognition.',
-            });
-            return;
-        }
-
-        const scanTime = new Date();
-        const registrationType = getRegistrationType(scanTime, eventDate, preRegStartDate);
-
-        if (!registrationType) {
-            toast({
-                title: 'Check-in Not Allowed',
-                description: 'Check-in is not open at this time.',
-                variant: 'destructive',
             });
             return;
         }
@@ -741,11 +700,5 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
 
     
