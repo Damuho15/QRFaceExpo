@@ -81,8 +81,6 @@ const expectedHeaders = [
   'Phone',
   'Birthday',
   'WeddingAnniversary',
-  'Ministries',
-  'LG'
 ];
 
 
@@ -170,8 +168,6 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
               phone: row[headerIndexMap['Phone']] ? String(row[headerIndexMap['Phone']]) : '',
               birthday: birthday!,
               weddingAnniversary: weddingAnniversary,
-              ministries: row[headerIndexMap['Ministries']] ? String(row[headerIndexMap['Ministries']]) : '',
-              lg: row[headerIndexMap['LG']] ? String(row[headerIndexMap['LG']]) : '',
             };
           }).filter(member => member !== null) as NewMember[];
 
@@ -300,7 +296,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
             Upload an Excel file (.xlsx, .xls, .csv) with member data.
-            Ensure your file has columns: `FullName`, `Birthday`, and optionally `Nickname`, `Email`, `Phone`, `WeddingAnniversary`, `Ministries`, and `LG`.
+            Ensure your file has columns: `FullName`, `Birthday`, and optionally `Nickname`, `Email`, `Phone`, and `WeddingAnniversary`.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -333,8 +329,6 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                     <TableHead>Full Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Birthday</TableHead>
-                                    <TableHead>Ministries</TableHead>
-                                    <TableHead>LG</TableHead>
                                 </TableRow>
                             </TableHeader>
                              <TableBody>
@@ -343,8 +337,6 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                         <TableCell className="font-medium">{member.fullName}</TableCell>
                                         <TableCell>{member.email || 'N/A'}</TableCell>
                                         <TableCell>{isValidDate(member.birthday) ? member.birthday.toLocaleDateString() : 'Invalid Date'}</TableCell>
-                                        <TableCell>{member.ministries || 'N/A'}</TableCell>
-                                        <TableCell>{member.lg || 'N/A'}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

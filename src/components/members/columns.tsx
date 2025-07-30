@@ -131,14 +131,6 @@ export const columns: ColumnDef<Member>[] = [
     header: 'Phone Number',
   },
   {
-    accessorKey: 'ministries',
-    header: 'Ministries',
-  },
-  {
-    accessorKey: 'lg',
-    header: 'LG',
-  },
-  {
     id: 'actions',
     cell: ({ row, table }) => {
       const member = row.original;

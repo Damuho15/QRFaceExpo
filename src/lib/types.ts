@@ -8,8 +8,6 @@ export type Member = {
   phone?: string | null;
   qrCodePayload: string;
   pictureUrl?: string | null;
-  ministries?: string | null;
-  lg?: string | null;
 };
 
 export type AttendanceLog = {

@@ -54,22 +54,9 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
-    const memberData = {
-        fullName: member.fullName,
-        nickname: member.nickname || null,
-        email: member.email || null,
-        phone: member.phone || null,
-        birthday: member.birthday.toISOString(),
-        weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
-        pictureUrl: member.pictureUrl || null,
-        qrCodePayload: member.qrCodePayload,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
-    };
-
     const { data, error } = await supabase
         .from('members')
-        .insert([memberData])
+        .insert([member])
         .select()
         .single();
     
@@ -91,8 +78,6 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
             birthday: member.birthday ? new Date(member.birthday).toISOString() : new Date().toISOString(),
             weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
             qrCodePayload: member.fullName,
-            ministries: member.ministries || null,
-            lg: member.lg || null,
         }
     });
 
