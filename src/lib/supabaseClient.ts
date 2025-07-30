@@ -87,8 +87,8 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
             nickname: member.nickname || null,
             email: member.email || null,
             phone: member.phone || null,
-            birthday: member.birthday ? new Date(member.birthday).toISOString() : new Date().toISOString(),
-            weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
+            birthday: member.birthday.toISOString(),
+            weddingAnniversary: member.weddingAnniversary ? member.weddingAnniversary.toISOString() : null,
             qrCodePayload: member.fullName,
             ministries: member.ministries || null,
             lg: member.lg || null,
@@ -115,11 +115,6 @@ export const updateMember = async (member: Member): Promise<Member | null> => {
         ...memberData,
         birthday: birthday.toISOString(),
         weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
-        ministries: member.ministries || null,
-        lg: member.lg || null,
-        phone: member.phone || null,
-        email: member.email || null,
-        nickname: member.nickname || null,
     };
     const { data, error } = await supabase
         .from('members')
