@@ -31,21 +31,18 @@ import { Skeleton } from '../ui/skeleton';
 
 const getNextSunday = (from: Date): Date => {
     const date = new Date(from.valueOf());
-    date.setUTCDate(date.getUTCDate() + ((7 - date.getUTCDay()) % 7 || 7));
+    const day = date.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
+    const daysToAdd = 7 - day;
+    date.setUTCDate(date.getUTCDate() + (daysToAdd % 7)); // If today is Sunday, add 0 days to get this Sunday. If any other day, get next Sunday.
     return date;
 };
 
 const getPreviousTuesday = (from: Date): Date => {
     const date = new Date(from.valueOf());
-    const day = date.getUTCDay();
-    // Sunday is 0, Tuesday is 2. We want to subtract days to get to the previous Tuesday.
-    // If today is Sunday (0), subtract 5 days.
-    // If today is Monday (1), subtract 6 days.
-    // If today is Tuesday (2), subtract 7 days to get previous week's.
-    // If today is Wednesday(3), subtract 1 day.
-    // The formula is (day + 7 - 2) % 7 + 1, but we need previous, so lets make it simpler
-    const daysToSubtract = (day + 7 - 2) % 7;
-    // from is always a sunday
+    const day = date.getUTCDay(); // 0 for Sunday
+    // Days to subtract to get to the previous Tuesday (day 2)
+    // from is always a Sunday (day 0)
+    // We want to go back to the previous Tuesday, which is 5 days before Sunday.
     date.setUTCDate(date.getUTCDate() - 5);
     return date;
 };
