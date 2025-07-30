@@ -92,6 +92,10 @@ export default function MemberDialog({
 
   useEffect(() => {
     if (open && isEditMode && memberToEdit) {
+      // When opening in edit mode, parse the string dates from the DB
+      // into Date objects for the form and the date picker.
+      // The `new Date()` constructor correctly handles 'YYYY-MM-DD' strings
+      // by interpreting them as UTC, which avoids timezone shifts.
       form.reset({
         fullName: memberToEdit.fullName || '',
         nickname: memberToEdit.nickname || '',
@@ -134,8 +138,13 @@ export default function MemberDialog({
             }
         }
         
+        const payload = {
+            ...data,
+            pictureUrl: pictureUrlToSave
+        }
+
         if (isEditMode && memberToEdit) {
-            const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
+            const result = await updateMember(memberToEdit.id, payload);
             toast({
                 title: 'Member Updated',
                 description: `${result.fullName} has been successfully updated.`,
@@ -144,14 +153,13 @@ export default function MemberDialog({
             setOpen(false);
 
         } else {
-             // This is the Add Member logic, which is working correctly.
-            const result = await addMember(data, pictureUrlToSave);
+            const result = await addMember(payload);
             toast({
                 title: 'Member Added',
                 description: `${result.fullName} has been successfully added.`,
             });
             setNewMember(result);
-setShowQr(true);
+            setShowQr(true);
             onSuccess?.();
         }
     } catch (error: any) {
@@ -430,5 +438,7 @@ setShowQr(true);
     </Dialog>
   );
 }
+
+    
 
     
