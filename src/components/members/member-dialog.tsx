@@ -165,44 +165,29 @@ export default function MemberDialog({
         
         if (isEditMode && memberToEdit) {
             const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
-            if (result) {
-                toast({
-                    title: 'Member Updated',
-                    description: `${data.fullName} has been successfully updated.`,
-                });
-                onSuccess?.();
-                setOpen(false);
-            } else {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Update Failed',
-                    description: 'Could not update the member. Please try again.',
-                });
-            }
+            toast({
+                title: 'Member Updated',
+                description: `${result.fullName} has been successfully updated.`,
+            });
+            onSuccess?.();
+            setOpen(false);
+
         } else {
             const result = await addMember(data, pictureUrlToSave);
-            if (result) {
-                toast({
-                    title: 'Member Added',
-                    description: `${data.fullName} has been successfully added.`,
-                });
-                setNewMember(result);
-                setShowQr(true);
-                onSuccess?.();
-            } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Add Failed',
-                    description: 'Could not add the member. Please try again.',
-                });
-            }
+            toast({
+                title: 'Member Added',
+                description: `${result.fullName} has been successfully added.`,
+            });
+            setNewMember(result);
+            setShowQr(true);
+            onSuccess?.();
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error submitting form", error)
         toast({
             variant: 'destructive',
             title: 'An Error Occurred',
-            description: 'Something went wrong. Please check the console and try again.',
+            description: error.message || 'Something went wrong. Please check the console and try again.',
         });
     } finally {
         setIsSubmitting(false);

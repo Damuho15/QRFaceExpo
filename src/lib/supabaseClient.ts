@@ -102,12 +102,12 @@ export const getMembers = async (): Promise<Member[]> => {
 /**
  * Creates a new member in the database.
  * This function is now the single source of truth for creating the payload.
+ * It will throw an error on failure with the database message.
  * @param formData The raw data from the react-hook-form.
  * @param pictureUrl The URL of the uploaded picture, or null.
- * @returns The newly created Member object or null on failure.
+ * @returns The newly created Member object.
  */
-export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member | null> => {
-    // Build a safe payload, ensuring data types are correct for Supabase
+export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
     const safePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -116,7 +116,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
         birthday: new Date(formData.birthday).toISOString(),
         weddingAnniversary: formData.weddingAnniversary ? new Date(formData.weddingAnniversary).toISOString() : null,
         pictureUrl: pictureUrl,
-        qrCodePayload: formData.fullName, // QR Code is based on the full name for new members
+        qrCodePayload: formData.fullName,
         ministries: formData.ministries || null,
         lg: formData.lg || null,
     };
@@ -129,23 +129,22 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
     
     if (error) {
         console.error('Error adding member:', error);
-        return null;
+        throw new Error(error.message);
     }
     
-    // Convert date strings from DB back to Date objects for the UI
-    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
+    return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
 }
 
 /**
  * Updates an existing member in the database.
  * This function is now the single source of truth for creating the payload.
+ * It will throw an error on failure with the database message.
  * @param id The ID of the member to update.
  * @param formData The raw data from the react-hook-form.
  * @param pictureUrl The new URL of the uploaded picture, or the existing one.
- * @returns The updated Member object or null on failure.
+ * @returns The updated Member object.
  */
-export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member | null> => {
-     // Build a safe payload, ensuring data types are correct for Supabase
+export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
     const safePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -167,11 +166,10 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
 
     if (error) {
         console.error('Error updating member:', error);
-        return null;
+        throw new Error(error.message);
     }
 
-    // Convert date strings from DB back to Date objects for the UI
-    return data ? { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null } : null;
+    return { ...data, birthday: new Date(data.birthday), weddingAnniversary: data.weddingAnniversary ? new Date(data.weddingAnniversary) : null };
 };
 
 
