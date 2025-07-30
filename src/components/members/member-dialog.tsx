@@ -52,7 +52,7 @@ const memberSchema = z.object({
   lg: z.string().optional(),
 });
 
-type MemberFormValues = z.infer<typeof memberSchema>;
+export type MemberFormValues = z.infer<typeof memberSchema>;
 
 interface MemberDialogProps {
   mode: 'add' | 'edit';
@@ -149,11 +149,10 @@ export default function MemberDialog({
             }
         }
 
-        let pictureUrl = memberToEdit?.pictureUrl || null;
-
+        let pictureUrlToSave = memberToEdit?.pictureUrl || null;
         if (data.picture && data.picture instanceof File) {
-            pictureUrl = await uploadMemberPicture(data.picture);
-            if (!pictureUrl) {
+            pictureUrlToSave = await uploadMemberPicture(data.picture);
+            if (!pictureUrlToSave) {
                 toast({
                     variant: 'destructive',
                     title: 'Picture Upload Failed',
@@ -163,22 +162,9 @@ export default function MemberDialog({
                 return;
             }
         }
-
+        
         if (isEditMode && memberToEdit) {
-            const memberPayload: Member = {
-                id: memberToEdit.id,
-                fullName: data.fullName,
-                nickname: data.nickname || '',
-                email: data.email || '',
-                phone: data.phone || '',
-                birthday: data.birthday,
-                weddingAnniversary: data.weddingAnniversary,
-                pictureUrl: pictureUrl,
-                qrCodePayload: memberToEdit.qrCodePayload,
-                ministries: data.ministries,
-                lg: data.lg,
-            }
-            const result = await updateMember(memberPayload);
+            const result = await updateMember(memberToEdit.id, data, pictureUrlToSave);
             if (result) {
                 toast({
                     title: 'Member Updated',
@@ -194,20 +180,7 @@ export default function MemberDialog({
                 });
             }
         } else {
-            const memberPayload: Omit<Member, 'id'> = {
-                fullName: data.fullName,
-                nickname: data.nickname || '',
-                email: data.email || '',
-                phone: data.phone || '',
-                birthday: data.birthday,
-                weddingAnniversary: data.weddingAnniversary,
-                pictureUrl: pictureUrl,
-                qrCodePayload: data.fullName, // Use full name for new member QR code
-                ministries: data.ministries,
-                lg: data.lg,
-            };
-             const result = await addMember(memberPayload);
-
+            const result = await addMember(data, pictureUrlToSave);
             if (result) {
                 toast({
                     title: 'Member Added',
@@ -475,7 +448,7 @@ export default function MemberDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Member Added & QR Code Generated</DialogTitle>
+              <DialogTitle>Member Added &amp; QR Code Generated</DialogTitle>
               <DialogDescription>
                 Share this QR code with {newMember?.fullName} for event check-ins.
               </DialogDescription>
