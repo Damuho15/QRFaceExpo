@@ -54,9 +54,16 @@ export const getMembers = async (): Promise<Member[]> => {
 };
 
 export const addMember = async (member: Omit<Member, 'id'>): Promise<Member | null> => {
+    const { birthday, weddingAnniversary, ...rest } = member;
+    const memberToInsert = {
+        ...rest,
+        birthday: birthday.toISOString(),
+        weddingAnniversary: weddingAnniversary ? weddingAnniversary.toISOString() : null,
+    };
+    
     const { data, error } = await supabase
         .from('members')
-        .insert([member])
+        .insert([memberToInsert])
         .select()
         .single();
     
@@ -78,6 +85,8 @@ export const addMembers = async (members: (Omit<Member, 'id' | 'qrCodePayload' |
             birthday: member.birthday ? new Date(member.birthday).toISOString() : new Date().toISOString(),
             weddingAnniversary: member.weddingAnniversary ? new Date(member.weddingAnniversary).toISOString() : null,
             qrCodePayload: member.fullName,
+            ministries: member.ministries || null,
+            lg: member.lg || null,
         }
     });
 
