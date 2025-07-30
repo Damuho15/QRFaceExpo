@@ -41,7 +41,7 @@ import { ScrollArea } from '../ui/scroll-area';
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
   nickname: z.string().optional(),
-  email: z.string().email('Invalid email address.'),
+  email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   phone: z.string().min(10, 'Phone number must be at least 10 digits.'),
   birthday: z.date({
     required_error: 'A date of birth is required.',
@@ -144,7 +144,7 @@ export default function MemberDialog({
       const memberPayload = {
           fullName: data.fullName,
           nickname: data.nickname || '',
-          email: data.email,
+          email: data.email || '',
           phone: data.phone,
           birthday: data.birthday,
           weddingAnniversary: data.weddingAnniversary || null,
@@ -375,7 +375,7 @@ export default function MemberDialog({
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Email Address</FormLabel>
+                            <FormLabel>Email Address (Optional)</FormLabel>
                             <FormControl>
                                 <Input placeholder="member@example.com" {...field} disabled={isSubmitting} />
                             </FormControl>
