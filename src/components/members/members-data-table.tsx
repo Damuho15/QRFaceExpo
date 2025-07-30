@@ -70,6 +70,30 @@ export default function MembersDataTable<TData, TValue>({
       onAction: onAction
     }
   });
+  
+  const [fullNameFilter, setFullNameFilter] = React.useState('');
+  const [nicknameFilter, setNicknameFilter] = React.useState('');
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+        table.getColumn('fullName')?.setFilterValue(fullNameFilter);
+    }, 300);
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [fullNameFilter, table]);
+  
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+        table.getColumn('nickname')?.setFilterValue(nicknameFilter);
+    }, 300);
+
+    return () => {
+        clearTimeout(handler);
+    };
+  }, [nicknameFilter, table]);
+
 
   return (
     <div>
@@ -77,18 +101,14 @@ export default function MembersDataTable<TData, TValue>({
         <div className="flex items-center gap-2">
             <Input
             placeholder="Filter by full name..."
-            value={(table.getColumn('fullName')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-                table.getColumn('fullName')?.setFilterValue(event.target.value)
-            }
+            value={fullNameFilter}
+            onChange={(event) => setFullNameFilter(event.target.value)}
             className="max-w-sm"
             />
             <Input
             placeholder="Filter by nickname..."
-            value={(table.getColumn('nickname')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-                table.getColumn('nickname')?.setFilterValue(event.target.value)
-            }
+            value={nicknameFilter}
+            onChange={(event) => setNicknameFilter(event.target.value)}
             className="max-w-sm"
             />
         </div>
