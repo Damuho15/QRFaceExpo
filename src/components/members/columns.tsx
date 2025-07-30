@@ -37,7 +37,14 @@ import { Input } from '@/components/ui/input';
 
 const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const rowValue = row.getValue(columnId) as string;
-    return rowValue?.toLowerCase().includes(String(value).toLowerCase());
+    
+    // Ensure that the row value is a non-empty string before comparing.
+    // This prevents rows with null, undefined, or empty string nicknames from matching.
+    if (!rowValue) {
+        return false;
+    }
+
+    return rowValue.toLowerCase().includes(String(value).toLowerCase());
 }
 
 export const columns: ColumnDef<Member>[] = [
