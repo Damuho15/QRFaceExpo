@@ -210,26 +210,32 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     }, [toast]);
 
     useEffect(() => {
-        const tick = () => {
+        let lastScanTime = 0;
+        const scanInterval = 200; // Scan every 200ms for performance
+
+        const tick = (time: number) => {
             if (isScanning && hasCameraPermission && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-                const canvas = canvasRef.current;
-                const video = videoRef.current;
-                if(canvas && video) {
-                    canvas.height = video.videoHeight;
-                    canvas.width = video.videoWidth;
-                    const context = canvas.getContext('2d', { willReadFrequently: true });
-                    if (context) {
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                        try {
-                            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                                inversionAttempts: 'attemptBoth',
-                            });
-                            if (code && code.data) {
-                                handleScan(code.data);
+                if (time - lastScanTime > scanInterval) {
+                    lastScanTime = time;
+                    const canvas = canvasRef.current;
+                    const video = videoRef.current;
+                    if(canvas && video) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        const context = canvas.getContext('2d', { willReadFrequently: true });
+                        if (context) {
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            try {
+                                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: 'attemptBoth',
+                                });
+                                if (code && code.data) {
+                                    handleScan(code.data);
+                                }
+                            } catch (e) {
+                                console.error("jsQR error", e)
                             }
-                        } catch (e) {
-                            console.error("jsQR error", e)
                         }
                     }
                 }
@@ -959,5 +965,6 @@ export default function CheckInPage() {
     
 
     
+
 
 
