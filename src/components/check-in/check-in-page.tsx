@@ -208,7 +208,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
         const scanInterval = 200; // Scan every 200ms
 
         const tick = (time: number) => {
-            if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
+            if (!isScanning || !videoRef.current || !hasCameraPermission) {
                 animationFrameId.current = requestAnimationFrame(tick);
                 return;
             }
@@ -218,21 +218,23 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 if (time - lastScanTime > scanInterval) {
                     lastScanTime = time;
                     const canvas = canvasRef.current;
-                    canvas.height = video.videoHeight;
-                    canvas.width = video.videoWidth;
-                    const context = canvas.getContext('2d', { willReadFrequently: true });
-                    if (context) {
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                        try {
-                            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                                inversionAttempts: 'attemptBoth',
-                            });
-                            if (code && code.data) {
-                                handleScan(code.data);
+                    if(canvas) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        const context = canvas.getContext('2d', { willReadFrequently: true });
+                        if (context) {
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            try {
+                                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: 'attemptBoth',
+                                });
+                                if (code && code.data) {
+                                    handleScan(code.data);
+                                }
+                            } catch (e) {
+                                console.error("jsQR error", e)
                             }
-                        } catch (e) {
-                            console.error("jsQR error", e)
                         }
                     }
                 }
