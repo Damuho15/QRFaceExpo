@@ -557,10 +557,11 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             setShowDialog(true);
         } catch (error) {
             console.error('Face recognition error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred during face recognition analysis.';
             toast({
                 variant: 'destructive',
                 title: 'AI Error',
-                description: 'An error occurred during face recognition analysis.',
+                description: errorMessage,
             });
             setIsProcessing(false);
         }
@@ -605,10 +606,11 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             onCheckInSuccess();
         } catch(error: any) {
             console.error("Error adding attendance log:", error);
+            const errorMessage = error instanceof Error ? error.message : 'Could not save attendance log. Please try again.';
             toast({
                 variant: 'destructive',
                 title: 'Save Failed',
-                description: 'Could not save attendance log. Please try again.',
+                description: errorMessage,
             });
         } finally {
             closeDialog();
@@ -953,5 +955,7 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
 
     
