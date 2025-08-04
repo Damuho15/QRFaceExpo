@@ -45,7 +45,7 @@ const prompt = ai.definePrompt({
             members: z.array(z.object({
                 id: z.string(),
                 fullName: z.string(),
-                pictureUrl: z.string().nullable(),
+                pictureUrl: z.string(),
             })),
         }),
     },
@@ -89,7 +89,7 @@ const recognizeFaceFlow = ai.defineFlow(
 
     const { output } = await prompt({
         imageDataUri: input.imageDataUri,
-        members: membersWithPictures.map(m => ({ id: m.id, fullName: m.fullName, pictureUrl: m.pictureUrl })),
+        members: membersWithPictures.map(m => ({ id: m.id, fullName: m.fullName, pictureUrl: m.pictureUrl! })),
     });
     
     return output!;

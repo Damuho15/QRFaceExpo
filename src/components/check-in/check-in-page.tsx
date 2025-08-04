@@ -479,7 +479,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             const result = await recognizeFace({ imageDataUri });
 
             if (result.matchFound && result.member && result.member.id) {
-                // Verify the member ID exists in our database
                 const actualMember = members.find(m => m.id === result.member!.id);
 
                 if (actualMember) {
@@ -496,7 +495,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                     });
                     onCheckInSuccess();
                 } else {
-                     // AI returned an ID, but it's not in our DB.
                      toast({
                         title: 'Check-in Failed',
                         description: 'Face not recognized. Please try again or use QR code.',
