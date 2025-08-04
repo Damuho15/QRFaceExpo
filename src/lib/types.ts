@@ -1,7 +1,7 @@
 
 
 export type Member = {
-  id: string; // Changed from number to string for UUID
+  id: string; 
   fullName: string;
   nickname: string;
   birthday: string;
@@ -17,7 +17,7 @@ export type Member = {
 
 export type AttendanceLog = {
   id: number;
-  member_id: string; // Changed from number to string for UUID
+  member_id: string; 
   member_name: string;
   timestamp: string;
   type: 'Pre-registration' | 'Actual';
