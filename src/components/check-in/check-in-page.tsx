@@ -520,7 +520,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
-                        memberToVerify: null, // No match found in DB
+                        memberToVerify: null, // AI found a name, but it's not in our DB.
                         registrationType: registrationType
                     });
                 }
@@ -642,18 +642,22 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     <AlertDialog open={verification.showDialog} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Verification Result</AlertDialogTitle>
+                <AlertDialogTitle>
+                     {verification.memberToVerify 
+                        ? `Welcome, ${verification.memberToVerify.fullName}! Is this you?` 
+                        : "Face Not Recognized"}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
                     {verification.memberToVerify 
-                        ? `Welcome, ${verification.memberToVerify.fullName}! Is this you?` 
-                        : "You are not a valid member."}
+                        ? "Please confirm your identity to complete the check-in." 
+                        : "We couldn't find a matching member in our records. Please try again or use the QR code check-in."}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                  <AlertDialogCancel onClick={closeDialog} disabled={verification.isSaving}>Cancel</AlertDialogCancel>
                 {verification.memberToVerify ? (
                     <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
-                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes"}
+                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
                     </AlertDialogAction>
                 ) : (
                      <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
