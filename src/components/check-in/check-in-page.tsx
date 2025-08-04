@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -509,14 +508,16 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
             setIsProcessing(false);
+            
+            let foundMember: Member | undefined;
 
             if (result.matchFound && result.fullName) {
-                const actualMember = members.find(m => m.fullName === result.fullName);
-                if (actualMember) {
-                    setConfirmedMemberId(actualMember.id);
-                    setConfirmedMemberName(actualMember.fullName);
+                foundMember = members.find(m => m.fullName === result.fullName);
+                if (foundMember) {
+                    setConfirmedMemberId(foundMember.id);
+                    setConfirmedMemberName(foundMember.fullName);
                     setRegistrationType(currentRegistrationType);
-                    setMemberToDebug(actualMember); // Capture member for debugger
+                    setMemberToDebug(foundMember); // Capture member for debugger
                 }
             }
             setShowDialog(true);
@@ -532,6 +533,27 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
+        // --- TEMPORARY DEBUGGING: Display data instead of saving ---
+        if (memberToDebug) {
+             toast({
+                title: 'Debug Mode',
+                description: 'Check the debugger card for the verified member data.',
+                duration: 5000,
+            });
+        } else if (confirmedMemberName) {
+            // This case should ideally not happen if memberToDebug is set correctly
+            toast({
+                title: 'Debug Warning',
+                description: `Could not find full data for ${confirmedMemberName}. The debugger may not show complete information.`,
+                variant: 'destructive'
+            });
+        }
+        
+        closeDialog(); // This will show the debugger card
+        return; // Skip saving
+        
+        // --- ORIGINAL SAVE LOGIC (Commented out) ---
+        /*
         if (!confirmedMemberId || !confirmedMemberName || !registrationType) {
              toast({
                 title: 'Save Failed',
@@ -542,17 +564,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        // --- TEMPORARY DEBUGGING: Display data instead of saving ---
-        toast({
-            title: 'Debug Mode',
-            description: 'Check the debugger card for the verified member data.',
-            duration: 5000,
-        });
-        closeDialog(); // This will show the debugger card
-        return; // Skip saving
-        
-        // --- ORIGINAL SAVE LOGIC (Commented out) ---
-        /*
         if (!isValidUUID(confirmedMemberId)) {
             toast({
                 title: 'Save Failed',
@@ -964,3 +975,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
