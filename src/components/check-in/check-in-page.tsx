@@ -506,7 +506,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
 
-            if (result.matchFound && result.member && result.member.id) {
+            if (result.matchFound && result.member && isValidUUID(result.member.id)) {
                 const actualMember = members.find(m => m.id === result.member!.id);
                 if (actualMember) {
                     setVerification({
@@ -518,7 +518,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                         registrationType: registrationType
                     });
                 } else {
-                    // AI found a match but the ID is not in our current member list
                      setVerification({
                         isProcessing: false,
                         isSaving: false,
@@ -556,17 +555,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         }
 
         const memberId = verification.memberToVerify.id;
-
-        // Final validation guardrail
-        if (!isValidUUID(memberId)) {
-            toast({
-                variant: 'destructive',
-                title: 'Save Failed',
-                description: `Invalid Member ID format: ${memberId}. Cannot save attendance.`,
-            });
-            closeDialog();
-            return;
-        }
         
         setVerification(prev => ({...prev, isSaving: true}));
 
@@ -931,5 +919,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
