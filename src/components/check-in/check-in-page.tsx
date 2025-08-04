@@ -16,6 +16,15 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +32,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX } from 'lucide-react';
 import jsQR from 'jsqr';
-import { recognizeFace } from '@/ai/flows/face-recognition-flow';
+import { recognizeFace, RecognizeFaceOutput } from '@/ai/flows/face-recognition-flow';
 import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAttendanceLog } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
@@ -401,11 +410,28 @@ const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }:
     );
 };
 
+type VerificationState = {
+  showDialog: boolean;
+  isProcessing: boolean;
+  isSaving: boolean;
+  memberToVerify: Member | null;
+  isValidMember: boolean | null;
+  registrationType: 'Pre-registration' | 'Actual' | null;
+};
+
 const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess }: { members: Member[], eventDate: Date, preRegStartDate: Date, onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
+
+    const [verification, setVerification] = useState<VerificationState>({
+        showDialog: false,
+        isProcessing: false,
+        isSaving: false,
+        memberToVerify: null,
+        isValidMember: null,
+        registrationType: null,
+    });
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -437,7 +463,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         };
     }, [toast]);
 
-    const handleCheckIn = async () => {
+    const handleVerification = async () => {
         if (!videoRef.current || !hasCameraPermission) {
             toast({
                 variant: 'destructive',
@@ -457,9 +483,10 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        setIsProcessing(true);
+        setVerification(prev => ({ ...prev, isProcessing: true }));
+        
         toast({
-            title: 'Processing Image...',
+            title: 'Verifying Member...',
             description: 'Capturing frame and analyzing face.',
         });
 
@@ -468,7 +495,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         canvas.height = videoRef.current.videoHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-            setIsProcessing(false);
+            setVerification(prev => ({ ...prev, isProcessing: false }));
             toast({ variant: 'destructive', title: 'Error', description: 'Could not process video frame.' });
             return;
         }
@@ -476,36 +503,38 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         const imageDataUri = canvas.toDataURL('image/jpeg');
 
         try {
-            const result = await recognizeFace({ imageDataUri });
+            const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
 
             if (result.matchFound && result.member && result.member.id) {
                 const actualMember = members.find(m => m.id === result.member!.id);
-
                 if (actualMember) {
-                    await addAttendanceLog({
-                        member_id: actualMember.id,
-                        member_name: actualMember.fullName,
-                        type: registrationType,
-                        method: 'Face',
-                        timestamp: new Date()
+                    setVerification({
+                        isProcessing: false,
+                        isSaving: false,
+                        showDialog: true,
+                        isValidMember: true,
+                        memberToVerify: actualMember,
+                        registrationType: registrationType
                     });
-                    toast({
-                        title: 'Check-in Successful!',
-                        description: `Welcome, ${actualMember.fullName}!`,
-                    });
-                    onCheckInSuccess();
                 } else {
-                     toast({
-                        title: 'Check-in Failed',
-                        description: 'Face not recognized. Please try again or use QR code.',
-                        variant: 'destructive',
+                    // AI found a match but the ID is not in our current member list
+                    setVerification({
+                        isProcessing: false,
+                        isSaving: false,
+                        showDialog: true,
+                        isValidMember: false,
+                        memberToVerify: null,
+                        registrationType: registrationType
                     });
                 }
             } else {
-                toast({
-                    title: 'Check-in Failed',
-                    description: 'Face not recognized. Please try again or use QR code.',
-                    variant: 'destructive',
+                setVerification({
+                    isProcessing: false,
+                    isSaving: false,
+                    showDialog: true,
+                    isValidMember: false,
+                    memberToVerify: null,
+                    registrationType: registrationType
                 });
             }
         } catch (error) {
@@ -515,12 +544,57 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 title: 'AI Error',
                 description: 'An error occurred during face recognition analysis.',
             });
-        } finally {
-            setIsProcessing(false);
+            setVerification(prev => ({ ...prev, isProcessing: false }));
         }
     };
+    
+    const confirmAndSaveChanges = async () => {
+        if (!verification.isValidMember || !verification.memberToVerify || !verification.registrationType) {
+            closeDialog();
+            return;
+        }
+        
+        setVerification(prev => ({...prev, isSaving: true}));
+
+        try {
+            await addAttendanceLog({
+                member_id: verification.memberToVerify.id,
+                member_name: verification.memberToVerify.fullName,
+                type: verification.registrationType,
+                method: 'Face',
+                timestamp: new Date()
+            });
+
+            toast({
+                title: 'Thank you for registering',
+                description: `${verification.memberToVerify.fullName} has been successfully checked in.`,
+            });
+            onCheckInSuccess();
+        } catch(error) {
+            console.error("Error adding attendance log:", error);
+            toast({
+                title: 'Save Failed',
+                description: 'Could not save attendance log. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            closeDialog();
+        }
+    }
+    
+    const closeDialog = () => {
+        setVerification({
+            showDialog: false,
+            isProcessing: false,
+            isSaving: false,
+            memberToVerify: null,
+            isValidMember: null,
+            registrationType: null,
+        });
+    }
 
     return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Face Recognition Check-in</CardTitle>
@@ -550,20 +624,42 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 </AlertDescription>
             </Alert>
         )}
-        <Button onClick={handleCheckIn} disabled={isProcessing || hasCameraPermission !== true} className="w-full">
-            {isProcessing ? (
+        <Button onClick={handleVerification} disabled={verification.isProcessing || hasCameraPermission !== true} className="w-full">
+            {verification.isProcessing ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recognizing...
+                    Verifying...
                 </>
             ) : (
                 <>
-                    <UserCheck className="mr-2 h-4 w-4" /> Check In
+                    <UserCheck className="mr-2 h-4 w-4" /> Verify Member
                 </>
             )}
         </Button>
       </CardContent>
     </Card>
+    
+    <AlertDialog open={verification.showDialog} onOpenChange={closeDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Verification Result</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {verification.isValidMember && verification.memberToVerify 
+                        ? `Welcome, ${verification.memberToVerify.fullName}!` 
+                        : "You are not a valid member."}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                 <Button variant="outline" onClick={closeDialog} disabled={verification.isSaving}>Cancel</Button>
+                {verification.isValidMember && (
+                    <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
+                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "OK"}
+                    </AlertDialogAction>
+                )}
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
     );
 };
 
