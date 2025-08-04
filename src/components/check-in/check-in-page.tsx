@@ -38,6 +38,7 @@ import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAtten
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Member } from '@/lib/types';
+import { isValidUUID } from '@/lib/validation';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -544,7 +545,12 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!verification.memberToVerify || !verification.registrationType) {
+        if (!verification.memberToVerify || !verification.registrationType || !isValidUUID(verification.memberToVerify.id)) {
+            toast({
+                title: 'Save Failed',
+                description: 'Cannot save attendance due to invalid member data.',
+                variant: 'destructive',
+            });
             closeDialog();
             return;
         }
@@ -913,3 +919,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
