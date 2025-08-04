@@ -480,16 +480,16 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
             if (result.matchFound && result.member && result.member.id) {
                 // Verify the member ID exists in our database
-                const actualMember = members.find(m => m.id === result.member.id);
+                const actualMember = members.find(m => m.id === result.member!.id);
 
                 if (actualMember) {
-                    // await addAttendanceLog({
-                    //     member_id: actualMember.id,
-                    //     member_name: actualMember.fullName,
-                    //     type: registrationType,
-                    //     method: 'Face',
-                    //     timestamp: new Date()
-                    // });
+                    await addAttendanceLog({
+                        member_id: actualMember.id,
+                        member_name: actualMember.fullName,
+                        type: registrationType,
+                        method: 'Face',
+                        timestamp: new Date()
+                    });
                     toast({
                         title: 'Check-in Successful!',
                         description: `Welcome, ${actualMember.fullName}!`,
