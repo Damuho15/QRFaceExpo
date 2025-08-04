@@ -23,10 +23,10 @@ export type RecognizeFaceInput = z.infer<typeof RecognizeFaceInputSchema>;
 
 const RecognizeFaceOutputSchema = z.object({
   matchFound: z.boolean().describe('Whether a matching member was found.'),
-  memberId: z
+  fullName: z
     .string()
     .optional()
-    .describe('The ID of the matched member, if any. Must be a valid UUID.'),
+    .describe('The full name of the matched member, if any.'),
 });
 export type RecognizeFaceOutput = z.infer<typeof RecognizeFaceOutputSchema>;
 
@@ -64,8 +64,8 @@ Registered Member Photos:
 Instructions:
 1. Analyze the face in the live image.
 2. Compare it against the profile photo of each registered member.
-3. If you find a definitive, high-confidence match, set 'matchFound' to true and provide the 'id' of that member in the 'memberId' field. You MUST return the 'id' field as a valid UUID string.
-4. If you do not find a clear match, or if you have low confidence, you MUST set 'matchFound' to false and 'memberId' to null. Do not guess.
+3. If you find a definitive, high-confidence match, set 'matchFound' to true and provide the 'fullName' of that member in the 'fullName' field.
+4. If you do not find a clear match, or if you have low confidence, you MUST set 'matchFound' to false and 'fullName' to null. Do not guess.
 5. Accuracy is critical. If you are not highly confident in a match, err on the side of caution and report 'matchFound: false'.`,
 });
 

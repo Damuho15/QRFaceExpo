@@ -19,6 +19,7 @@ import {
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -37,7 +38,6 @@ import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAtten
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Member } from '@/lib/types';
-import { isValidUUID } from '@/lib/validation';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -416,7 +416,6 @@ type VerificationState = {
   isProcessing: boolean;
   isSaving: boolean;
   memberToVerify: Member | null;
-  isValidMember: boolean | null;
   registrationType: 'Pre-registration' | 'Actual' | null;
 };
 
@@ -430,7 +429,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         isProcessing: false,
         isSaving: false,
         memberToVerify: null,
-        isValidMember: null,
         registrationType: null,
     });
 
@@ -506,14 +504,13 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
 
-            if (result.matchFound && result.memberId && isValidUUID(result.memberId)) {
-                const actualMember = members.find(m => m.id === result.memberId);
+            if (result.matchFound && result.fullName) {
+                const actualMember = members.find(m => m.fullName === result.fullName);
                 if (actualMember) {
                     setVerification({
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
-                        isValidMember: true,
                         memberToVerify: actualMember,
                         registrationType: registrationType
                     });
@@ -522,8 +519,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
-                        isValidMember: false,
-                        memberToVerify: null,
+                        memberToVerify: null, // No match found in DB
                         registrationType: registrationType
                     });
                 }
@@ -532,8 +528,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                     isProcessing: false,
                     isSaving: false,
                     showDialog: true,
-                    isValidMember: false,
-                    memberToVerify: null,
+                    memberToVerify: null, // AI found no match
                     registrationType: registrationType
                 });
             }
@@ -549,18 +544,16 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!verification.isValidMember || !verification.memberToVerify || !verification.registrationType) {
+        if (!verification.memberToVerify || !verification.registrationType) {
             closeDialog();
             return;
         }
-
-        const memberId = verification.memberToVerify.id;
         
         setVerification(prev => ({...prev, isSaving: true}));
 
         try {
             await addAttendanceLog({
-                member_id: memberId,
+                member_id: verification.memberToVerify.id,
                 member_name: verification.memberToVerify.fullName,
                 type: verification.registrationType,
                 method: 'Face',
@@ -590,7 +583,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             isProcessing: false,
             isSaving: false,
             memberToVerify: null,
-            isValidMember: null,
             registrationType: null,
         });
     }
@@ -646,16 +638,16 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             <AlertDialogHeader>
                 <AlertDialogTitle>Verification Result</AlertDialogTitle>
                 <AlertDialogDescription>
-                    {verification.isValidMember && verification.memberToVerify 
-                        ? `Welcome, ${verification.memberToVerify.fullName}!` 
+                    {verification.memberToVerify 
+                        ? `Welcome, ${verification.memberToVerify.fullName}! Is this you?` 
                         : "You are not a valid member."}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                 <Button variant="outline" onClick={closeDialog} disabled={verification.isSaving}>Cancel</Button>
-                {verification.isValidMember ? (
+                 <AlertDialogCancel onClick={closeDialog} disabled={verification.isSaving}>Cancel</AlertDialogCancel>
+                {verification.memberToVerify ? (
                     <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
-                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "OK"}
+                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes"}
                     </AlertDialogAction>
                 ) : (
                      <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
