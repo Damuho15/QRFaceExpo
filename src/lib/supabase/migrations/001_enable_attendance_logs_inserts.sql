@@ -1,28 +1,25 @@
--- This script enables Row Level Security (RLS) on the attendance_logs table and
--- adds a policy to allow new rows to be inserted by any user. This is required
--- for the check-in functionality of the application to be able to save attendance records.
---
--- To run this script:
--- 1. Go to your Supabase project dashboard.
--- 2. In the left sidebar, click on "SQL Editor".
--- 3. Click "+ New query".
--- 4. Copy the entire content of this file and paste it into the editor.
--- 5. Click the "RUN" button.
+-- src/lib/supabase/migrations/001_enable_attendance_logs_inserts.sql
 
--- Step 1: Enable Row Level Security on the table.
--- This is a security best practice. By default, RLS is off. When it's on,
--- all access is denied until a policy grants it.
+-- STEP 1: Enable Row Level Security (RLS) on the attendance_logs table.
+-- This is a foundational security step. By default, it denies all access.
+-- If RLS is already on, this command does nothing.
 alter table public.attendance_logs enable row level security;
 
--- Step 2: Create a policy to allow anyone to insert a new log.
--- This policy is what allows your application to save check-in data.
--- 'as permissive' means the policy grants access.
--- 'for insert' specifies that this policy only applies to INSERT operations.
--- 'to public' means this policy applies to any user, including anonymous public users.
--- 'with check (true)' is the rule that must be satisfied. 'true' means any insert is allowed.
-create policy "Enable insert for public users"
-on public.attendance_logs
-as permissive
+
+-- STEP 2: Create the policy to allow inserts.
+-- This command creates a new security policy named "Allow public insert access"
+-- on the "attendance_logs" table.
+create policy "Allow public insert access"
+on "public"."attendance_logs"
+
+-- This specifies that the policy applies to INSERT operations.
 for insert
+
+-- "to public" means this policy applies to any user, including anonymous
+-- users who are using your app's public API key.
 to public
+
+-- The WITH CHECK expression is the rule that must be true for the insert
+-- to be allowed. By setting it to "true", we are saying that any
+-- insert operation is permitted, without any additional conditions.
 with check (true);
