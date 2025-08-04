@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -101,6 +102,10 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     const handleScan = useCallback((qrData: string) => {
         if (!isScanning) return;
         setIsScanning(false);
+        toast({
+            title: 'QR Code Detected',
+            description: 'Processing...',
+        });
 
         const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
         if (!currentRegistrationType) {
@@ -161,10 +166,11 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
             onCheckInSuccess();
         } catch (error) {
             console.error("Error adding attendance log:", error);
+            const errorMessage = error instanceof Error ? error.message : 'Could not save attendance. Please check your connection or contact support.';
             toast({
                 variant: 'destructive',
                 title: 'Save Failed',
-                description: 'Could not save attendance. Please check your connection or contact support.',
+                description: errorMessage,
             });
         } finally {
             closeDialog();
