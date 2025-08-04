@@ -506,8 +506,8 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
 
-            if (result.matchFound && result.member && isValidUUID(result.member.id)) {
-                const actualMember = members.find(m => m.id === result.member!.id);
+            if (result.matchFound && result.memberId && isValidUUID(result.memberId)) {
+                const actualMember = members.find(m => m.id === result.memberId);
                 if (actualMember) {
                     setVerification({
                         isProcessing: false,
@@ -653,10 +653,12 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             </AlertDialogHeader>
             <AlertDialogFooter>
                  <Button variant="outline" onClick={closeDialog} disabled={verification.isSaving}>Cancel</Button>
-                {verification.isValidMember && (
+                {verification.isValidMember ? (
                     <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
                          {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "OK"}
                     </AlertDialogAction>
+                ) : (
+                     <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
                 )}
             </AlertDialogFooter>
         </AlertDialogContent>
