@@ -411,26 +411,20 @@ const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }:
     );
 };
 
-type VerificationState = {
-  isProcessing: boolean;
-  isSaving: boolean;
-  registrationType: 'Pre-registration' | 'Actual' | null;
-};
-
 const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess }: { members: Member[], eventDate: Date, preRegStartDate: Date, onCheckInSuccess: () => void }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
     const [showDialog, setShowDialog] = useState(false);
     
-    // Dedicated state for the member being verified to avoid race conditions.
+    // State to hold the member object once verified, to avoid race conditions.
     const [memberToVerify, setMemberToVerify] = useState<Member | null>(null);
+    // State to hold the registration type determined at the time of verification.
+    const [registrationType, setRegistrationType] = useState<'Pre-registration' | 'Actual' | null>(null);
 
-    const [verification, setVerification] = useState<VerificationState>({
-        isProcessing: false,
-        isSaving: false,
-        registrationType: null,
-    });
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -472,8 +466,8 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
-        if (!registrationType) {
+        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        if (!currentRegistrationType) {
             toast({
                 title: 'Check-in Not Allowed',
                 description: 'Check-in is not open at this time.',
@@ -482,8 +476,8 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        setVerification(prev => ({ ...prev, isProcessing: true }));
-        setMemberToVerify(null);
+        setIsProcessing(true);
+        setMemberToVerify(null); // Reset previous verification
         
         toast({
             title: 'Verifying Member...',
@@ -495,7 +489,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         canvas.height = videoRef.current.videoHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-            setVerification(prev => ({ ...prev, isProcessing: false }));
+            setIsProcessing(false);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not process video frame.' });
             return;
         }
@@ -504,35 +498,20 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
+            setIsProcessing(false);
 
             if (result.matchFound && result.fullName) {
                 const actualMember = members.find(m => m.fullName === result.fullName);
                 if (actualMember) {
-                    setMemberToVerify(actualMember);
-                    setVerification({
-                        isProcessing: false,
-                        isSaving: false,
-                        registrationType: registrationType
-                    });
-                     setShowDialog(true);
+                    setMemberToVerify(actualMember); // Set the full member object
+                    setRegistrationType(currentRegistrationType);
                 } else {
-                     setMemberToVerify(null); // Explicitly set to null
-                     setVerification({
-                        isProcessing: false,
-                        isSaving: false,
-                        registrationType: registrationType
-                    });
-                     setShowDialog(true);
+                    setMemberToVerify(null); // Explicitly set to null if not found in DB
                 }
             } else {
                 setMemberToVerify(null);
-                setVerification({
-                    isProcessing: false,
-                    isSaving: false,
-                    registrationType: registrationType
-                });
-                setShowDialog(true);
             }
+            setShowDialog(true);
         } catch (error) {
             console.error('Face recognition error:', error);
             toast({
@@ -540,12 +519,13 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 title: 'AI Error',
                 description: 'An error occurred during face recognition analysis.',
             });
-            setVerification(prev => ({ ...prev, isProcessing: false }));
+            setIsProcessing(false);
         }
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!memberToVerify || !verification.registrationType || !isValidUUID(memberToVerify.id)) {
+        // This check is now robust because memberToVerify comes from a dedicated, stable state.
+        if (!memberToVerify || !registrationType || !isValidUUID(memberToVerify.id)) {
             toast({
                 title: 'Save Failed',
                 description: 'Cannot save attendance due to invalid or missing member data.',
@@ -555,13 +535,13 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
         
-        setVerification(prev => ({...prev, isSaving: true}));
+        setIsSaving(true);
 
         try {
             await addAttendanceLog({
                 member_id: memberToVerify.id,
                 member_name: memberToVerify.fullName,
-                type: verification.registrationType,
+                type: registrationType,
                 method: 'Face',
                 timestamp: new Date()
             });
@@ -584,12 +564,9 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     }
     
     const closeDialog = () => {
-        setVerification({
-            isProcessing: false,
-            isSaving: false,
-            registrationType: null,
-        });
+        setIsSaving(false);
         setMemberToVerify(null);
+        setRegistrationType(null);
         setShowDialog(false);
     }
 
@@ -624,8 +601,8 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 </AlertDescription>
             </Alert>
         )}
-        <Button onClick={handleVerification} disabled={verification.isProcessing || hasCameraPermission !== true} className="w-full">
-            {verification.isProcessing ? (
+        <Button onClick={handleVerification} disabled={isProcessing || hasCameraPermission !== true} className="w-full">
+            {isProcessing ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Verifying...
@@ -654,10 +631,10 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                 <AlertDialogCancel onClick={closeDialog} disabled={verification.isSaving}>Cancel</AlertDialogCancel>
+                 <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>Cancel</AlertDialogCancel>
                 {memberToVerify ? (
-                    <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
-                         {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
+                    <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
+                         {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
                     </AlertDialogAction>
                 ) : (
                      <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
