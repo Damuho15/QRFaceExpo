@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -89,63 +88,94 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-    const [scanResult, setScanResult] = useState<{ memberName: string; found: boolean } | null>(null);
     const [isScanning, setIsScanning] = useState(true);
     const animationFrameId = useRef<number>();
 
-    const handleCheckIn = useCallback(async (qrData: string) => {
-        setIsScanning(false); // Stop scanning immediately
+    // State for the confirmation dialog
+    const [showDialog, setShowDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [confirmedMember, setConfirmedMember] = useState<Member | null>(null);
+    const [registrationType, setRegistrationType] = useState<'Pre-registration' | 'Actual' | null>(null);
 
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
 
-        if (!registrationType) {
+    const handleScan = useCallback((qrData: string) => {
+        if (!isScanning) return;
+        setIsScanning(false);
+
+        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        if (!currentRegistrationType) {
             toast({
                 title: 'Check-in Not Allowed',
                 description: 'Check-in is not open at this time.',
                 variant: 'destructive',
             });
-            setTimeout(() => {
-                setScanResult(null);
-                setIsScanning(true);
-            }, 2000);
+            setIsScanning(true);
             return;
         }
 
         const matchedMember = members.find(m => m.qrCodePayload === qrData);
-
-        if (matchedMember) {
-            try {
-                await addAttendanceLog({
-                    member_id: matchedMember.id,
-                    member_name: matchedMember.fullName,
-                    type: registrationType,
-                    method: 'QR',
-                    timestamp: new Date()
-                });
-                setScanResult({ memberName: matchedMember.fullName, found: true });
-                onCheckInSuccess();
-            } catch (error) {
-                console.error("Error adding attendance log:", error);
-                toast({
-                    title: 'Check-in Failed',
-                    description: 'Could not save attendance. Please check the logs.',
-                    variant: 'destructive',
-                });
-            }
+        
+        setConfirmedMember(matchedMember || null);
+        if(matchedMember) {
+            setRegistrationType(currentRegistrationType);
         } else {
-            setScanResult({ memberName: 'Not Found', found: false });
+            setRegistrationType(null);
+        }
+        setShowDialog(true);
+
+    }, [isScanning, members, eventDate, preRegStartDate, toast]);
+    
+     const closeDialog = () => {
+        setShowDialog(false);
+        setIsSaving(false);
+        setConfirmedMember(null);
+        setRegistrationType(null);
+        // Resume scanning after the dialog is closed
+        setTimeout(() => setIsScanning(true), 300);
+    }
+
+    const confirmAndSaveChanges = async () => {
+        if (!confirmedMember || !registrationType) {
+             toast({
+                title: 'Save Failed',
+                description: 'Cannot save attendance due to missing member data.',
+                variant: 'destructive',
+            });
+            closeDialog();
+            return;
         }
 
-        setTimeout(() => {
-            setScanResult(null);
-            setIsScanning(true); // Resume scanning
-        }, 2000);
-    }, [members, onCheckInSuccess, toast, eventDate, preRegStartDate]);
+        setIsSaving(true);
+        try {
+            await addAttendanceLog({
+                member_id: confirmedMember.id,
+                member_name: confirmedMember.fullName,
+                type: registrationType,
+                method: 'QR',
+                timestamp: new Date()
+            });
+            toast({
+                title: 'Check-in Successful',
+                description: `${confirmedMember.fullName} has been checked in.`,
+            });
+            onCheckInSuccess();
+        } catch (error) {
+            console.error("Error adding attendance log:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save attendance. Please check your connection or contact support.',
+            });
+        } finally {
+            closeDialog();
+        }
+    };
+
 
     useEffect(() => {
         const getCameraPermission = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                 }
@@ -175,7 +205,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
 
     useEffect(() => {
         let lastScanTime = 0;
-        const scanInterval = 150; // Scan every 150ms
+        const scanInterval = 200; // Scan every 200ms
 
         const tick = (time: number) => {
             if (!isScanning || !videoRef.current || !canvasRef.current || !hasCameraPermission) {
@@ -199,7 +229,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                                 inversionAttempts: 'attemptBoth',
                             });
                             if (code && code.data) {
-                                handleCheckIn(code.data);
+                                handleScan(code.data);
                             }
                         } catch (e) {
                             console.error("jsQR error", e)
@@ -223,13 +253,20 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [isScanning, hasCameraPermission, handleCheckIn]);
+    }, [isScanning, hasCameraPermission, handleScan]);
 
     return (
+        <>
         <div className="space-y-4">
             <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                 <canvas ref={canvasRef} className="hidden" />
+                {!isScanning && !showDialog && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                        <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
+                        <p className="mt-2 text-muted-foreground">Processing...</p>
+                    </div>
+                )}
                 {hasCameraPermission === null && (
                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
                          <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
@@ -242,23 +279,6 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                          <p className="mt-2 text-muted-foreground">Camera not available</p>
                     </div>
                 )}
-                 {scanResult && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 text-center px-4">
-                        {scanResult.found ? (
-                            <>
-                                <UserCheck className="h-16 w-16 text-green-500" />
-                                <p className="mt-4 text-xl font-bold">{scanResult.memberName}</p>
-                                <p className="text-sm text-muted-foreground">Check-in Successful!</p>
-                            </>
-                        ) : (
-                            <>
-                                <UserX className="h-16 w-16 text-destructive" />
-                                <p className="mt-4 text-lg font-semibold">Invalid QR Code</p>
-                                <p className="text-sm text-muted-foreground">Member not found.</p>
-                            </>
-                        )}
-                    </div>
-                )}
             </div>
              {hasCameraPermission === false && (
                 <Alert variant="destructive">
@@ -269,6 +289,33 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 </Alert>
             )}
         </div>
+        <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {confirmedMember 
+                            ? `Welcome, ${confirmedMember.fullName}! Is this you?` 
+                            : "Invalid QR Code"}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {confirmedMember 
+                            ? "Please confirm your identity to complete the check-in." 
+                            : "We couldn't find a member associated with this QR code. Please try again."}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>Cancel</AlertDialogCancel>
+                    {confirmedMember ? (
+                        <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
+                            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
+                        </AlertDialogAction>
+                    ) : (
+                        <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
+                    )}
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     );
 };
 
@@ -568,9 +615,9 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         } catch(error: any) {
             console.error("Error adding attendance log:", error);
             toast({
-                title: 'Save Failed',
-                description: error.message || 'Could not save attendance log. Please try again.',
                 variant: 'destructive',
+                title: 'Save Failed',
+                description: 'Could not save attendance log. Please try again.',
             });
         } finally {
             closeDialog();
@@ -915,3 +962,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
