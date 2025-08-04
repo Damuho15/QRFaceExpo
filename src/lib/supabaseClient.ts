@@ -94,7 +94,10 @@ export const getMembers = async (): Promise<Member[]> => {
         throw error;
     }
     
-    return data as Member[];
+    return (data || []).map(member => ({
+        ...member,
+        id: String(member.id),
+    })) as Member[];
 };
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
