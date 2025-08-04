@@ -18,7 +18,7 @@ export default function MembersPage() {
     try {
         const fetchedMembers = await getMembers();
         setMembers(fetchedMembers);
-    } catch (error) => {
+    } catch (error) {
         console.error("Failed to fetch members:", error);
         // Optionally, add toast notifications for errors
     } finally {
