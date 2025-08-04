@@ -211,7 +211,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
 
     useEffect(() => {
         let lastScanTime = 0;
-        const scanInterval = 200; // Scan every 200ms
+        const scanInterval = 100; // Scan every 100ms
 
         const tick = (time: number) => {
             if (isScanning && hasCameraPermission && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
