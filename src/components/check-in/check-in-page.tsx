@@ -487,7 +487,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         // Reset previous verification and debug data
         setConfirmedMemberId(null);
         setConfirmedMemberName(null);
-        setMemberToDebug(null);
+        setMemberToDebug(null); // Fix: Reset debugger state on each verification
         
         toast({
             title: 'Verifying Member...',
