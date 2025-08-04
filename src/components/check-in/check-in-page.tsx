@@ -135,8 +135,8 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
         setIsSaving(false);
         setConfirmedMember(null);
         setRegistrationType(null);
-        // Resume scanning after the dialog is closed
-        setTimeout(() => setIsScanning(true), 300);
+        // Resume scanning immediately after the dialog is closed
+        setIsScanning(true);
     }
 
     const confirmAndSaveChanges = async () => {
@@ -959,4 +959,5 @@ export default function CheckInPage() {
     
 
     
+
 
