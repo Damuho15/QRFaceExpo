@@ -565,11 +565,11 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 description: `${confirmedMemberName} has been successfully checked in.`,
             });
             onCheckInSuccess();
-        } catch(error) {
+        } catch(error: any) {
             console.error("Error adding attendance log:", error);
             toast({
                 title: 'Save Failed',
-                description: 'Could not save attendance log. Please try again.',
+                description: error.message || 'Could not save attendance log. Please try again.',
                 variant: 'destructive',
             });
         } finally {
