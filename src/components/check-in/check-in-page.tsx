@@ -537,6 +537,12 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                     <p className="mt-2 text-muted-foreground">Camera not available</p>
                 </div>
             )}
+             {hasCameraPermission === null && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                         <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
+                         <p className="mt-2 text-muted-foreground">Initializing camera...</p>
+                    </div>
+                )}
         </div>
         {hasCameraPermission === false && (
             <Alert variant="destructive">
@@ -546,7 +552,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 </AlertDescription>
             </Alert>
         )}
-        <Button onClick={handleCheckIn} disabled={isProcessing || !hasCameraPermission} className="w-full">
+        <Button onClick={handleCheckIn} disabled={isProcessing || hasCameraPermission !== true} className="w-full">
             {isProcessing ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -817,3 +823,5 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+    
