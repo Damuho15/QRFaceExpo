@@ -416,7 +416,6 @@ type VerificationState = {
   showDialog: boolean;
   isProcessing: boolean;
   isSaving: boolean;
-  memberToVerify: Member | null;
   registrationType: 'Pre-registration' | 'Actual' | null;
 };
 
@@ -424,12 +423,14 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    
+    // Dedicated state for the member being verified to avoid race conditions.
+    const [memberToVerify, setMemberToVerify] = useState<Member | null>(null);
 
     const [verification, setVerification] = useState<VerificationState>({
         showDialog: false,
         isProcessing: false,
         isSaving: false,
-        memberToVerify: null,
         registrationType: null,
     });
 
@@ -484,6 +485,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         }
 
         setVerification(prev => ({ ...prev, isProcessing: true, showDialog: false }));
+        setMemberToVerify(null);
         
         toast({
             title: 'Verifying Member...',
@@ -508,28 +510,29 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             if (result.matchFound && result.fullName) {
                 const actualMember = members.find(m => m.fullName === result.fullName);
                 if (actualMember) {
+                    // Set the dedicated state for the verified member
+                    setMemberToVerify(actualMember);
                     setVerification({
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
-                        memberToVerify: actualMember,
                         registrationType: registrationType
                     });
                 } else {
+                     setMemberToVerify(null);
                      setVerification({
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
-                        memberToVerify: null, // AI found a name, but it's not in our DB.
                         registrationType: registrationType
                     });
                 }
             } else {
+                setMemberToVerify(null);
                 setVerification({
                     isProcessing: false,
                     isSaving: false,
                     showDialog: true,
-                    memberToVerify: null, // AI found no match
                     registrationType: registrationType
                 });
             }
@@ -545,10 +548,10 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!verification.memberToVerify || !verification.registrationType || !isValidUUID(verification.memberToVerify.id)) {
+        if (!memberToVerify || !verification.registrationType || !isValidUUID(memberToVerify.id)) {
             toast({
                 title: 'Save Failed',
-                description: 'Cannot save attendance due to invalid member data.',
+                description: 'Cannot save attendance due to invalid or missing member data.',
                 variant: 'destructive',
             });
             closeDialog();
@@ -559,8 +562,8 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
         try {
             await addAttendanceLog({
-                member_id: verification.memberToVerify.id,
-                member_name: verification.memberToVerify.fullName,
+                member_id: memberToVerify.id,
+                member_name: memberToVerify.fullName,
                 type: verification.registrationType,
                 method: 'Face',
                 timestamp: new Date()
@@ -568,7 +571,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
             toast({
                 title: 'Thank you for registering',
-                description: `${verification.memberToVerify.fullName} has been successfully checked in.`,
+                description: `${memberToVerify.fullName} has been successfully checked in.`,
             });
             onCheckInSuccess();
         } catch(error) {
@@ -588,9 +591,9 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             showDialog: false,
             isProcessing: false,
             isSaving: false,
-            memberToVerify: null,
             registrationType: null,
         });
+        setMemberToVerify(null);
     }
 
     return (
@@ -643,19 +646,19 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>
-                     {verification.memberToVerify 
-                        ? `Welcome, ${verification.memberToVerify.fullName}! Is this you?` 
+                     {memberToVerify 
+                        ? `Welcome, ${memberToVerify.fullName}! Is this you?` 
                         : "Face Not Recognized"}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                    {verification.memberToVerify 
+                    {memberToVerify 
                         ? "Please confirm your identity to complete the check-in." 
                         : "We couldn't find a matching member in our records. Please try again or use the QR code check-in."}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                  <AlertDialogCancel onClick={closeDialog} disabled={verification.isSaving}>Cancel</AlertDialogCancel>
-                {verification.memberToVerify ? (
+                {memberToVerify ? (
                     <AlertDialogAction onClick={confirmAndSaveChanges} disabled={verification.isSaving}>
                          {verification.isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
                     </AlertDialogAction>
