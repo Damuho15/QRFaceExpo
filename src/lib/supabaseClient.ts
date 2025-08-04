@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Member, EventConfig, AttendanceLog } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
+import { v4 as uuidv4 } from 'uuid';
 
 // Notice the `NEXT_PUBLIC_` prefix is required for Next.js to expose the variable to the browser.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -98,6 +99,7 @@ export const getMembers = async (): Promise<Member[]> => {
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
     const safePayload = {
+        id: uuidv4(),
         fullName: formData.fullName,
         nickname: formData.nickname || null,
         email: formData.email || null,
@@ -204,6 +206,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
         const weddingAnniversary = parseDate(rawMember.WeddingAnniversary);
         
         return {
+            id: uuidv4(),
             fullName: fullName,
             nickname: rawMember.Nickname ? String(rawMember.Nickname).trim() : null,
             email: rawMember.Email ? String(rawMember.Email).trim() : null,

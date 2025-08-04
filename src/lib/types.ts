@@ -16,7 +16,7 @@ export type Member = {
 };
 
 export type AttendanceLog = {
-  id: number;
+  id: string;
   member_id: string; 
   member_name: string;
   timestamp: string;
