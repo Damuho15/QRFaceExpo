@@ -109,7 +109,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 description: 'Check-in is not open at this time.',
                 variant: 'destructive',
             });
-            setIsScanning(true);
+            setTimeout(() => setIsScanning(true), 500);
             return;
         }
 
@@ -208,17 +208,12 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
         const scanInterval = 200; // Scan every 200ms
 
         const tick = (time: number) => {
-            if (!isScanning || !videoRef.current || !hasCameraPermission) {
-                animationFrameId.current = requestAnimationFrame(tick);
-                return;
-            }
-
-            const video = videoRef.current;
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (isScanning && hasCameraPermission && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
                 if (time - lastScanTime > scanInterval) {
                     lastScanTime = time;
                     const canvas = canvasRef.current;
-                    if(canvas) {
+                    const video = videoRef.current;
+                    if(canvas && video) {
                         canvas.height = video.videoHeight;
                         canvas.width = video.videoWidth;
                         const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -242,13 +237,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
             animationFrameId.current = requestAnimationFrame(tick);
         };
 
-        if (isScanning && hasCameraPermission) {
-            animationFrameId.current = requestAnimationFrame(tick);
-        } else {
-            if (animationFrameId.current) {
-                cancelAnimationFrame(animationFrameId.current);
-            }
-        }
+        animationFrameId.current = requestAnimationFrame(tick);
 
         return () => {
             if (animationFrameId.current) {
