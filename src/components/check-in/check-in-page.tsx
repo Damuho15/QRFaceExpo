@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -413,7 +412,6 @@ const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }:
 };
 
 type VerificationState = {
-  showDialog: boolean;
   isProcessing: boolean;
   isSaving: boolean;
   registrationType: 'Pre-registration' | 'Actual' | null;
@@ -423,12 +421,12 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [showDialog, setShowDialog] = useState(false);
     
     // Dedicated state for the member being verified to avoid race conditions.
     const [memberToVerify, setMemberToVerify] = useState<Member | null>(null);
 
     const [verification, setVerification] = useState<VerificationState>({
-        showDialog: false,
         isProcessing: false,
         isSaving: false,
         registrationType: null,
@@ -484,7 +482,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        setVerification(prev => ({ ...prev, isProcessing: true, showDialog: false }));
+        setVerification(prev => ({ ...prev, isProcessing: true }));
         setMemberToVerify(null);
         
         toast({
@@ -510,31 +508,30 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             if (result.matchFound && result.fullName) {
                 const actualMember = members.find(m => m.fullName === result.fullName);
                 if (actualMember) {
-                    // Set the dedicated state for the verified member
                     setMemberToVerify(actualMember);
                     setVerification({
                         isProcessing: false,
                         isSaving: false,
-                        showDialog: true,
                         registrationType: registrationType
                     });
+                     setShowDialog(true);
                 } else {
-                     setMemberToVerify(null);
+                     setMemberToVerify(null); // Explicitly set to null
                      setVerification({
                         isProcessing: false,
                         isSaving: false,
-                        showDialog: true,
                         registrationType: registrationType
                     });
+                     setShowDialog(true);
                 }
             } else {
                 setMemberToVerify(null);
                 setVerification({
                     isProcessing: false,
                     isSaving: false,
-                    showDialog: true,
                     registrationType: registrationType
                 });
+                setShowDialog(true);
             }
         } catch (error) {
             console.error('Face recognition error:', error);
@@ -588,12 +585,12 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     
     const closeDialog = () => {
         setVerification({
-            showDialog: false,
             isProcessing: false,
             isSaving: false,
             registrationType: null,
         });
         setMemberToVerify(null);
+        setShowDialog(false);
     }
 
     return (
@@ -642,7 +639,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
       </CardContent>
     </Card>
     
-    <AlertDialog open={verification.showDialog} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
+    <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>
@@ -926,5 +923,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
