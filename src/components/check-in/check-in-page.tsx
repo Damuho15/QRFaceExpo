@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -427,9 +428,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    
-    // --- Temporary Debugger State ---
-    const [memberToDebug, setMemberToDebug] = useState<Member | null>(null);
 
 
     useEffect(() => {
@@ -483,10 +481,9 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         }
 
         setIsProcessing(true);
-        // Reset previous verification and debug data
+        // Reset previous verification data
         setConfirmedMemberId(null);
         setConfirmedMemberName(null);
-        setMemberToDebug(null); // Fix: Reset debugger state on each verification
         
         toast({
             title: 'Verifying Member...',
@@ -509,15 +506,14 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
             setIsProcessing(false);
             
-            let foundMember: Member | undefined;
-
             if (result.matchFound && result.fullName) {
-                foundMember = members.find(m => m.fullName === result.fullName);
+                const foundMember = members.find(m => m.fullName === result.fullName);
                 if (foundMember) {
                     setConfirmedMemberId(foundMember.id);
                     setConfirmedMemberName(foundMember.fullName);
                     setRegistrationType(currentRegistrationType);
-                    setMemberToDebug(foundMember); // Capture member for debugger
+                } else {
+                     setConfirmedMemberName(result.fullName); // Name found, but not in DB
                 }
             }
             setShowDialog(true);
@@ -533,23 +529,21 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        // --- TEMPORARY DEBUGGING: Display data instead of saving ---
-        if (memberToDebug) {
-             toast({
-                title: 'Debug Mode',
-                description: 'Check the debugger card for the verified member data.',
-                duration: 5000,
-            });
-        } else if (confirmedMemberName) {
-            // This case should ideally not happen if memberToDebug is set correctly
-            toast({
-                title: 'Debug Warning',
-                description: `Could not find full data for ${confirmedMemberName}. The debugger may not show complete information.`,
-                variant: 'destructive'
-            });
-        }
+        // --- TEMPORARY DEBUGGING: Display data in toast instead of saving ---
+        toast({
+            title: 'Debug Mode: Values to be Saved',
+            description: (
+                <div className="w-full mt-2">
+                    <p>ID: {confirmedMemberId ?? 'null'}</p>
+                    <p>Name: {confirmedMemberName ?? 'null'}</p>
+                    <p>Type: {registrationType ?? 'null'}</p>
+                    <p>ID is valid UUID: {isValidUUID(confirmedMemberId) ? 'Yes' : 'No'}</p>
+                </div>
+            ),
+            duration: 9000,
+        });
         
-        closeDialog(); // This will show the debugger card
+        closeDialog(); // This will close the dialog after showing the toast.
         return; // Skip saving
         
         // --- ORIGINAL SAVE LOGIC (Commented out) ---
@@ -609,7 +603,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         setConfirmedMemberName(null);
         setRegistrationType(null);
         setShowDialog(false);
-        // We don't clear memberToDebug here, so it can be displayed after the dialog closes.
     }
 
     return (
@@ -658,49 +651,16 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
       </CardContent>
     </Card>
 
-    {/* --- Temporary Debugger Card --- */}
-    {memberToDebug && (
-        <Card className="bg-destructive/10 border-destructive mt-6">
-            <CardHeader>
-                <CardTitle>Temporary Debugger: Verified Member Data</CardTitle>
-                <CardDescription>
-                    This card shows the raw data and JavaScript type for the member object just before the save attempt.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Field Name</TableHead>
-                            <TableHead>Value</TableHead>
-                            <TableHead>Type (typeof)</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {Object.entries(memberToDebug).map(([key, value]) => (
-                            <TableRow key={key}>
-                                <TableCell className="font-mono">{key}</TableCell>
-                                <TableCell className="font-mono">{String(value)}</TableCell>
-                                <TableCell className="font-mono">{typeof value}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    )}
-    {/* --- End Temporary Debugger Card --- */}
-    
     <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>
-                     {confirmedMemberName 
+                     {confirmedMemberId 
                         ? `Welcome, ${confirmedMemberName}! Is this you?` 
                         : "Face Not Recognized"}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                    {confirmedMemberName 
+                    {confirmedMemberId 
                         ? "Please confirm your identity to complete the check-in." 
                         : "We couldn't find a matching member in our records. Please try again or use the QR code check-in."}
                 </AlertDialogDescription>
