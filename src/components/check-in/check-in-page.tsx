@@ -529,25 +529,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        // --- TEMPORARY DEBUGGING: Display data in toast instead of saving ---
-        toast({
-            title: 'Debug Mode: Values to be Saved',
-            description: (
-                <div className="w-full mt-2">
-                    <p>ID: {confirmedMemberId ?? 'null'}</p>
-                    <p>Name: {confirmedMemberName ?? 'null'}</p>
-                    <p>Type: {registrationType ?? 'null'}</p>
-                    <p>ID is valid UUID: {isValidUUID(confirmedMemberId) ? 'Yes' : 'No'}</p>
-                </div>
-            ),
-            duration: 9000,
-        });
-        
-        closeDialog(); // This will close the dialog after showing the toast.
-        return; // Skip saving
-        
-        // --- ORIGINAL SAVE LOGIC (Commented out) ---
-        /*
         if (!confirmedMemberId || !confirmedMemberName || !registrationType) {
              toast({
                 title: 'Save Failed',
@@ -594,7 +575,6 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         } finally {
             closeDialog();
         }
-        */
     }
     
     const closeDialog = () => {
@@ -667,7 +647,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             </AlertDialogHeader>
             <AlertDialogFooter>
                  <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>Cancel</AlertDialogCancel>
-                {confirmedMemberName ? (
+                {confirmedMemberId ? (
                     <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
                          {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
                     </AlertDialogAction>
@@ -935,5 +915,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    

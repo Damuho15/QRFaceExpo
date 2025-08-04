@@ -94,9 +94,22 @@ export const getMembers = async (): Promise<Member[]> => {
         throw error;
     }
     
+    // Explicitly map and cast ALL relevant fields to ensure data integrity
     return (data || []).map(member => ({
         ...member,
         id: String(member.id),
+        // Ensure other fields that should be strings are not null
+        fullName: String(member.fullName || ''), 
+        nickname: String(member.nickname || ''),
+        email: String(member.email || ''),
+        phone: String(member.phone || ''),
+        birthday: String(member.birthday || ''),
+        weddingAnniversary: member.weddingAnniversary ? String(member.weddingAnniversary) : null,
+        qrCodePayload: String(member.qrCodePayload || ''),
+        pictureUrl: member.pictureUrl ? String(member.pictureUrl) : null,
+        ministries: String(member.ministries || ''),
+        lg: String(member.lg || ''),
+        created_at: String(member.created_at || ''),
     })) as Member[];
 };
 
@@ -290,7 +303,6 @@ export const addAttendanceLog = async (log: {
             member_name: log.member_name,
             type: log.type,
             method: log.method,
-            timestamp: log.timestamp.toISOString(),
         })
         .select()
         .single();
