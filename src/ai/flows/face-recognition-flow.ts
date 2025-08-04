@@ -39,6 +39,17 @@ export async function recognizeFace(input: RecognizeFaceInput): Promise<Recogniz
 
 const prompt = ai.definePrompt({
     name: 'recognizeFacePrompt',
+    input: {
+        schema: z.object({
+            imageDataUri: z.string(),
+            members: z.array(z.object({
+                id: z.string(),
+                fullName: z.string(),
+                pictureUrl: z.string().nullable(),
+            })),
+        }),
+    },
+    output: { schema: RecognizeFaceOutputSchema },
     prompt: `You are an AI security agent performing face recognition for event check-in.
 
 Your task is to determine if the person in the provided live image matches any of the registered members' profile photos.
@@ -59,17 +70,6 @@ Instructions:
 3. If you find a definitive, high-confidence match with one of the members, set 'matchFound' to true and provide the 'id' and 'fullName' of that member.
 4. If you do not find a clear match, or if you have low confidence, you MUST set 'matchFound' to false. Do not guess.
 5. Accuracy is critical. If you are not highly confident in a match, err on the side of caution and report 'matchFound: false'. Do not provide member details if no match is found.`,
-    input: {
-        schema: z.object({
-            imageDataUri: z.string(),
-            members: z.array(z.object({
-                id: z.string(),
-                fullName: z.string(),
-                pictureUrl: z.string().nullable(),
-            })),
-        }),
-    },
-    output: { schema: RecognizeFaceOutputSchema },
 });
 
 
