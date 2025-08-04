@@ -38,6 +38,7 @@ import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Member } from '@/lib/types';
 import { isValidUUID } from '@/lib/validation';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -426,6 +427,9 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    
+    // --- Temporary Debugger State ---
+    const [memberToDebug, setMemberToDebug] = useState<Member | null>(null);
 
 
     useEffect(() => {
@@ -479,9 +483,10 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         }
 
         setIsProcessing(true);
-        // Reset previous verification
+        // Reset previous verification and debug data
         setConfirmedMemberId(null);
         setConfirmedMemberName(null);
+        setMemberToDebug(null);
         
         toast({
             title: 'Verifying Member...',
@@ -510,6 +515,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                     setConfirmedMemberId(actualMember.id);
                     setConfirmedMemberName(actualMember.fullName);
                     setRegistrationType(currentRegistrationType);
+                    setMemberToDebug(actualMember); // Capture member for debugger
                 }
             }
             setShowDialog(true);
@@ -525,10 +531,31 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!confirmedMemberId || !confirmedMemberName || !registrationType || !isValidUUID(confirmedMemberId)) {
+        if (!confirmedMemberId || !confirmedMemberName || !registrationType) {
+             toast({
+                title: 'Save Failed',
+                description: 'Cannot save attendance due to missing member data.',
+                variant: 'destructive',
+            });
+            closeDialog();
+            return;
+        }
+
+        // --- TEMPORARY DEBUGGING: Display data instead of saving ---
+        toast({
+            title: 'Debug Mode',
+            description: 'Check the debugger card for the verified member data.',
+            duration: 5000,
+        });
+        closeDialog(); // This will show the debugger card
+        return; // Skip saving
+        
+        // --- ORIGINAL SAVE LOGIC (Commented out) ---
+        /*
+        if (!isValidUUID(confirmedMemberId)) {
             toast({
                 title: 'Save Failed',
-                description: 'Cannot save attendance due to invalid or missing member data.',
+                description: 'Cannot save attendance due to invalid member ID.',
                 variant: 'destructive',
             });
             closeDialog();
@@ -561,6 +588,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         } finally {
             closeDialog();
         }
+        */
     }
     
     const closeDialog = () => {
@@ -569,6 +597,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         setConfirmedMemberName(null);
         setRegistrationType(null);
         setShowDialog(false);
+        // We don't clear memberToDebug here, so it can be displayed after the dialog closes.
     }
 
     return (
@@ -616,6 +645,39 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         </Button>
       </CardContent>
     </Card>
+
+    {/* --- Temporary Debugger Card --- */}
+    {memberToDebug && (
+        <Card className="bg-destructive/10 border-destructive mt-6">
+            <CardHeader>
+                <CardTitle>Temporary Debugger: Verified Member Data</CardTitle>
+                <CardDescription>
+                    This card shows the raw data and JavaScript type for the member object just before the save attempt.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Field Name</TableHead>
+                            <TableHead>Value</TableHead>
+                            <TableHead>Type (typeof)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {Object.entries(memberToDebug).map(([key, value]) => (
+                            <TableRow key={key}>
+                                <TableCell className="font-mono">{key}</TableCell>
+                                <TableCell className="font-mono">{String(value)}</TableCell>
+                                <TableCell className="font-mono">{typeof value}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    )}
+    {/* --- End Temporary Debugger Card --- */}
     
     <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
