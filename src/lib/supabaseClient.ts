@@ -303,6 +303,7 @@ export const addAttendanceLog = async (log: {
             member_name: log.member_name,
             type: log.type,
             method: log.method,
+            timestamp: log.timestamp.toISOString(),
         })
         .select()
         .single();
