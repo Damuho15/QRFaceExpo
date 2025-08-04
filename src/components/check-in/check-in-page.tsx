@@ -923,5 +923,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
