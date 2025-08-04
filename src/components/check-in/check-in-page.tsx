@@ -37,6 +37,7 @@ import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAtten
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
 import { Member } from '@/lib/types';
+import { isValidUUID } from '@/lib/validation';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -483,7 +484,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             return;
         }
 
-        setVerification(prev => ({ ...prev, isProcessing: true }));
+        setVerification(prev => ({ ...prev, isProcessing: true, showDialog: false }));
         
         toast({
             title: 'Verifying Member...',
@@ -518,7 +519,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                     });
                 } else {
                     // AI found a match but the ID is not in our current member list
-                    setVerification({
+                     setVerification({
                         isProcessing: false,
                         isSaving: false,
                         showDialog: true,
@@ -553,12 +554,25 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             closeDialog();
             return;
         }
+
+        const memberId = verification.memberToVerify.id;
+
+        // Final validation guardrail
+        if (!isValidUUID(memberId)) {
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: `Invalid Member ID format: ${memberId}. Cannot save attendance.`,
+            });
+            closeDialog();
+            return;
+        }
         
         setVerification(prev => ({...prev, isSaving: true}));
 
         try {
             await addAttendanceLog({
-                member_id: verification.memberToVerify.id,
+                member_id: memberId,
                 member_name: verification.memberToVerify.fullName,
                 type: verification.registrationType,
                 method: 'Face',
@@ -639,7 +653,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
       </CardContent>
     </Card>
     
-    <AlertDialog open={verification.showDialog} onOpenChange={closeDialog}>
+    <AlertDialog open={verification.showDialog} onOpenChange={(isOpen) => !isOpen && closeDialog()}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Verification Result</AlertDialogTitle>
