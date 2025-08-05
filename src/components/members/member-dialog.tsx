@@ -24,7 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Loader2, Download } from 'lucide-react';
 import type { Member } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -157,6 +157,29 @@ export default function MemberDialog({
         setIsSubmitting(false);
     }
   };
+
+  const handleDownload = async () => {
+    if (!newMember?.qrCodePayload) return;
+    try {
+        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(newMember.qrCodePayload)}`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${newMember.fullName}-QR.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Failed to download QR code", error);
+        toast({
+            variant: "destructive",
+            title: "Download failed",
+            description: "Could not download the QR code image."
+        });
+    }
+  }
 
   const TriggerComponent = isEditMode ? (
     <div onClick={() => setOpen(true)} className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
@@ -356,6 +379,10 @@ export default function MemberDialog({
               <p className="text-lg font-medium">{newMember?.fullName}</p>
             </div>
             <DialogFooter>
+                <Button variant="secondary" onClick={handleDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                </Button>
                 <Button onClick={() => setOpen(false)}>Close</Button>
             </DialogFooter>
           </>
