@@ -745,24 +745,13 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
 
         const matchedFirstTimer = firstTimers.find(ft => ft.qrCodePayload === qrData);
         
+        setConfirmedFirstTimer(matchedFirstTimer || null);
         if (matchedFirstTimer) {
-            toast({
-                title: 'New Comer Found (Debug)',
-                description: (
-                    <div className="text-sm">
-                        <p><b>ID:</b> {matchedFirstTimer.id}</p>
-                        <p><b>Name:</b> {matchedFirstTimer.fullName}</p>
-                        <p><b>QR Payload:</b> {matchedFirstTimer.qrCodePayload}</p>
-                    </div>
-                ),
-                duration: 9000
-            });
             setRegistrationType(currentRegistrationType);
         } else {
             setRegistrationType(null);
         }
 
-        setConfirmedFirstTimer(matchedFirstTimer || null);
         setShowDialog(true);
 
     }, [isScanning, firstTimers, eventDate, preRegStartDate, toast]);
