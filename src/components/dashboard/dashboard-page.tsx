@@ -421,25 +421,25 @@ export default function DashboardPage() {
   
   const combinedLogs = useMemo(() => [
       ...attendanceLogs.map(l => ({ ...l, name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
-      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id }))
+      ...firstTimerLogs.map(l => ({ ...l, id: l.id, name: l.first_timer_name, type: l.type, method: l.method, timestamp: l.timestamp }))
   ], [attendanceLogs, firstTimerLogs]);
 
   const { preRegistrations, actualRegistrations } = useMemo(() => {
-    const uniquePreRegistrants = new Set<string>();
-    const uniqueActualRegistrants = new Set<string>();
+      const uniquePreRegistrants = new Set<string>();
+      const uniqueActualRegistrants = new Set<string>();
 
-    combinedLogs.forEach(log => {
-        if (log.type === 'Pre-registration') {
-            uniquePreRegistrants.add(log.name);
-        } else if (log.type === 'Actual') {
-            uniqueActualRegistrants.add(log.name);
-        }
-    });
-
-    return {
-        preRegistrations: uniquePreRegistrants.size,
-        actualRegistrations: uniqueActualRegistrants.size,
-    };
+      combinedLogs.forEach(log => {
+          if (log.type === 'Pre-registration') {
+              uniquePreRegistrants.add(log.name);
+          } else if (log.type === 'Actual') {
+              uniqueActualRegistrants.add(log.name);
+          }
+      });
+      
+      return {
+          preRegistrations: uniquePreRegistrants.size,
+          actualRegistrations: uniqueActualRegistrants.size,
+      };
   }, [combinedLogs]);
   
   const { qrCheckins, faceCheckins } = useMemo(() => {
@@ -464,11 +464,15 @@ export default function DashboardPage() {
   const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const attendanceReportDefaults = useMemo(() => {
-    // Hardcode the default date range as requested.
-    const defaultStartDate = new Date(2025, 6, 29); // Month is 0-indexed, so 6 is July
-    const defaultEndDate = new Date(2025, 7, 3); // 7 is August
+    if (!eventConfig) {
+      return { defaultStartDate: undefined, defaultEndDate: undefined };
+    }
+    // Calculate the week before the current event date.
+    const eventDate = parseDateAsUTC(eventConfig.event_date);
+    const defaultEndDate = subDays(eventDate, 1); // e.g., Saturday if event is Sunday
+    const defaultStartDate = subDays(defaultEndDate, 6); // Go back 6 more days to get a full week
     return { defaultStartDate, defaultEndDate };
-  }, []);
+  }, [eventConfig]);
   
   if (loading) {
       return (
