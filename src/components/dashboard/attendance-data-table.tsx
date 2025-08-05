@@ -65,7 +65,7 @@ export default function AttendanceDataTable<TData, TValue>({
     <Card>
       <CardHeader>
         <CardTitle>Attendance Log</CardTitle>
-        <CardDescription>A detailed list of all check-ins for the event.</CardDescription>
+        <CardDescription>A detailed list of all check-ins for the current event period.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center py-4">

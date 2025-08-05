@@ -262,8 +262,12 @@ export const getEventConfig = async (): Promise<EventConfig | null> => {
         .single();
     
     if (error) {
+        if (error.code === 'PGRST116') { // Resource not found
+            console.warn('Event config not found. This might be expected if it has not been set yet.');
+            return null;
+        }
         console.error('Error fetching event config:', error);
-        return null;
+        throw error;
     }
     
     return data;
@@ -316,11 +320,20 @@ export const addAttendanceLog = async (log: {
     return data;
 };
 
-export const getAttendanceLogs = async (): Promise<AttendanceLog[]> => {
-    const { data, error } = await supabase
+export const getAttendanceLogs = async (startDate?: Date, endDate?: Date): Promise<AttendanceLog[]> => {
+    let query = supabase
         .from('attendance_logs')
         .select('*')
         .order('timestamp', { ascending: false });
+
+    if (startDate) {
+        query = query.gte('timestamp', startDate.toISOString());
+    }
+    if (endDate) {
+        query = query.lte('timestamp', endDate.toISOString());
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching attendance logs:', error);

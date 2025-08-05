@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint } from 'lucide-react';
-import { getMembers, getAttendanceLogs } from '@/lib/supabaseClient';
+import { getMembers, getAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
@@ -39,10 +39,25 @@ export default function DashboardPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [memberData, logData] = await Promise.all([
+            const [memberData, eventConfig] = await Promise.all([
                 getMembers(),
-                getAttendanceLogs(),
+                getEventConfig()
             ]);
+            
+            let logData: AttendanceLog[] = [];
+            if (eventConfig) {
+                const startDate = parseDateAsUTC(eventConfig.pre_reg_start_date);
+                
+                // Set end date to the end of the event day
+                const endDate = parseDateAsUTC(eventConfig.event_date);
+                endDate.setUTCHours(23, 59, 59, 999);
+
+                logData = await getAttendanceLogs(startDate, endDate);
+            } else {
+                // Fallback to fetching all logs if config is not available
+                logData = await getAttendanceLogs();
+            }
+
             setMembers(memberData);
             setAttendanceLogs(logData);
         } catch (error) {
@@ -142,7 +157,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <AttendanceDataTable columns={columns} data={attendanceLogs} />
+      <AttendanceDataTable columns={columns} data={attendanceLogs} isLoading={loading} />
 
     </div>
   );
