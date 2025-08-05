@@ -391,7 +391,7 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, canvas.height, {
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
                             inversionAttempts: 'attemptBoth',
                         });
                         if (code && code.data) {
@@ -978,7 +978,7 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
                         if (code && code.data) {
                             handleCheckIn(code.data);
                         } else {
