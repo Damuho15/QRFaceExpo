@@ -147,7 +147,7 @@ export const columns: ColumnDef<FirstTimer>[] = [
           try {
               await deleteFirstTimer(firstTimer.id);
               toast({
-                  title: '1st Timer Deleted',
+                  title: 'New Comer Deleted',
                   description: `${firstTimer.fullName} has been successfully deleted.`,
               });
               table.options.meta?.onAction(); // This refreshes the table
@@ -155,7 +155,7 @@ export const columns: ColumnDef<FirstTimer>[] = [
               toast({
                   variant: 'destructive',
                   title: 'Delete Failed',
-                  description: error.message || 'Could not delete the 1st timer.',
+                  description: error.message || 'Could not delete the new comer.',
               });
           }
       };

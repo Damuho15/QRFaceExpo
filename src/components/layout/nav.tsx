@@ -18,7 +18,7 @@ import Link from 'next/link';
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/members', label: 'Members', icon: Users },
-  { href: '/first-timers', label: '1st Timers', icon: UserPlus },
+  { href: '/first-timers', label: 'New Comers', icon: UserPlus },
   { href: '/check-in', label: 'Check-in', icon: QrCode },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },
 ];

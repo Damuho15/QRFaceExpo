@@ -331,7 +331,7 @@ export const getAttendanceLogs = async (): Promise<AttendanceLog[]> => {
     return (data || []).map(log => ({ ...log, id: String(log.id) }));
 };
 
-// First Timer Functions
+// New Comer Functions
 export const getFirstTimers = async (): Promise<FirstTimer[]> => {
     const { data, error } = await supabase
         .from('first_timers')
@@ -339,7 +339,7 @@ export const getFirstTimers = async (): Promise<FirstTimer[]> => {
         .order('fullName', { ascending: true });
 
     if (error) {
-        console.error('Error fetching first_timers:', error);
+        console.error('Error fetching new comers:', error);
         throw error;
     }
     return data || [];
@@ -357,7 +357,7 @@ export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<Fir
         .single();
 
     if (error) {
-        console.error('Error adding first timer:', error);
+        console.error('Error adding new comer:', error);
         throw error;
     }
     return data;
@@ -377,7 +377,7 @@ export const updateFirstTimer = async (id: string, formData: FirstTimerFormValue
         .single();
 
     if (error) {
-        console.error('Error updating first timer:', error);
+        console.error('Error updating new comer:', error);
         throw error;
     }
     return data;
@@ -387,7 +387,7 @@ export const deleteFirstTimer = async (id: string) => {
     const { error } = await supabase.from('first_timers').delete().eq('id', id);
 
     if (error) {
-        console.error('Error deleting first timer:', error);
+        console.error('Error deleting new comer:', error);
         throw error;
     }
 

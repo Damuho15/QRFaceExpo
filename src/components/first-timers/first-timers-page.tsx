@@ -17,7 +17,7 @@ export default function FirstTimersPage() {
         const fetchedFirstTimers = await getFirstTimers();
         setFirstTimers(fetchedFirstTimers);
     } catch (error) {
-        console.error("Failed to fetch first-timers:", error);
+        console.error("Failed to fetch new comers:", error);
         // Optionally, add toast notifications for errors
     } finally {
         setLoading(false);
@@ -31,9 +31,9 @@ export default function FirstTimersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-headline">1st Timer Management</h1>
+        <h1 className="text-2xl font-bold font-headline">New Comer Management</h1>
         <p className="text-muted-foreground">
-          Add, edit, and manage your first-time attendees.
+          Add, edit, and manage your new comers.
         </p>
       </div>
 

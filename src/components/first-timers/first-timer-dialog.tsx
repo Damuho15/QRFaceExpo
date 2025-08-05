@@ -89,7 +89,7 @@ export default function FirstTimerDialog({
         if (isEditMode && firstTimerToEdit) {
             const result = await updateFirstTimer(firstTimerToEdit.id, data);
             toast({
-                title: '1st Timer Updated',
+                title: 'New Comer Updated',
                 description: `${result.fullName} has been successfully updated.`,
             });
             onSuccess?.();
@@ -98,7 +98,7 @@ export default function FirstTimerDialog({
         } else {
             const result = await addFirstTimer(data);
             toast({
-                title: '1st Timer Added',
+                title: 'New Comer Added',
                 description: `${result.fullName} has been successfully added.`,
             });
             setNewFirstTimer(result);
@@ -125,7 +125,7 @@ export default function FirstTimerDialog({
     <DialogTrigger asChild>
       <Button>
         <PlusCircle className="mr-2 h-4 w-4" />
-        Add 1st Timer
+        Add New Comer
       </Button>
     </DialogTrigger>
   );
@@ -141,11 +141,11 @@ export default function FirstTimerDialog({
         {!showQr ? (
           <>
             <DialogHeader>
-              <DialogTitle>{isEditMode ? 'Edit 1st Timer' : 'Add New 1st Timer'}</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Edit New Comer' : 'Add New Comer'}</DialogTitle>
               <DialogDescription>
                 {isEditMode
-                  ? "Update the 1st timer's details below."
-                  : 'Fill in the details for the new 1st timer.'}
+                  ? "Update the new comer's details below."
+                  : 'Fill in the details for the new comer.'}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -196,7 +196,7 @@ export default function FirstTimerDialog({
                 <DialogFooter className="pt-4">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isEditMode ? 'Save Changes' : 'Create 1st Timer'}
+                    {isEditMode ? 'Save Changes' : 'Create New Comer'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -205,7 +205,7 @@ export default function FirstTimerDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>1st Timer Added &amp; QR Code Generated</DialogTitle>
+              <DialogTitle>New Comer Added &amp; QR Code Generated</DialogTitle>
               <DialogDescription>
                 Share this QR code with {newFirstTimer?.fullName} for event check-ins.
               </DialogDescription>
