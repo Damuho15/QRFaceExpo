@@ -10,12 +10,12 @@ import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
 import { columns } from './columns';
-import type { AttendanceLog, Member, NewComerAttendanceLog } from '@/lib/types';
+import type { AttendanceLog, Member, NewComerAttendanceLog, EventConfig } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { Calendar } from '../ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
@@ -47,10 +47,10 @@ const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLo
   );
 };
 
-const AttendanceReport = () => {
+const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
-    const [startDate, setStartDate] = useState<Date | undefined>();
-    const [endDate, setEndDate] = useState<Date | undefined>();
+    const [startDate, setStartDate] = useState<Date | undefined>(defaultStartDate);
+    const [endDate, setEndDate] = useState<Date | undefined>(defaultEndDate);
     const [isLoading, setIsLoading] = useState(false);
     const [totalActualAttendance, setTotalActualAttendance] = useState<number | null>(null);
 
@@ -86,8 +86,8 @@ const AttendanceReport = () => {
             ]);
             
             const combinedLogs = [
-                ...memberLogs.map(l => ({ ...l, name: l.member_name })), 
-                ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
+                ...memberLogs.map(l => ({ ...l, name: l.member_name, timestamp: l.timestamp, type: l.type })), 
+                ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, timestamp: l.timestamp, type: l.type }))
             ];
 
             const actualLogs = combinedLogs.filter(log => log.type === 'Actual');
@@ -350,17 +350,20 @@ export default function DashboardPage() {
     const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
     const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
     const [allTimeLogs, setAllTimeLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
+    const [eventConfig, setEventConfig] = useState<EventConfig | null>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [memberData, eventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
+            const [memberData, fetchedEventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
                 getMembers(),
                 getEventConfig(),
                 getAttendanceLogs(), // Fetch all logs for monthly report
                 getFirstTimerAttendanceLogs() // Fetch all logs for monthly report
             ]);
             
+            setEventConfig(fetchedEventConfig);
+
             const combinedAllLogs = [
                 ...allMemberLogs,
                 ...allFirstTimerLogs,
@@ -370,9 +373,9 @@ export default function DashboardPage() {
             let currentEventLogs: AttendanceLog[] = [];
             let currentFirstTimerLogs: NewComerAttendanceLog[] = [];
 
-            if (eventConfig) {
-                const startDate = parseDateAsUTC(eventConfig.pre_reg_start_date);
-                const endDate = parseDateAsUTC(eventConfig.event_date);
+            if (fetchedEventConfig) {
+                const startDate = parseDateAsUTC(fetchedEventConfig.pre_reg_start_date);
+                const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
 
                 currentEventLogs = allMemberLogs.filter(log => {
@@ -409,8 +412,8 @@ export default function DashboardPage() {
   const totalMembers = members.length;
   
   const combinedLogs = useMemo(() => [
-      ...attendanceLogs.map(l => ({ ...l, name: l.member_name })),
-      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
+      ...attendanceLogs.map(l => ({ ...l, name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
+      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id }))
   ], [attendanceLogs, firstTimerLogs]);
 
   const { preRegistrations, actualRegistrations } = useMemo(() => {
@@ -451,6 +454,16 @@ export default function DashboardPage() {
   }, [combinedLogs]);
   
   const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const attendanceReportDefaults = useMemo(() => {
+    if (!eventConfig) return { defaultStartDate: undefined, defaultEndDate: undefined };
+    
+    const eventDate = parseDateAsUTC(eventConfig.event_date);
+    const defaultEndDate = subDays(eventDate, 1);
+    const defaultStartDate = subDays(defaultEndDate, 6);
+    
+    return { defaultStartDate, defaultEndDate };
+  }, [eventConfig]);
   
   if (loading) {
       return (
@@ -506,7 +519,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <AttendanceReport />
+      <AttendanceReport {...attendanceReportDefaults} />
 
       <MonthlyAverageChart allLogs={allTimeLogs} />
 
