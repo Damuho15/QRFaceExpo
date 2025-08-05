@@ -15,6 +15,15 @@ export type Member = {
   created_at: string;
 };
 
+export type FirstTimer = {
+  id: string;
+  fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  qrCodePayload: string;
+  created_at: string;
+}
+
 export type AttendanceLog = {
   id: string;
   member_id: string; 

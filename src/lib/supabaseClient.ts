@@ -1,8 +1,9 @@
 
 
 import { createClient } from '@supabase/supabase-js';
-import type { Member, EventConfig, AttendanceLog } from '@/lib/types';
+import type { Member, EventConfig, AttendanceLog, FirstTimer } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
+import type { FirstTimerFormValues } from '@/components/first-timers/first-timer-dialog';
 import { v4 as uuidv4 } from 'uuid';
 
 // Notice the `NEXT_PUBLIC_` prefix is required for Next.js to expose the variable to the browser.
@@ -328,4 +329,67 @@ export const getAttendanceLogs = async (): Promise<AttendanceLog[]> => {
     }
 
     return (data || []).map(log => ({ ...log, id: String(log.id) }));
+};
+
+// First Timer Functions
+export const getFirstTimers = async (): Promise<FirstTimer[]> => {
+    const { data, error } = await supabase
+        .from('first_timers')
+        .select('*')
+        .order('fullName', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching first_timers:', error);
+        throw error;
+    }
+    return data || [];
+};
+
+export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const { data, error } = await supabase
+        .from('first_timers')
+        .insert({
+            fullName: formData.fullName,
+            email: formData.email || null,
+            phone: formData.phone || null,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding first timer:', error);
+        throw error;
+    }
+    return data;
+};
+
+export const updateFirstTimer = async (id: string, formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const { data, error } = await supabase
+        .from('first_timers')
+        .update({
+            fullName: formData.fullName,
+            email: formData.email || null,
+            phone: formData.phone || null,
+            qrCodePayload: formData.fullName, // Also update QR payload on name change
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating first timer:', error);
+        throw error;
+    }
+    return data;
+};
+
+export const deleteFirstTimer = async (id: string) => {
+    const { error } = await supabase.from('first_timers').delete().eq('id', id);
+
+    if (error) {
+        console.error('Error deleting first timer:', error);
+        throw error;
+    }
+
+    return true;
 };
