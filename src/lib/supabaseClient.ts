@@ -401,7 +401,7 @@ export const addFirstTimerAttendanceLog = async (log: {
     timestamp: Date;
 }) => {
     const { data, error } = await supabase
-        .from('atttendance_log_1stTimer')
+        .from('attendance_log_1sttimer')
         .insert({
             first_timer_id: log.first_timer_id,
             first_timer_name: log.first_timer_name,
