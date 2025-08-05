@@ -455,3 +455,58 @@ export const getFirstTimerAttendanceLogs = async (startDate?: Date, endDate?: Da
 
     return (data || []).map(log => ({ ...log, id: String(log.id) }));
 };
+
+export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise<Member> => {
+    // 1. Check if a member with the same fullName already exists to prevent duplicates.
+    const { data: existingMembers, error: fetchError } = await supabase
+        .from('members')
+        .select('id')
+        .eq('fullName', firstTimer.fullName);
+
+    if (fetchError) {
+        console.error('Error checking for existing members:', fetchError);
+        throw new Error('Could not verify existing members before promotion.');
+    }
+
+    if (existingMembers && existingMembers.length > 0) {
+        throw new Error(`A member with the name "${firstTimer.fullName}" already exists.`);
+    }
+
+    // 2. Add the new comer's data to the members table.
+    // Birthday is a required field in the members table, so we need to provide a default
+    // or handle this case. For now, we'll use today's date as a placeholder.
+    // In a real app, you might prompt the user for this information.
+    const newMemberPayload = {
+        fullName: firstTimer.fullName,
+        email: firstTimer.email,
+        phone: firstTimer.phone,
+        birthday: new Date().toISOString().split('T')[0], // Placeholder for required field
+        qrCodePayload: firstTimer.fullName, // Generate new QR payload based on name
+    };
+    
+    const { data: newMember, error: addError } = await supabase
+        .from('members')
+        .insert(newMemberPayload)
+        .select()
+        .single();
+
+    if (addError) {
+        console.error('Error adding new member during promotion:', addError);
+        throw new Error('Failed to create a new member record.');
+    }
+
+    // 3. Delete the original record from the first_timers table.
+    const { error: deleteError } = await supabase
+        .from('first_timers')
+        .delete()
+        .eq('id', firstTimer.id);
+    
+    if (deleteError) {
+        // This is a critical issue. We have a new member but failed to remove the old record.
+        // We will log this, but the function will still succeed from the user's perspective.
+        // Manual cleanup might be required in the database.
+        console.error(`CRITICAL: Failed to delete first_timer record for ${firstTimer.fullName} (ID: ${firstTimer.id}) after promotion.`, deleteError);
+    }
+    
+    return newMember;
+}
