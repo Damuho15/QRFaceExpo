@@ -745,12 +745,18 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
 
         const matchedFirstTimer = firstTimers.find(ft => ft.qrCodePayload === qrData);
         
-        setConfirmedFirstTimer(matchedFirstTimer || null);
-        if(matchedFirstTimer) {
+        if (matchedFirstTimer) {
+            toast({
+                title: 'New Comer Found (Debug)',
+                description: (<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4"><code className="text-white">{JSON.stringify(matchedFirstTimer, null, 2)}</code></pre>),
+                duration: 9000
+            });
             setRegistrationType(currentRegistrationType);
         } else {
             setRegistrationType(null);
         }
+
+        setConfirmedFirstTimer(matchedFirstTimer || null);
         setShowDialog(true);
 
     }, [isScanning, firstTimers, eventDate, preRegStartDate, toast]);
@@ -777,7 +783,7 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
         if (!isValidUUID(confirmedFirstTimer.id)) {
             toast({
                 title: 'Save Failed',
-                description: 'Cannot save attendance due to invalid new comer ID.',
+                description: `Cannot save attendance due to invalid new comer ID: ${confirmedFirstTimer.id}`,
                 variant: 'destructive',
             });
             closeDialog();
