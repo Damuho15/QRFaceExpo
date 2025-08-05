@@ -1184,7 +1184,7 @@ export default function CheckInPage() {
         <CardHeader>
             <CardTitle>Event Configuration</CardTitle>
             <CardDescription>
-                Configure the event and pre-registration dates. Pre-registration ends on event day at 8:59 AM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
+                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
             </CardDescription>
         </CardHeader>
         {isLoading ? (
