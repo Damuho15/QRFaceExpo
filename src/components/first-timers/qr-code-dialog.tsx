@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import type { FirstTimer } from '@/lib/types';
 import Image from 'next/image';
+import { Download } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface QrCodeDialogProps {
   firstTimer: FirstTimer;
@@ -22,6 +24,7 @@ interface QrCodeDialogProps {
 
 export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
 
   if (!firstTimer.qrCodePayload) {
     return <>{children}</>;
@@ -36,6 +39,29 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
       }, 150);
     }
      setOpen(isOpen);
+  }
+
+  const handleDownload = async () => {
+    if (!firstTimer.qrCodePayload) return;
+    try {
+        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(firstTimer.qrCodePayload)}`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${firstTimer.fullName}-QR.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Failed to download QR code", error);
+        toast({
+            variant: "destructive",
+            title: "Download failed",
+            description: "Could not download the QR code image."
+        });
+    }
   }
 
   return (
@@ -62,6 +88,10 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
           <p className="text-lg font-medium">{firstTimer.fullName}</p>
         </div>
         <DialogFooter>
+          <Button variant="secondary" onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+          </Button>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Close
           </Button>
@@ -70,3 +100,4 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
     </Dialog>
   );
 }
+
