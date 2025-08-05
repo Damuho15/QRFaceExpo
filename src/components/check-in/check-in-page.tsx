@@ -45,7 +45,10 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     preRegStart.setUTCHours(0, 0, 0, 0);
 
     const eventStartTime = new Date(eventDate);
-    eventStartTime.setUTCHours(9, 0, 0, 0);
+    eventStartTime.setUTCHours(9, 0, 0, 0); // 9:00 AM UTC
+
+    const eventEndTime = new Date(eventDate);
+    eventEndTime.setUTCHours(23, 30, 0, 0); // 11:30 PM UTC
     
     const preRegEndTime = new Date(eventStartTime);
     preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
@@ -54,15 +57,14 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
         return 'Pre-registration';
     }
     
-    // Check if it's event day
-    if (scanDate.getUTCFullYear() === eventDate.getUTCFullYear() &&
-        scanDate.getUTCMonth() === eventDate.getUTCMonth() &&
-        scanDate.getUTCDate() === eventDate.getUTCDate() &&
-        scanDate.getUTCHours() >= 9) {
+    // Check if it's within the event day window (9:00 AM to 11:30 PM UTC)
+    if (scanDate >= eventStartTime && scanDate <= eventEndTime) {
         return 'Actual';
     }
 
-    if (scanDate > eventDate) {
+    // Allow check-ins after the event day to be counted as 'Actual' for simplicity,
+    // though the date rollover logic should typically handle this.
+    if (scanDate > eventEndTime) {
         return 'Actual'
     }
 
@@ -1184,7 +1186,7 @@ export default function CheckInPage() {
         <CardHeader>
             <CardTitle>Event Configuration</CardTitle>
             <CardDescription>
-                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
+                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Actual day check-in is from 9:00 AM to 11:30 PM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
             </CardDescription>
         </CardHeader>
         {isLoading ? (
@@ -1214,7 +1216,7 @@ export default function CheckInPage() {
                             />
                     </div>
                     <div className="flex flex-col space-y-2">
-                            <Label>Event Date (Sunday @ 9:00 AM)</Label>
+                            <Label>Event Date (Sunday)</Label>
                             <Input
                             type="date"
                             value={tempEventDate ? format(tempEventDate, 'yyyy-MM-dd') : ''}
