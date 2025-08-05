@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2 } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -12,14 +12,15 @@ import AttendanceDataTable from './attendance-data-table';
 import { columns } from './columns';
 import type { AttendanceLog, Member, NewComerAttendanceLog } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '../ui/calendar';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '../ui/label';
 
-const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
+const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLog & { member_name: string } }) => {
   const [timeString, setTimeString] = useState('');
 
   useEffect(() => {
@@ -38,51 +39,72 @@ const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
 };
 
 const AttendanceReport = () => {
-    const [dateRange, setDateRange] = useState<DateRange | undefined>();
+    const { toast } = useToast();
+    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [endDate, setEndDate] = useState<Date | undefined>();
     const [isLoading, setIsLoading] = useState(false);
-    const [totalActualAttendance, setTotalActualAttendance] = useState(0);
+    const [totalActualAttendance, setTotalActualAttendance] = useState<number | null>(null);
 
-    useEffect(() => {
-        const calculateAttendance = async () => {
-            if (dateRange?.from && dateRange?.to) {
-                setIsLoading(true);
-                try {
-                    const [memberLogs, firstTimerLogs] = await Promise.all([
-                        getAttendanceLogs(dateRange.from, dateRange.to),
-                        getFirstTimerAttendanceLogs(dateRange.from, dateRange.to)
-                    ]);
-                    
-                    const combinedLogs = [
-                        ...memberLogs.map(l => ({ ...l, name: l.member_name })), 
-                        ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
-                    ];
+    const handleGenerateReport = async () => {
+        if (!startDate || !endDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Date Range',
+                description: 'Please select both a start and an end date.',
+            });
+            return;
+        }
 
-                    const actualLogs = combinedLogs.filter(log => log.type === 'Actual');
-                    
-                    const uniqueAttendance = new Set<string>();
+        if (startDate > endDate) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Date Range',
+                description: 'The start date cannot be after the end date.',
+            });
+            return;
+        }
+        
+        setIsLoading(true);
+        setTotalActualAttendance(null);
+        try {
+            // Set end date to the end of the day to include all logs for that day
+            const adjustedEndDate = new Date(endDate);
+            adjustedEndDate.setHours(23, 59, 59, 999);
 
-                    actualLogs.forEach(log => {
-                        const eventDate = new Date(log.timestamp).toISOString().split('T')[0];
-                        const uniqueKey = `${log.name}-${eventDate}`;
-                        uniqueAttendance.add(uniqueKey);
-                    });
-                    
-                    setTotalActualAttendance(uniqueAttendance.size);
+            const [memberLogs, firstTimerLogs] = await Promise.all([
+                getAttendanceLogs(startDate, adjustedEndDate),
+                getFirstTimerAttendanceLogs(startDate, adjustedEndDate)
+            ]);
+            
+            const combinedLogs = [
+                ...memberLogs.map(l => ({ ...l, name: l.member_name })), 
+                ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
+            ];
 
-                } catch (error) {
-                    console.error("Failed to calculate attendance report:", error);
-                    // You might want to add a toast here
-                    setTotalActualAttendance(0);
-                } finally {
-                    setIsLoading(false);
-                }
-            } else {
-                 setTotalActualAttendance(0);
-            }
-        };
+            const actualLogs = combinedLogs.filter(log => log.type === 'Actual');
+            
+            const uniqueAttendance = new Set<string>();
 
-        calculateAttendance();
-    }, [dateRange]);
+            actualLogs.forEach(log => {
+                const eventDate = new Date(log.timestamp).toISOString().split('T')[0];
+                const uniqueKey = `${log.name}-${eventDate}`;
+                uniqueAttendance.add(uniqueKey);
+            });
+            
+            setTotalActualAttendance(uniqueAttendance.size);
+
+        } catch (error) {
+            console.error("Failed to calculate attendance report:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to generate the attendance report.',
+            });
+            setTotalActualAttendance(0);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
 
     return (
@@ -94,62 +116,92 @@ const AttendanceReport = () => {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                            "w-[300px] justify-start text-left font-normal",
-                            !dateRange && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateRange?.from ? (
-                            dateRange.to ? (
-                              <>
-                                {format(dateRange.from, "LLL dd, y")} -{" "}
-                                {format(dateRange.to, "LLL dd, y")}
-                              </>
-                            ) : (
-                              format(dateRange.from, "LLL dd, y")
-                            )
-                          ) : (
-                            <span>Pick a date range</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={dateRange?.from}
-                          selected={dateRange}
-                          onSelect={setDateRange}
-                          numberOfMonths={2}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <div className="flex-1 w-full sm:w-auto">
-                        {isLoading ? (
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <Skeleton className="h-5 w-40" />
-                                    <Skeleton className="h-4 w-4" />
-                                </CardHeader>
-                                <CardContent>
-                                    <Skeleton className="h-8 w-16" />
-                                </CardContent>
-                            </Card>
-                        ) : (
-                             <StatCard 
-                                title="Total Unique Actual Attendance" 
-                                value={totalActualAttendance}
-                                icon={TrendingUp}
-                            />
-                        )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="start-date">Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="start-date"
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={setStartDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
+                     <div className="space-y-2">
+                       <Label htmlFor="end-date">End Date</Label>
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                             id="end-date"
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            onSelect={setEndDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <Button onClick={handleGenerateReport} disabled={isLoading}>
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            'Generate Report'
+                        )}
+                    </Button>
+                </div>
+                <div className="pt-4">
+                  {isLoading ? (
+                      <Card>
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                              <Skeleton className="h-5 w-40" />
+                              <Skeleton className="h-4 w-4" />
+                          </CardHeader>
+                          <CardContent>
+                              <Skeleton className="h-8 w-16" />
+                          </CardContent>
+                      </Card>
+                  ) : totalActualAttendance !== null ? (
+                      <StatCard 
+                          title="Total Unique Actual Attendance" 
+                          value={totalActualAttendance}
+                          icon={TrendingUp}
+                      />
+                  ) : (
+                      <div className="text-center text-muted-foreground py-8">
+                          Please select a date range and click "Generate Report".
+                      </div>
+                  )}
                 </div>
             </CardContent>
         </Card>
@@ -211,7 +263,7 @@ export default function DashboardPage() {
   const totalMembers = members.length;
   
   const combinedLogs = [
-      ...attendanceLogs.map(l => ({ ...l, name: l.member_name, id: l.id, timestamp: l.timestamp, type: l.type, method: l.method })),
+      ...attendanceLogs.map(l => ({ ...l, name: l.member_name, id: l.id, timestamp: l.timestamp, type: l.type, method: l.method, member_name: l.first_timer_name ? l.first_timer_name : l.member_name })),
       ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, id: l.id, timestamp: l.timestamp, type: l.type, method: l.method, member_name: l.first_timer_name}))
   ];
   
@@ -221,7 +273,7 @@ export default function DashboardPage() {
   const uniqueActualRegistrantNames = new Set(combinedLogs.filter(log => log.type === 'Actual').map(log => log.name));
   const actualRegistrations = uniqueActualRegistrantNames.size;
   
-  const uniqueCheckins = Array.from(
+  const latestCheckins = Array.from(
       combinedLogs
           .reduce((map, log) => {
               const existing = map.get(log.name);
@@ -233,9 +285,10 @@ export default function DashboardPage() {
           .values()
   );
   
-  const qrCheckins = uniqueCheckins.filter(log => log.method === 'QR').length;
-  const faceCheckins = uniqueCheckins.filter(log => log.method === 'Face').length;
+  const qrCheckins = latestCheckins.filter(log => log.method === 'QR').length;
+  const faceCheckins = latestCheckins.filter(log => log.method === 'Face').length;
   
+  const sortedLogs = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
   if (loading) {
       return (
@@ -310,7 +363,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                {attendanceLogs.slice(0, 5).map(log => (
+                {sortedLogs.slice(0, 5).map(log => (
                     <RecentActivityItem key={log.id} log={log} />
                 ))}
                 </div>
