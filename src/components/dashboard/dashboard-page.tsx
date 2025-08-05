@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2 } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { Calendar } from '../ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLog & { member_name: string } }) => {
   const [timeString, setTimeString] = useState('');
@@ -208,44 +209,143 @@ const AttendanceReport = () => {
     );
 }
 
+const MonthlyAverageReport = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[] }) => {
+    
+    const monthlyAverageData = useMemo(() => {
+        const actualLogs = allLogs.filter(log => log.type === 'Actual');
+        
+        const monthlyStats: { [key: string]: { totalUniqueAttendees: number, eventDays: Set<string> } } = {};
+
+        actualLogs.forEach(log => {
+            const timestamp = new Date(log.timestamp);
+            const monthKey = format(timestamp, 'yyyy-MM'); // e.g., "2024-07"
+            
+            if (!monthlyStats[monthKey]) {
+                monthlyStats[monthKey] = { totalUniqueAttendees: 0, eventDays: new Set() };
+            }
+        });
+
+        // Group by month, then by day, then by unique user
+        const attendeesByMonthDay: { [monthKey: string]: { [dayKey: string]: Set<string> } } = {};
+        
+        actualLogs.forEach(log => {
+            const timestamp = new Date(log.timestamp);
+            const monthKey = format(timestamp, 'yyyy-MM');
+            const dayKey = format(timestamp, 'yyyy-MM-dd');
+            const name = 'member_name' in log ? log.member_name : log.first_timer_name;
+            
+            if (!attendeesByMonthDay[monthKey]) {
+                attendeesByMonthDay[monthKey] = {};
+            }
+            if (!attendeesByMonthDay[monthKey][dayKey]) {
+                attendeesByMonthDay[monthKey][dayKey] = new Set();
+            }
+            attendeesByMonthDay[monthKey][dayKey].add(name);
+        });
+
+        // Calculate averages
+        const result = Object.keys(monthlyStats).map(monthKey => {
+            const monthData = attendeesByMonthDay[monthKey];
+            const eventDays = Object.keys(monthData);
+            const numEvents = eventDays.length;
+            const totalAttendees = eventDays.reduce((sum, dayKey) => sum + monthData[dayKey].size, 0);
+            
+            return {
+                month: format(new Date(monthKey), 'MMMM yyyy'),
+                average: numEvents > 0 ? (totalAttendees / numEvents).toFixed(1) : '0.0',
+            };
+        }).sort((a,b) => new Date(b.month).getTime() - new Date(a.month).getTime());
+
+        return result;
+
+    }, [allLogs]);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Average Monthly Attendance</CardTitle>
+                <CardDescription>
+                    Average unique "Actual" attendance per event for each month.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Month</TableHead>
+                            <TableHead className="text-right">Average Attendance</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {monthlyAverageData.length > 0 ? (
+                            monthlyAverageData.map(row => (
+                                <TableRow key={row.month}>
+                                    <TableCell className="font-medium">{row.month}</TableCell>
+                                    <TableCell className="text-right">{row.average}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                           <TableRow>
+                               <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                                   No "Actual" attendance data found.
+                               </TableCell>
+                           </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
     const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
     const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
+    const [allTimeLogs, setAllTimeLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [memberData, eventConfig] = await Promise.all([
+            const [memberData, eventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
                 getMembers(),
-                getEventConfig()
+                getEventConfig(),
+                getAttendanceLogs(), // Fetch all logs for monthly report
+                getFirstTimerAttendanceLogs() // Fetch all logs for monthly report
             ]);
             
-            let logData: AttendanceLog[] = [];
-            let firstTimerLogData: NewComerAttendanceLog[] = [];
+            const combinedAllLogs = [
+                ...allMemberLogs,
+                ...allFirstTimerLogs,
+            ];
+            setAllTimeLogs(combinedAllLogs);
+            
+            let currentEventLogs: AttendanceLog[] = [];
+            let currentFirstTimerLogs: NewComerAttendanceLog[] = [];
 
             if (eventConfig) {
                 const startDate = parseDateAsUTC(eventConfig.pre_reg_start_date);
-                
                 const endDate = parseDateAsUTC(eventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
 
-                 [logData, firstTimerLogData] = await Promise.all([
-                    getAttendanceLogs(startDate, endDate),
-                    getFirstTimerAttendanceLogs(startDate, endDate)
-                ]);
+                currentEventLogs = allMemberLogs.filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    return logDate >= startDate && logDate <= endDate;
+                });
+                currentFirstTimerLogs = allFirstTimerLogs.filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    return logDate >= startDate && logDate <= endDate;
+                })
 
             } else {
-                 [logData, firstTimerLogData] = await Promise.all([
-                    getAttendanceLogs(),
-                    getFirstTimerAttendanceLogs()
-                ]);
+                 currentEventLogs = allMemberLogs;
+                 currentFirstTimerLogs = allFirstTimerLogs;
             }
 
             setMembers(memberData);
-            setAttendanceLogs(logData);
-            setFirstTimerLogs(firstTimerLogData);
+            setAttendanceLogs(currentEventLogs);
+            setFirstTimerLogs(currentFirstTimerLogs);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         } finally {
@@ -263,8 +363,8 @@ export default function DashboardPage() {
   const totalMembers = members.length;
   
   const combinedLogs = [
-      ...attendanceLogs.map(l => ({ ...l, name: l.member_name, id: l.id, timestamp: l.timestamp, type: l.type, method: l.method, member_name: l.first_timer_name ? l.first_timer_name : l.member_name })),
-      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, id: l.id, timestamp: l.timestamp, type: l.type, method: l.method, member_name: l.first_timer_name}))
+      ...attendanceLogs.map(l => ({ ...l, name: l.member_name })),
+      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
   ];
   
   const uniquePreRegistrantNames = new Set(combinedLogs.filter(log => log.type === 'Pre-registration').map(log => log.name));
@@ -288,7 +388,7 @@ export default function DashboardPage() {
   const qrCheckins = latestCheckins.filter(log => log.method === 'QR').length;
   const faceCheckins = latestCheckins.filter(log => log.method === 'Face').length;
   
-  const sortedLogs = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
   if (loading) {
       return (
@@ -346,6 +446,8 @@ export default function DashboardPage() {
       
       <AttendanceReport />
 
+      <MonthlyAverageReport allLogs={allTimeLogs} />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
             <CardHeader>
@@ -363,7 +465,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                {sortedLogs.slice(0, 5).map(log => (
+                {sortedLogsForDisplay.slice(0, 5).map(log => (
                     <RecentActivityItem key={log.id} log={log} />
                 ))}
                 </div>
