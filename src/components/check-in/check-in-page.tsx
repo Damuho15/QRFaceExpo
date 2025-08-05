@@ -377,39 +377,58 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            const file = event.target.files[0];
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0);
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                            inversionAttempts: 'attemptBoth',
-                        });
-                        if (code && code.data) {
-                            handleCheckIn(code.data);
-                        } else {
-                             toast({
-                                title: 'Check-in Failed',
-                                description: 'Could not decode QR code from the uploaded image.',
-                                variant: 'destructive',
-                            });
-                            resetInput();
-                        }
-                    }
-                };
-                img.src = e.target?.result as string;
-            };
-            reader.readAsDataURL(file);
-        }
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setFileName(file.name);
+        const img = new Image();
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) {
+                toast({ title: 'Error', description: 'Could not get canvas context.', variant: 'destructive' });
+                resetInput();
+                return;
+            }
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            try {
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'attemptBoth',
+                });
+
+                if (code && code.data) {
+                    handleCheckIn(code.data);
+                } else {
+                    toast({
+                        title: 'Check-in Failed',
+                        description: 'Could not decode QR code from the uploaded image.',
+                        variant: 'destructive',
+                    });
+                    resetInput();
+                }
+            } catch (e) {
+                console.error("jsQR error on upload", e);
+                toast({
+                    title: 'QR Decode Error',
+                    description: 'An error occurred while trying to decode the QR code.',
+                    variant: 'destructive',
+                });
+                resetInput();
+            }
+            URL.revokeObjectURL(img.src);
+        };
+        
+        img.onerror = () => {
+            toast({ title: 'Image Load Error', description: 'Could not load the selected image file.', variant: 'destructive' });
+            resetInput();
+            URL.revokeObjectURL(img.src);
+        };
+        
+        img.src = URL.createObjectURL(file);
     };
 
     return (
@@ -964,33 +983,50 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            const file = event.target.files[0];
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        ctx.drawImage(img, 0, 0);
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-                        if (code && code.data) {
-                            handleCheckIn(code.data);
-                        } else {
-                             toast({ title: 'Check-in Failed', description: 'Could not decode QR code from the image.', variant: 'destructive' });
-                             resetInput();
-                        }
-                    }
-                };
-                img.src = e.target?.result as string;
-            };
-            reader.readAsDataURL(file);
-        }
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setFileName(file.name);
+        const img = new Image();
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) {
+                toast({ title: 'Error', description: 'Could not get canvas context.', variant: 'destructive' });
+                resetInput();
+                return;
+            }
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            try {
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: 'attemptBoth',
+                });
+
+                if (code && code.data) {
+                    handleCheckIn(code.data);
+                } else {
+                    toast({ title: 'Check-in Failed', description: 'Could not decode QR code from the image.', variant: 'destructive' });
+                    resetInput();
+                }
+            } catch (e) {
+                console.error("jsQR error on upload", e);
+                toast({ title: 'QR Decode Error', description: 'An error occurred while trying to decode the QR code.', variant: 'destructive' });
+                resetInput();
+            }
+            URL.revokeObjectURL(img.src);
+        };
+
+        img.onerror = () => {
+            toast({ title: 'Image Load Error', description: 'Could not load the selected image file.', variant: 'destructive' });
+            resetInput();
+            URL.revokeObjectURL(img.src);
+        };
+
+        img.src = URL.createObjectURL(file);
     };
 
     return (
