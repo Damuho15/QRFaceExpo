@@ -78,8 +78,23 @@ export default function DashboardPage() {
   const totalMembers = members.length;
   const preRegistrations = attendanceLogs.filter(log => log.type === 'Pre-registration').length;
   const actualRegistrations = attendanceLogs.filter(log => log.type === 'Actual').length;
-  const qrCheckins = attendanceLogs.filter(log => log.method === 'QR').length;
-  const faceCheckins = attendanceLogs.filter(log => log.method === 'Face').length;
+  
+  // Calculate check-in methods based on the latest check-in for each unique member
+  const { qrCheckins, faceCheckins } = attendanceLogs.reduce(
+    (acc, log) => {
+        // Since logs are sorted by timestamp desc, the first time we see a member, it's their latest check-in
+        if (!acc.countedMembers.has(log.member_name)) {
+            acc.countedMembers.add(log.member_name);
+            if (log.method === 'QR') {
+                acc.qrCheckins++;
+            } else if (log.method === 'Face') {
+                acc.faceCheckins++;
+            }
+        }
+        return acc;
+    },
+    { qrCheckins: 0, faceCheckins: 0, countedMembers: new Set<string>() }
+  );
   
   if (loading) {
       return (
