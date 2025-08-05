@@ -748,7 +748,11 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
         if (matchedFirstTimer) {
             toast({
                 title: 'New Comer Found (Debug)',
-                description: (<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4"><code className="text-white">{JSON.stringify(matchedFirstTimer, null, 2)}</code></pre>),
+                description: (
+                    <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+                        <code className="text-white">{JSON.stringify(matchedFirstTimer, null, 2)}</code>
+                    </pre>
+                ),
                 duration: 9000
             });
             setRegistrationType(currentRegistrationType);
