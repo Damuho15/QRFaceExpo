@@ -5,12 +5,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint } from 'lucide-react';
-import { getMembers, getAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
+import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
 import { columns } from './columns';
-import type { AttendanceLog, Member } from '@/lib/types';
+import type { AttendanceLog, Member, NewComerAttendanceLog } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
 const RecentActivityItem = ({ log }: { log: AttendanceLog }) => {
@@ -35,6 +35,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
     const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+    const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -45,6 +46,8 @@ export default function DashboardPage() {
             ]);
             
             let logData: AttendanceLog[] = [];
+            let firstTimerLogData: NewComerAttendanceLog[] = [];
+
             if (eventConfig) {
                 const startDate = parseDateAsUTC(eventConfig.pre_reg_start_date);
                 
@@ -52,14 +55,22 @@ export default function DashboardPage() {
                 const endDate = parseDateAsUTC(eventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
 
-                logData = await getAttendanceLogs(startDate, endDate);
+                 [logData, firstTimerLogData] = await Promise.all([
+                    getAttendanceLogs(startDate, endDate),
+                    getFirstTimerAttendanceLogs(startDate, endDate)
+                ]);
+
             } else {
                 // Fallback to fetching all logs if config is not available
-                logData = await getAttendanceLogs();
+                 [logData, firstTimerLogData] = await Promise.all([
+                    getAttendanceLogs(),
+                    getFirstTimerAttendanceLogs()
+                ]);
             }
 
             setMembers(memberData);
             setAttendanceLogs(logData);
+            setFirstTimerLogs(firstTimerLogData);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             // You might want to add a toast here
@@ -79,12 +90,19 @@ export default function DashboardPage() {
   const preRegistrations = attendanceLogs.filter(log => log.type === 'Pre-registration').length;
   const actualRegistrations = attendanceLogs.filter(log => log.type === 'Actual').length;
   
-  // Calculate check-in methods based on the latest check-in for each unique member
-  const { qrCheckins, faceCheckins } = attendanceLogs.reduce(
+  // Calculate check-in methods based on the latest check-in for each unique person (members and first-timers)
+  const combinedLogs = [
+      ...attendanceLogs.map(l => ({ ...l, name: l.member_name })), 
+      ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, member_name: l.first_timer_name }))
+  ];
+
+  // Sort by timestamp descending to easily find the latest
+  combinedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const { qrCheckins, faceCheckins } = combinedLogs.reduce(
     (acc, log) => {
-        // Since logs are sorted by timestamp desc, the first time we see a member, it's their latest check-in
-        if (!acc.countedMembers.has(log.member_name)) {
-            acc.countedMembers.add(log.member_name);
+        if (!acc.countedNames.has(log.name)) {
+            acc.countedNames.add(log.name);
             if (log.method === 'QR') {
                 acc.qrCheckins++;
             } else if (log.method === 'Face') {
@@ -93,7 +111,7 @@ export default function DashboardPage() {
         }
         return acc;
     },
-    { qrCheckins: 0, faceCheckins: 0, countedMembers: new Set<string>() }
+    { qrCheckins: 0, faceCheckins: 0, countedNames: new Set<string>() }
   );
   
   if (loading) {

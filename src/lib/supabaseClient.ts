@@ -432,3 +432,26 @@ export const addFirstTimerAttendanceLog = async (log: {
 
     return data;
 };
+
+export const getFirstTimerAttendanceLogs = async (startDate?: Date, endDate?: Date): Promise<NewComerAttendanceLog[]> => {
+    let query = supabase
+        .from('attendance_log_1sttimer')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+    if (startDate) {
+        query = query.gte('timestamp', startDate.toISOString());
+    }
+    if (endDate) {
+        query = query.lte('timestamp', endDate.toISOString());
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error('Error fetching new comer attendance logs:', error);
+        throw error;
+    }
+
+    return (data || []).map(log => ({ ...log, id: String(log.id) }));
+};
