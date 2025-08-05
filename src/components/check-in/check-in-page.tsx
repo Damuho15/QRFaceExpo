@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -386,7 +387,7 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
                     const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -973,7 +974,7 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
                     const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
                     if (ctx) {
                         ctx.drawImage(img, 0, 0);
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
