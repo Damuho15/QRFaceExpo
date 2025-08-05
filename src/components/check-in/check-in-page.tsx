@@ -381,18 +381,19 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
         if (!file) return;
 
         setFileName(file.name);
+        
         const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) {
                 toast({ title: 'Error', description: 'Could not get canvas context.', variant: 'destructive' });
                 resetInput();
                 return;
             }
+            canvas.width = img.width;
+            canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             try {
@@ -987,18 +988,19 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
         if (!file) return;
 
         setFileName(file.name);
+        
         const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) {
                 toast({ title: 'Error', description: 'Could not get canvas context.', variant: 'destructive' });
                 resetInput();
                 return;
             }
+            canvas.width = img.width;
+            canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             try {
