@@ -1,7 +1,6 @@
 
-
 import { createClient } from '@supabase/supabase-js';
-import type { Member, EventConfig, AttendanceLog, FirstTimer } from '@/lib/types';
+import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
 import type { FirstTimerFormValues } from '@/components/first-timers/first-timer-dialog';
 import { v4 as uuidv4 } from 'uuid';
@@ -392,4 +391,31 @@ export const deleteFirstTimer = async (id: string) => {
     }
 
     return true;
+};
+
+export const addFirstTimerAttendanceLog = async (log: {
+    first_timer_id: string;
+    first_timer_name: string;
+    type: 'Pre-registration' | 'Actual';
+    method: 'QR';
+    timestamp: Date;
+}) => {
+    const { data, error } = await supabase
+        .from('atttendance_log_1stTimer')
+        .insert({
+            first_timer_id: log.first_timer_id,
+            first_timer_name: log.first_timer_name,
+            type: log.type,
+            method: log.method,
+            timestamp: log.timestamp.toISOString(),
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding new comer attendance log:', error);
+        throw error;
+    }
+
+    return data;
 };

@@ -34,6 +34,16 @@ export type AttendanceLog = {
   created_at: string;
 };
 
+export type NewComerAttendanceLog = {
+  id: string;
+  first_timer_id: string;
+  first_timer_name: string;
+  timestamp: string;
+  type: 'Pre-registration' | 'Actual';
+  method: 'QR';
+  created_at: string;
+}
+
 export type EventConfig = {
   id: number;
   pre_reg_start_date: string;

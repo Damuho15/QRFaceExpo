@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -34,10 +33,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX } from 'lucide-react';
 import jsQR from 'jsqr';
 import { recognizeFace, RecognizeFaceOutput } from '@/ai/flows/face-recognition-flow';
-import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAttendanceLog } from '@/lib/supabaseClient';
+import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAttendanceLog, getFirstTimers, addFirstTimerAttendanceLog } from '@/lib/supabaseClient';
 import { Skeleton } from '../ui/skeleton';
 import { format } from 'date-fns';
-import { Member } from '@/lib/types';
+import { Member, FirstTimer } from '@/lib/types';
 import { isValidUUID } from '@/lib/validation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
@@ -84,7 +83,7 @@ const getPreviousTuesday = (from: Date): Date => {
     return date;
 };
 
-const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
+const MemberScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -98,10 +97,10 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     const [confirmedMember, setConfirmedMember] = useState<Member | null>(null);
     const [registrationType, setRegistrationType] = useState<'Pre-registration' | 'Actual' | null>(null);
 
-
     const handleScan = useCallback((qrData: string) => {
         if (!isScanning) return;
         setIsScanning(false);
+        
         toast({
             title: 'QR Code Detected',
             description: 'Processing...',
@@ -114,7 +113,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
                 description: 'Check-in is not open at this time.',
                 variant: 'destructive',
             });
-            setTimeout(() => setIsScanning(true), 500);
+            setTimeout(() => setIsScanning(true), 2000);
             return;
         }
 
@@ -316,8 +315,7 @@ const ScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { me
     );
 };
 
-
-const UploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
+const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
@@ -414,9 +412,9 @@ const UploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { 
     return (
         <div className="space-y-6">
             <div className="space-y-2">
-                <Label htmlFor="qr-upload">Upload QR Code Image</Label>
+                <Label htmlFor="qr-upload-member">Upload Member QR Code Image</Label>
                 <div className="flex items-center gap-2">
-                    <Input id="qr-upload" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                    <Input id="qr-upload-member" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                         <Upload className="mr-2 h-4 w-4" />
                         Choose File
@@ -431,12 +429,11 @@ const UploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { 
     );
 };
 
-
 const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }: { members: Member[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>QR Code Check-in</CardTitle>
+                <CardTitle>Member QR Code Check-in</CardTitle>
                 <CardDescription>Scan or upload a member's QR code to check them in.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -446,10 +443,10 @@ const QRCheckinTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }:
                         <TabsTrigger value="upload">Upload File</TabsTrigger>
                     </TabsList>
                     <TabsContent value="scan" className="pt-6">
-                        <ScanTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                        <MemberScanTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
                     </TabsContent>
                     <TabsContent value="upload" className="pt-6">
-                        <UploadTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                        <MemberUploadTab members={members} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -635,7 +632,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     <>
     <Card>
       <CardHeader>
-        <CardTitle>Face Recognition Check-in</CardTitle>
+        <CardTitle>Member Face Recognition Check-in</CardTitle>
         <CardDescription>Use the camera to check in members via face recognition.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -708,6 +705,324 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 };
 
 
+// ----- NEW COMER CHECK-IN COMPONENTS -----
+
+const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStartDate }: { firstTimers: FirstTimer[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
+    const { toast } = useToast();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [isScanning, setIsScanning] = useState(true);
+    const animationFrameId = useRef<number>();
+
+    // State for the confirmation dialog
+    const [showDialog, setShowDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [confirmedFirstTimer, setConfirmedFirstTimer] = useState<FirstTimer | null>(null);
+    const [registrationType, setRegistrationType] = useState<'Pre-registration' | 'Actual' | null>(null);
+
+    const handleScan = useCallback((qrData: string) => {
+        if (!isScanning) return;
+        setIsScanning(false);
+        
+        toast({
+            title: 'QR Code Detected',
+            description: 'Processing new comer...',
+        });
+
+        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        if (!currentRegistrationType) {
+            toast({
+                title: 'Check-in Not Allowed',
+                description: 'Check-in is not open at this time.',
+                variant: 'destructive',
+            });
+            setTimeout(() => setIsScanning(true), 2000);
+            return;
+        }
+
+        const matchedFirstTimer = firstTimers.find(ft => ft.qrCodePayload === qrData);
+        
+        setConfirmedFirstTimer(matchedFirstTimer || null);
+        if(matchedFirstTimer) {
+            setRegistrationType(currentRegistrationType);
+        } else {
+            setRegistrationType(null);
+        }
+        setShowDialog(true);
+
+    }, [isScanning, firstTimers, eventDate, preRegStartDate, toast]);
+    
+    const closeDialog = () => {
+        setShowDialog(false);
+        setIsSaving(false);
+        setConfirmedFirstTimer(null);
+        setRegistrationType(null);
+        setIsScanning(true);
+    }
+
+    const confirmAndSaveChanges = async () => {
+        if (!confirmedFirstTimer || !registrationType) {
+             toast({
+                title: 'Save Failed',
+                description: 'Cannot save attendance due to missing new comer data.',
+                variant: 'destructive',
+            });
+            closeDialog();
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            await addFirstTimerAttendanceLog({
+                first_timer_id: confirmedFirstTimer.id,
+                first_timer_name: confirmedFirstTimer.fullName,
+                type: registrationType,
+                method: 'QR',
+                timestamp: new Date()
+            });
+            toast({
+                title: 'Check-in Successful',
+                description: `${confirmedFirstTimer.fullName} has been checked in.`,
+            });
+            onCheckInSuccess();
+        } catch (error) {
+            console.error("Error adding new comer attendance log:", error);
+            const errorMessage = error instanceof Error ? error.message : 'Could not save attendance.';
+            toast({
+                variant: 'destructive',
+                title: 'Save Failed',
+                description: errorMessage,
+            });
+        } finally {
+            closeDialog();
+        }
+    };
+
+    useEffect(() => {
+        const getCameraPermission = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+                setHasCameraPermission(true);
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                setHasCameraPermission(false);
+                toast({
+                    variant: 'destructive',
+                    title: 'Camera Access Denied',
+                    description: 'Please enable camera permissions.',
+                });
+            }
+        };
+        getCameraPermission();
+        return () => {
+            if (videoRef.current && videoRef.current.srcObject) {
+                (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
+            }
+            if(animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+        };
+    }, [toast]);
+
+    useEffect(() => {
+        let lastScanTime = 0;
+        const scanInterval = 200;
+
+        const tick = (time: number) => {
+            if (isScanning && hasCameraPermission && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+                if (time - lastScanTime > scanInterval) {
+                    lastScanTime = time;
+                    const canvas = canvasRef.current;
+                    const video = videoRef.current;
+                    if(canvas && video) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        const context = canvas.getContext('2d', { willReadFrequently: true });
+                        if (context) {
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+                            if (code && code.data) handleScan(code.data);
+                        }
+                    }
+                }
+            }
+            animationFrameId.current = requestAnimationFrame(tick);
+        };
+
+        animationFrameId.current = requestAnimationFrame(tick);
+        return () => {
+            if(animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+        };
+    }, [isScanning, hasCameraPermission, handleScan]);
+
+    return (
+        <>
+        <div className="space-y-4">
+            <div className="relative w-full aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                <canvas ref={canvasRef} className="hidden" />
+                {hasCameraPermission === false && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
+                         <Camera className="h-16 w-16 text-muted-foreground" />
+                         <p className="mt-2 text-muted-foreground">Camera not available</p>
+                    </div>
+                )}
+            </div>
+             {hasCameraPermission === false && (
+                <Alert variant="destructive">
+                    <AlertTitle>Camera Access Required</AlertTitle>
+                    <AlertDescription>Please allow camera access to use this feature.</AlertDescription>
+                </Alert>
+            )}
+        </div>
+        <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {confirmedFirstTimer 
+                            ? `Welcome, ${confirmedFirstTimer.fullName}! Is this you?` 
+                            : "Invalid New Comer QR Code"}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {confirmedFirstTimer 
+                            ? "Please confirm your identity to complete the check-in." 
+                            : "We couldn't find a new comer associated with this QR code."}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>Cancel</AlertDialogCancel>
+                    {confirmedFirstTimer ? (
+                        <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
+                            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
+                        </AlertDialogAction>
+                    ) : (
+                        <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
+                    )}
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
+    );
+};
+
+const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStartDate }: { firstTimers: FirstTimer[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
+    const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileName, setFileName] = useState('');
+
+    const resetInput = () => {
+        setFileName('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+    
+    const handleCheckIn = async (qrData: string) => {
+        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+
+        if (!registrationType) {
+            toast({ title: 'Check-in Not Allowed', description: 'Check-in is not open at this time.', variant: 'destructive' });
+            resetInput();
+            return;
+        }
+
+        const matchedFirstTimer = firstTimers.find(ft => ft.qrCodePayload === qrData);
+
+        if (matchedFirstTimer) {
+            try {
+                await addFirstTimerAttendanceLog({
+                    first_timer_id: matchedFirstTimer.id,
+                    first_timer_name: matchedFirstTimer.fullName,
+                    type: registrationType,
+                    method: 'QR',
+                    timestamp: new Date()
+                });
+                 toast({ title: 'Check-in Successful', description: `${matchedFirstTimer.fullName} has been checked in.` });
+                onCheckInSuccess();
+            } catch (error) {
+                 toast({ title: 'Check-in Failed', description: 'Could not save attendance.', variant: 'destructive' });
+            }
+        } else {
+             toast({ title: 'Check-in Failed', description: 'Invalid QR Code. New comer not found.', variant: 'destructive' });
+        }
+        resetInput();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+                        if (code && code.data) {
+                            handleCheckIn(code.data);
+                        } else {
+                             toast({ title: 'Check-in Failed', description: 'Could not decode QR code from the image.', variant: 'destructive' });
+                             resetInput();
+                        }
+                    }
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="qr-upload-newcomer">Upload New Comer QR Code</Label>
+                <div className="flex items-center gap-2">
+                    <Input id="qr-upload-newcomer" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" /> Choose File
+                    </Button>
+                    {fileName && <p className="text-sm text-muted-foreground">{fileName}</p>}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NewComerCheckinTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStartDate }: { firstTimers: FirstTimer[], onCheckInSuccess: () => void, eventDate: Date, preRegStartDate: Date }) => {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>New Comer QR Code Check-in</CardTitle>
+                <CardDescription>Scan or upload a new comer's QR code to check them in.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Tabs defaultValue="scan">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="scan">Scan with Camera</TabsTrigger>
+                        <TabsTrigger value="upload">Upload File</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="scan" className="pt-6">
+                        <NewComerScanTab firstTimers={firstTimers} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                    </TabsContent>
+                    <TabsContent value="upload" className="pt-6">
+                        <NewComerUploadTab firstTimers={firstTimers} onCheckInSuccess={onCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+                    </TabsContent>
+                </Tabs>
+            </CardContent>
+        </Card>
+    );
+};
+
+// ----- END NEW COMER CHECK-IN COMPONENTS -----
+
+
 export default function CheckInPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
@@ -722,6 +1037,7 @@ export default function CheckInPage() {
     const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
     const [members, setMembers] = useState<Member[]>([]);
+    const [firstTimers, setFirstTimers] = useState<FirstTimer[]>([]);
     
     // This is a simple counter to trigger a re-fetch on the dashboard
     const [checkInCounter, setCheckInCounter] = useState(0);
@@ -732,9 +1048,14 @@ export default function CheckInPage() {
      const fetchAndSetDates = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [config, allMembers] = await Promise.all([getEventConfig(), getMembers()]);
+            const [config, allMembers, allFirstTimers] = await Promise.all([
+                getEventConfig(), 
+                getMembers(),
+                getFirstTimers()
+            ]);
             
             setMembers(allMembers);
+            setFirstTimers(allFirstTimers);
 
             if (config) {
                 // This is a test block to simulate a past date for rollover testing
@@ -915,12 +1236,13 @@ export default function CheckInPage() {
         )}
     </Card>
 
-      <Tabs defaultValue="qr" className="w-full max-w-2xl mx-auto">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="qr">QR Code</TabsTrigger>
-          <TabsTrigger value="face">Face Recognition</TabsTrigger>
+      <Tabs defaultValue="member-qr" className="w-full max-w-2xl mx-auto">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="member-qr">Member QR</TabsTrigger>
+          <TabsTrigger value="new-comer-qr">New Comer QR</TabsTrigger>
+          <TabsTrigger value="member-face">Member Face</TabsTrigger>
         </TabsList>
-        <TabsContent value="qr">
+        <TabsContent value="member-qr">
             {isLoading || !eventDate || !preRegStartDate ? (
                 <Card>
                     <CardHeader>
@@ -941,7 +1263,22 @@ export default function CheckInPage() {
                 <QRCheckinTab members={members} onCheckInSuccess={handleCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
             )}
         </TabsContent>
-        <TabsContent value="face">
+        <TabsContent value="new-comer-qr">
+             {isLoading || !eventDate || !preRegStartDate ? (
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                    </CardHeader>
+                     <CardContent>
+                        <Skeleton className="w-full aspect-video rounded-lg mt-4" />
+                    </CardContent>
+                </Card>
+             ) : (
+                <NewComerCheckinTab firstTimers={firstTimers} onCheckInSuccess={handleCheckInSuccess} eventDate={eventDate} preRegStartDate={preRegStartDate}/>
+             )}
+        </TabsContent>
+        <TabsContent value="member-face">
              {isLoading || !eventDate || !preRegStartDate ? (
                 <Card>
                     <CardHeader>
@@ -961,10 +1298,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
