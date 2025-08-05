@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ColumnDef, FilterFn } from '@tanstack/react-table';
 import type { FirstTimer } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,16 @@ const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => 
     }
     return rowValue.toLowerCase().includes(String(value).toLowerCase());
 }
+
+const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
+  const [localizedTimestamp, setLocalizedTimestamp] = useState('');
+
+  useEffect(() => {
+    setLocalizedTimestamp(new Date(timestamp).toLocaleString());
+  }, [timestamp]);
+
+  return <div>{localizedTimestamp}</div>;
+};
 
 export const columns: ColumnDef<FirstTimer>[] = [
   {
@@ -108,6 +118,24 @@ export const columns: ColumnDef<FirstTimer>[] = [
   {
     accessorKey: 'phone',
     header: 'Phone Number',
+  },
+   {
+    accessorKey: 'created_at',
+    header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            Date Added
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+    },
+    cell: ({ row }) => {
+        const timestamp = row.getValue('created_at') as string;
+        return <TimestampCell timestamp={timestamp} />;
+    }
   },
   {
     id: 'actions',
