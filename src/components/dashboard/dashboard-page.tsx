@@ -53,7 +53,7 @@ export default function DashboardPage() {
                 
                 // Set end date to the end of the event day
                 const endDate = parseDateAsUTC(eventConfig.event_date);
-                endDate.setUTCHours(23, 59, 59, 999);
+endDate.setUTCHours(23, 59, 59, 999);
 
                  [logData, firstTimerLogData] = await Promise.all([
                     getAttendanceLogs(startDate, endDate),
@@ -87,16 +87,24 @@ export default function DashboardPage() {
 
 
   const totalMembers = members.length;
-  const preRegistrations = attendanceLogs.filter(log => log.type === 'Pre-registration').length;
-  const actualRegistrations = attendanceLogs.filter(log => log.type === 'Actual').length;
   
-  // Calculate check-in methods based on the latest check-in for each unique person (members and first-timers)
+  // Combine all logs and add a consistent 'name' property for uniqueness
   const combinedLogs = [
       ...attendanceLogs.map(l => ({ ...l, name: l.member_name })), 
       ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, member_name: l.first_timer_name }))
   ];
-
-  // Sort by timestamp descending to easily find the latest
+  
+  // Calculate unique pre-registrations
+  const preRegistrationLogs = combinedLogs.filter(log => log.type === 'Pre-registration');
+  const uniquePreRegistrantNames = new Set(preRegistrationLogs.map(log => log.name));
+  const preRegistrations = uniquePreRegistrantNames.size;
+  
+  // Calculate unique actual-day registrations
+  const actualRegistrationLogs = combinedLogs.filter(log => log.type === 'Actual');
+  const uniqueActualRegistrantNames = new Set(actualRegistrationLogs.map(log => log.name));
+  const actualRegistrations = uniqueActualRegistrantNames.size;
+  
+  // Calculate check-in methods based on the latest check-in for each unique person
   combinedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const { qrCheckins, faceCheckins } = combinedLogs.reduce(
