@@ -19,7 +19,15 @@ import { format } from 'date-fns';
 import { Calendar } from '../ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLog & { member_name: string } }) => {
   const [timeString, setTimeString] = useState('');
@@ -209,23 +217,31 @@ const AttendanceReport = () => {
     );
 }
 
-const MonthlyAverageReport = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[] }) => {
+const chartConfig = {
+  averageAttendance: {
+    label: "Average Attendance",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
+const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[] }) => {
     
+    const availableYears = useMemo(() => {
+        const years = new Set(allLogs.map(log => new Date(log.timestamp).getFullYear()));
+        return Array.from(years).sort((a,b) => b - a);
+    }, [allLogs]);
+
+    const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+
+    useEffect(() => {
+        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+            setSelectedYear(availableYears[0]);
+        }
+    }, [availableYears, selectedYear]);
+
     const monthlyAverageData = useMemo(() => {
-        const actualLogs = allLogs.filter(log => log.type === 'Actual');
+        const actualLogs = allLogs.filter(log => log.type === 'Actual' && new Date(log.timestamp).getFullYear() === selectedYear);
         
-        const monthlyStats: { [key: string]: { totalUniqueAttendees: number, eventDays: Set<string> } } = {};
-
-        actualLogs.forEach(log => {
-            const timestamp = new Date(log.timestamp);
-            const monthKey = format(timestamp, 'yyyy-MM'); // e.g., "2024-07"
-            
-            if (!monthlyStats[monthKey]) {
-                monthlyStats[monthKey] = { totalUniqueAttendees: 0, eventDays: new Set() };
-            }
-        });
-
-        // Group by month, then by day, then by unique user
         const attendeesByMonthDay: { [monthKey: string]: { [dayKey: string]: Set<string> } } = {};
         
         actualLogs.forEach(log => {
@@ -243,56 +259,86 @@ const MonthlyAverageReport = ({ allLogs }: { allLogs: (AttendanceLog | NewComerA
             attendeesByMonthDay[monthKey][dayKey].add(name);
         });
 
-        // Calculate averages
-        const result = Object.keys(monthlyStats).map(monthKey => {
+        const monthsOfYear = Array.from({ length: 12 }, (_, i) => format(new Date(selectedYear, i, 1), 'yyyy-MM'));
+
+        const result = monthsOfYear.map(monthKey => {
             const monthData = attendeesByMonthDay[monthKey];
+            if (!monthData) {
+                return {
+                    month: format(new Date(monthKey), 'MMM'),
+                    averageAttendance: 0,
+                };
+            }
+
             const eventDays = Object.keys(monthData);
             const numEvents = eventDays.length;
             const totalAttendees = eventDays.reduce((sum, dayKey) => sum + monthData[dayKey].size, 0);
             
             return {
-                month: format(new Date(monthKey), 'MMMM yyyy'),
-                average: numEvents > 0 ? (totalAttendees / numEvents).toFixed(1) : '0.0',
+                month: format(new Date(monthKey), 'MMM'),
+                averageAttendance: numEvents > 0 ? parseFloat((totalAttendees / numEvents).toFixed(1)) : 0,
             };
-        }).sort((a,b) => new Date(b.month).getTime() - new Date(a.month).getTime());
+        });
 
         return result;
 
-    }, [allLogs]);
+    }, [allLogs, selectedYear]);
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Average Monthly Attendance</CardTitle>
-                <CardDescription>
-                    Average unique "Actual" attendance per event for each month.
-                </CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className='space-y-1.5'>
+                        <CardTitle>Average Monthly Attendance</CardTitle>
+                        <CardDescription>
+                            Average unique "Actual" attendance per event for each month in {selectedYear}.
+                        </CardDescription>
+                    </div>
+                    <div className="w-full sm:w-auto">
+                        <Select
+                            value={String(selectedYear)}
+                            onValueChange={(value) => setSelectedYear(Number(value))}
+                            disabled={availableYears.length === 0}
+                        >
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select a year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Month</TableHead>
-                            <TableHead className="text-right">Average Attendance</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {monthlyAverageData.length > 0 ? (
-                            monthlyAverageData.map(row => (
-                                <TableRow key={row.month}>
-                                    <TableCell className="font-medium">{row.month}</TableCell>
-                                    <TableCell className="text-right">{row.average}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                           <TableRow>
-                               <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
-                                   No "Actual" attendance data found.
-                               </TableCell>
-                           </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                 {monthlyAverageData.length > 0 ? (
+                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                        <BarChart accessibilityLayer data={monthlyAverageData}>
+                            <XAxis
+                                dataKey="month"
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                stroke="#888888"
+                                fontSize={12}
+                                tickLine={false}
+                                axisLine={false}
+                                allowDecimals={false}
+                            />
+                            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                            <Bar dataKey="averageAttendance" fill="var(--color-averageAttendance)" radius={4} />
+                        </BarChart>
+                    </ChartContainer>
+                 ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                        No "Actual" attendance data found for the selected year.
+                    </div>
+                 )}
             </CardContent>
         </Card>
     )
@@ -362,31 +408,47 @@ export default function DashboardPage() {
 
   const totalMembers = members.length;
   
-  const combinedLogs = [
+  const combinedLogs = useMemo(() => [
       ...attendanceLogs.map(l => ({ ...l, name: l.member_name })),
       ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name }))
-  ];
+  ], [attendanceLogs, firstTimerLogs]);
+
+  const { preRegistrations, actualRegistrations } = useMemo(() => {
+    const uniquePreRegistrants = new Set<string>();
+    const uniqueActualRegistrants = new Set<string>();
+
+    combinedLogs.forEach(log => {
+        if (log.type === 'Pre-registration') {
+            uniquePreRegistrants.add(log.name);
+        } else if (log.type === 'Actual') {
+            uniqueActualRegistrants.add(log.name);
+        }
+    });
+
+    return {
+        preRegistrations: uniquePreRegistrants.size,
+        actualRegistrations: uniqueActualRegistrants.size,
+    };
+  }, [combinedLogs]);
   
-  const uniquePreRegistrantNames = new Set(combinedLogs.filter(log => log.type === 'Pre-registration').map(log => log.name));
-  const preRegistrations = uniquePreRegistrantNames.size;
-  
-  const uniqueActualRegistrantNames = new Set(combinedLogs.filter(log => log.type === 'Actual').map(log => log.name));
-  const actualRegistrations = uniqueActualRegistrantNames.size;
-  
-  const latestCheckins = Array.from(
-      combinedLogs
-          .reduce((map, log) => {
-              const existing = map.get(log.name);
-              if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
-                  map.set(log.name, log);
-              }
-              return map;
-          }, new Map<string, typeof combinedLogs[number]>())
-          .values()
-  );
-  
-  const qrCheckins = latestCheckins.filter(log => log.method === 'QR').length;
-  const faceCheckins = latestCheckins.filter(log => log.method === 'Face').length;
+  const { qrCheckins, faceCheckins } = useMemo(() => {
+      const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
+
+      combinedLogs.forEach(log => {
+          const existing = latestCheckins.get(log.name);
+          if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
+              latestCheckins.set(log.name, log);
+          }
+      });
+
+      let qr = 0;
+      let face = 0;
+      latestCheckins.forEach(log => {
+          if (log.method === 'QR') qr++;
+          if (log.method === 'Face') face++;
+      });
+      return { qrCheckins: qr, faceCheckins: face };
+  }, [combinedLogs]);
   
   const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
@@ -446,7 +508,7 @@ export default function DashboardPage() {
       
       <AttendanceReport />
 
-      <MonthlyAverageReport allLogs={allTimeLogs} />
+      <MonthlyAverageChart allLogs={allTimeLogs} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
@@ -478,3 +540,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
