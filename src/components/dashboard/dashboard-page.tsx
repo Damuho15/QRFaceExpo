@@ -53,9 +53,10 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
     const [endDate, setEndDate] = useState<Date | undefined>(defaultEndDate);
     const [isLoading, setIsLoading] = useState(false);
     const [totalActualAttendance, setTotalActualAttendance] = useState<number | null>(null);
+    const hasFetchedOnLoad = React.useRef(false);
 
-    const handleGenerateReport = async () => {
-        if (!startDate || !endDate) {
+    const handleGenerateReport = useCallback(async (start: Date, end: Date) => {
+        if (!start || !end) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid Date Range',
@@ -64,7 +65,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
             return;
         }
 
-        if (startDate > endDate) {
+        if (start > end) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid Date Range',
@@ -77,12 +78,12 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
         setTotalActualAttendance(null);
         try {
             // Set end date to the end of the day to include all logs for that day
-            const adjustedEndDate = new Date(endDate);
+            const adjustedEndDate = new Date(end);
             adjustedEndDate.setHours(23, 59, 59, 999);
 
             const [memberLogs, firstTimerLogs] = await Promise.all([
-                getAttendanceLogs(startDate, adjustedEndDate),
-                getFirstTimerAttendanceLogs(startDate, adjustedEndDate)
+                getAttendanceLogs(start, adjustedEndDate),
+                getFirstTimerAttendanceLogs(start, adjustedEndDate)
             ]);
             
             const combinedLogs = [
@@ -113,7 +114,14 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
+    
+    useEffect(() => {
+        if (defaultStartDate && defaultEndDate && !hasFetchedOnLoad.current) {
+            handleGenerateReport(defaultStartDate, defaultEndDate);
+            hasFetchedOnLoad.current = true;
+        }
+    }, [defaultStartDate, defaultEndDate, handleGenerateReport]);
 
 
     return (
@@ -178,7 +186,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <Button onClick={handleGenerateReport} disabled={isLoading}>
+                    <Button onClick={() => startDate && endDate && handleGenerateReport(startDate, endDate)} disabled={isLoading}>
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -456,14 +464,11 @@ export default function DashboardPage() {
   const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const attendanceReportDefaults = useMemo(() => {
-    if (!eventConfig) return { defaultStartDate: undefined, defaultEndDate: undefined };
-    
-    const eventDate = parseDateAsUTC(eventConfig.event_date);
-    const defaultEndDate = subDays(eventDate, 1);
-    const defaultStartDate = subDays(defaultEndDate, 6);
-    
+    // Hardcode the default date range as requested.
+    const defaultStartDate = new Date(2025, 6, 29); // Month is 0-indexed, so 6 is July
+    const defaultEndDate = new Date(2025, 7, 3); // 7 is August
     return { defaultStartDate, defaultEndDate };
-  }, [eventConfig]);
+  }, []);
   
   if (loading) {
       return (
