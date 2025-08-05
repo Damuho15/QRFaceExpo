@@ -774,6 +774,16 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
             return;
         }
 
+        if (!isValidUUID(confirmedFirstTimer.id)) {
+            toast({
+                title: 'Save Failed',
+                description: 'Cannot save attendance due to invalid new comer ID.',
+                variant: 'destructive',
+            });
+            closeDialog();
+            return;
+        }
+
         setIsSaving(true);
         try {
             await addFirstTimerAttendanceLog({
