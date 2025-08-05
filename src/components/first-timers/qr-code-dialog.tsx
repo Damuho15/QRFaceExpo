@@ -100,4 +100,3 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
     </Dialog>
   );
 }
-

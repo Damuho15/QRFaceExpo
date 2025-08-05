@@ -100,4 +100,3 @@ export default function QrCodeDialog({ member, children }: QrCodeDialogProps) {
     </Dialog>
   );
 }
-
