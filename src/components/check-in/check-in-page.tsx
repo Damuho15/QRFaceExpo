@@ -749,9 +749,11 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
             toast({
                 title: 'New Comer Found (Debug)',
                 description: (
-                    <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-                        <code className="text-white">{JSON.stringify(matchedFirstTimer, null, 2)}</code>
-                    </pre>
+                    <div className="text-sm">
+                        <p><b>ID:</b> {matchedFirstTimer.id}</p>
+                        <p><b>Name:</b> {matchedFirstTimer.fullName}</p>
+                        <p><b>QR Payload:</b> {matchedFirstTimer.qrCodePayload}</p>
+                    </div>
                 ),
                 duration: 9000
             });
