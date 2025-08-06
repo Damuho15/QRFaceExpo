@@ -526,7 +526,7 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
 // User Management Functions
 export const getUsers = async (): Promise<User[]> => {
     const { data, error } = await supabase
-        .from('user_QRface')
+        .from('user_qrface')
         .select('*')
         .order('full_name', { ascending: true });
 
@@ -539,7 +539,7 @@ export const getUsers = async (): Promise<User[]> => {
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
     const { data, error } = await supabase
-        .from('user_QRface')
+        .from('user_qrface')
         .select('*')
         .eq('email', email)
         .single();
@@ -560,7 +560,7 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
     const newUserId = uuidv4();
 
     const { data, error } = await supabase
-        .from('user_QRface')
+        .from('user_qrface')
         .insert({
             id: newUserId,
             full_name: formData.full_name,
@@ -583,7 +583,7 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
 
 export const updateUser = async (id: string, formData: UserFormValues): Promise<User> => {
     const { data, error } = await supabase
-        .from('user_QRface')
+        .from('user_qrface')
         .update({
             full_name: formData.full_name,
             email: formData.email,
@@ -608,7 +608,7 @@ export const deleteUser = async (id: string): Promise<boolean> => {
     // This requires elevated 'service_role' privileges and should be handled in a server-side function.
     // e.g., await supabase.auth.admin.deleteUser(id);
 
-    const { error } = await supabase.from('user_QRface').delete().eq('id', id);
+    const { error } = await supabase.from('user_qrface').delete().eq('id', id);
 
     if (error) {
         console.error('Error deleting user:', error);
