@@ -33,6 +33,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import * as XLSX from 'xlsx';
 import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
 
 const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
@@ -412,6 +413,23 @@ const NamesListDialog = ({
 }) => {
     const { toast } = useToast();
 
+    const { memberCount, newComerCount, isDetailedView } = useMemo(() => {
+        let members = 0;
+        let newComers = 0;
+        let detailed = false;
+        
+        if (names.length > 0 && typeof names[0] !== 'string') {
+            detailed = true;
+            names.forEach(item => {
+                if (typeof item !== 'string') {
+                    if (item.type === 'Member') members++;
+                    if (item.type === 'New Comer') newComers++;
+                }
+            });
+        }
+        return { memberCount: members, newComerCount: newComers, isDetailedView: detailed };
+    }, [names]);
+
     const handleCopy = () => {
         const textToCopy = names.map(item => {
             if (typeof item === 'string') {
@@ -443,8 +461,24 @@ const NamesListDialog = ({
                     <DialogDescription>
                         A list of {names.length} attendees for this category.
                     </DialogDescription>
+                    {isDetailedView && (
+                        <div className="pt-2 text-sm text-muted-foreground">
+                            <div className="flex justify-between border-t pt-2 mt-2">
+                                <span>Members:</span>
+                                <span>{memberCount}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>New Comers:</span>
+                                <span>{newComerCount}</span>
+                            </div>
+                             <div className="flex justify-between font-bold border-t mt-1 pt-1">
+                                <span>Total:</span>
+                                <span>{names.length}</span>
+                            </div>
+                        </div>
+                    )}
                 </DialogHeader>
-                <ScrollArea className="h-72 mt-4">
+                <ScrollArea className="h-72 mt-2">
                     <div className="space-y-2 pr-4">
                         {names.length > 0 ? (
                             names.map((item, index) => {
