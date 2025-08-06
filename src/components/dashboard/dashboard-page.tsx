@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ScrollArea } from '../ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 
 const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
@@ -394,6 +395,49 @@ const PromotionHistory = ({ members, isLoading }: { members: Member[], isLoading
     )
 }
 
+const NamesListDialog = ({
+    isOpen,
+    onClose,
+    title,
+    names
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    names: string[];
+}) => {
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        A list of {names.length} attendees for this category.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-72 mt-4">
+                    <div className="space-y-2 pr-4">
+                        {names.length > 0 ? (
+                            names.map((name, index) => (
+                                <div key={index} className="text-sm p-2 rounded-md bg-muted/50">
+                                    {name}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center pt-8">
+                                No attendees in this category.
+                            </p>
+                        )}
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="pt-4">
+                    <Button variant="outline" onClick={onClose}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
@@ -401,6 +445,11 @@ export default function DashboardPage() {
     const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
     const [allTimeLogs, setAllTimeLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
     const [eventConfig, setEventConfig] = useState<EventConfig | null>(null);
+
+    // State for the names list dialog
+    const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
+    const [dialogTitle, setDialogTitle] = useState('');
+    const [dialogNames, setDialogNames] = useState<string[]>([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -522,6 +571,43 @@ export default function DashboardPage() {
     return { defaultStartDate, defaultEndDate };
   }, [eventConfig]);
   
+  const { membersActualOnly, firstTimersActualOnly } = useMemo(() => {
+        const memberAttendance = new Map<string, Set<string>>();
+        attendanceLogs.forEach(log => {
+            if (!memberAttendance.has(log.member_name)) {
+                memberAttendance.set(log.member_name, new Set());
+            }
+            memberAttendance.get(log.member_name)!.add(log.type);
+        });
+
+        const firstTimerAttendance = new Map<string, Set<string>>();
+        firstTimerLogs.forEach(log => {
+            if (!firstTimerAttendance.has(log.first_timer_name)) {
+                firstTimerAttendance.set(log.first_timer_name, new Set());
+            }
+            firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
+        });
+
+        const membersActualOnlyList = Array.from(memberAttendance.entries())
+            .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
+            .map(([name]) => name);
+
+        const firstTimersActualOnlyList = Array.from(firstTimerAttendance.entries())
+            .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
+            .map(([name]) => name);
+
+        return {
+            membersActualOnly: membersActualOnlyList,
+            firstTimersActualOnly: firstTimersActualOnlyList,
+        };
+    }, [attendanceLogs, firstTimerLogs]);
+
+    const handleStatCardClick = (title: string, names: string[]) => {
+        setDialogTitle(title);
+        setDialogNames(names);
+        setIsNamesDialogOpen(true);
+    };
+  
   if (loading) {
       return (
         <div className="space-y-6 p-4 md:p-6">
@@ -535,9 +621,8 @@ export default function DashboardPage() {
                 <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
                 <Card><CardHeader><Skeleton className="h-5 w-32 mb-2" /><Skeleton className="h-4 w-8" /></CardHeader><CardContent><Skeleton className="h-8 w-12" /></CardContent></Card>
             </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-1">
                 <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-48 mb-2" /><Skeleton className="h-4 w-64" /></CardHeader><CardContent><Skeleton className="h-56 w-full" /></CardContent></Card>
-                <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-48 mb-2" /><Skeleton className="h-4 w-56" /></CardHeader><CardContent className="space-y-4">{Array(5).fill(0).map((_,i) => <Skeleton key={i} className="h-12 w-full" />)}</CardContent></Card>
             </div>
              <Card>
                 <CardHeader>
@@ -553,6 +638,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <>
     <div className="flex flex-col gap-6 p-4 md:p-6">
        <div>
         <h1 className="text-2xl font-bold font-headline">Dashboard</h1>
@@ -563,7 +649,7 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
             <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
@@ -572,6 +658,18 @@ export default function DashboardPage() {
                 value={`${qrCheckins} QR / ${faceCheckins}`} 
                 icon={QrCode} 
                 subIcon={Fingerprint} 
+            />
+             <StatCard 
+                title="Members (Actual Only)" 
+                value={membersActualOnly.length} 
+                icon={UserRoundCheck} 
+                onClick={() => handleStatCardClick("Members (Actual Only)", membersActualOnly)}
+            />
+            <StatCard 
+                title="New Comers (Actual Only)" 
+                value={firstTimersActualOnly.length} 
+                icon={UserPlus} 
+                onClick={() => handleStatCardClick("New Comers (Actual Only)", firstTimersActualOnly)}
             />
         </div>
       </div>
@@ -597,5 +695,12 @@ export default function DashboardPage() {
       <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} />
 
     </div>
+    <NamesListDialog
+        isOpen={isNamesDialogOpen}
+        onClose={() => setIsNamesDialogOpen(false)}
+        title={dialogTitle}
+        names={dialogNames}
+    />
+    </>
   );
 }

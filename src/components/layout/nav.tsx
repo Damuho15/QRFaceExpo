@@ -59,9 +59,6 @@ export default function Nav() {
             <MonkeyIcon className="h-8 w-8 text-primary" />
             <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">ExpAttendance</h1>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="group-data-[collapsible=icon]:hidden">
-            <LayoutDashboard className="h-4 w-4" />
-        </Button>
       </div>
       <SidebarMenu className="p-4 space-y-2">
         {navItems.map((item) => (
