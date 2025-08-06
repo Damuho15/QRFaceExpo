@@ -597,7 +597,6 @@ const InactiveMembersDialog = ({
 
 const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoading: boolean }) => {
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
     const { birthdayCelebrants, anniversaryCelebrants } = useMemo(() => {
         const birthdays: { name: string, date: string }[] = [];
@@ -625,22 +624,19 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
         });
         
         const sortCelebrants = (a: { name: string, date: string }, b: { name: string, date: string }) => {
-            return new Date(a.date).getDate() - new Date(b.date).getDate();
+            return new Date(a.date + ', 2000').getTime() - new Date(b.date + ', 2000').getTime();
         }
 
         return {
             birthdayCelebrants: birthdays.sort(sortCelebrants),
             anniversaryCelebrants: anniversaries.sort(sortCelebrants)
         };
-    }, [members, selectedMonth, selectedYear]);
+    }, [members, selectedMonth]);
 
     const months = Array.from({ length: 12 }, (_, i) => ({
         value: i,
         label: format(new Date(0, i), 'MMMM')
     }));
-
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
 
     return (
         <Card>
@@ -658,16 +654,6 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
                             <SelectContent>
                                 {months.map(month => (
                                     <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-                            <SelectTrigger className="w-full sm:w-[120px]">
-                                <SelectValue placeholder="Select Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {years.map(year => (
-                                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -974,13 +960,13 @@ export default function DashboardPage() {
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
              <StatCard 
                 title="Total Pre-registered" 
                 value={totalPreRegistrations} 
                 icon={ClipboardCheck}
                 onClick={() => handleStatCardClick("Total Pre-registered", allPreRegisteredNames)}
             />
-            <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
                 title="Members (Actual Only)" 
                 value={membersActualOnly.length} 
