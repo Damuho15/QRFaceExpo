@@ -32,8 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error("User not found or invalid credentials.");
         }
     } catch (error) {
-        // Log unexpected errors but re-throw for the UI to handle.
-        console.error("Login error:", error);
+        // Re-throw the error for the UI to handle.
+        // This includes the "User not found" error from above.
         throw error;
     }
   };

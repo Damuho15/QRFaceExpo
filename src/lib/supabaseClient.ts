@@ -545,9 +545,11 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
         .single();
     
     if (error) {
-        if (error.code === 'PGRST116') { // Not found
+        // Specifically ignore the 'PGRST116' error which means "Not Found"
+        if (error.code === 'PGRST116') {
             return null;
         }
+        // For all other errors, log and re-throw
         console.error('Error fetching user by email:', error);
         throw error;
     }
