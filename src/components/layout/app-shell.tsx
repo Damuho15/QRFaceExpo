@@ -29,10 +29,11 @@ export default function AppShell({ children, requiredRole }: { children: React.R
   }
   
   useEffect(() => {
-    if (!loading && !isAuthenticated && pathname !== '/login') {
+    // If a required role is present and the user is not authenticated (after loading), redirect to login.
+    if (requiredRole && !loading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [loading, isAuthenticated, pathname, router]);
+  }, [requiredRole, loading, isAuthenticated, router]);
 
 
   const renderContent = () => {
@@ -44,8 +45,8 @@ export default function AppShell({ children, requiredRole }: { children: React.R
       );
     }
     
-    // If not authenticated and not on the login page, show loading while redirect happens
-    if (!isAuthenticated && pathname !== '/login') {
+    // If a page requires a role, but the user is not authenticated, show a loading spinner while the redirect happens.
+    if (requiredRole && !isAuthenticated) {
         return (
              <div className="flex items-center justify-center min-h-screen">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -53,8 +54,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
         );
     }
 
-    // If on a protected route without being authenticated, the useEffect will handle the redirect.
-    // We only need to handle the case where the user IS authenticated but does NOT have the role.
+    // If on a protected route and the user IS authenticated but does NOT have the role.
     const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
     
     if (isAuthenticated && requiredRole && !hasPermission) {
@@ -123,8 +123,8 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                         </Popover>
                     ) : (
                         <Button variant="outline" onClick={() => router.push('/login')}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Login
+                            <UserIcon className="mr-2 h-4 w-4" />
+                            Admin Login
                         </Button>
                     )}
                 </div>
