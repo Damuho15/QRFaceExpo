@@ -33,17 +33,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     try {
-        const potentialUser = await loginUser(username);
+        const potentialUser = await loginUser(username, password);
 
-        if (potentialUser && potentialUser.password === password) {
+        if (potentialUser) {
             const { password: _, ...userToStore } = potentialUser;
             setUser(userToStore);
             return userToStore;
         } else {
+            // This will be caught by the UI and shown as a toast.
             throw new Error("The username or password you entered is incorrect.");
         }
     } catch (error) {
-        console.error("Login failed:", error);
+        // Re-throw the error to be handled by the calling function (e.g., in the login page component).
         throw error;
     } finally {
         setLoading(false);

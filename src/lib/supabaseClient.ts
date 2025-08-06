@@ -538,19 +538,22 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
-export const loginUser = async (username: string): Promise<User | null> => {
+export const loginUser = async (username: string, password?: string): Promise<User | null> => {
+    if (!password) return null;
+    
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
         .eq('username', username)
+        .eq('password', password)
         .single();
     
     if (error) {
-        if (error.code === 'PGRST116') {
-            return null; // This is an expected case, not an error.
+        if (error.code === 'PGRST116') { // This code means "No rows found"
+            return null; // This is an expected case for wrong username or password, not a system error.
         }
         console.error('Error fetching user during login:', error);
-        throw error;
+        throw error; // For other unexpected database errors
     }
 
     return data;
