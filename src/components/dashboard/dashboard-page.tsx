@@ -784,13 +784,6 @@ export default function DashboardPage() {
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard 
-                title="Pre-registered (No-Show)" 
-                value={preRegisteredNoShows.length} 
-                icon={UserCheck}
-                onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
-                subIcon={UserMinus}
-            />
              <StatCard 
                 title="Total Pre-registered" 
                 value={totalPreRegistrations} 
@@ -809,6 +802,13 @@ export default function DashboardPage() {
                 value={firstTimersActualOnly.length} 
                 icon={UserPlus} 
                 onClick={() => handleStatCardClick("New Comers (Actual Only)", firstTimersActualOnly)}
+            />
+            <StatCard 
+                title="Pre-registered (No-Show)" 
+                value={preRegisteredNoShows.length} 
+                icon={UserCheck}
+                onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
+                subIcon={UserMinus}
             />
             <StatCard 
                 title="Check-in Methods" 
