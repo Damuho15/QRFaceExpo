@@ -480,19 +480,33 @@ export default function DashboardPage() {
   const totalMembers = members.length;
   
   const combinedLogs = useMemo(() => [
-      ...attendanceLogs.map(l => ({ ...l, name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
-      ...firstTimerLogs.map(l => ({ ...l, id: l.id, name: l.first_timer_name, type: l.type, method: l.method, timestamp: l.timestamp }))
+      ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
+      ...firstTimerLogs.map(l => ({ ...l, id: l.id, member_name: l.first_timer_name, member_id: l.first_timer_id, type: l.type, method: l.method, timestamp: l.timestamp }))
   ], [attendanceLogs, firstTimerLogs]);
+
+  const latestLogs = useMemo(() => {
+      const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
+      
+      combinedLogs.forEach(log => {
+          const existing = latestCheckins.get(log.member_name);
+          if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
+              latestCheckins.set(log.member_name, log);
+          }
+      });
+      
+      return Array.from(latestCheckins.values())
+        .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [combinedLogs]);
 
   const { preRegistrations, actualRegistrations } = useMemo(() => {
       const uniquePreRegistrants = new Set<string>();
       const uniqueActualRegistrants = new Set<string>();
 
-      combinedLogs.forEach(log => {
+      latestLogs.forEach(log => {
           if (log.type === 'Pre-registration') {
-              uniquePreRegistrants.add(log.name);
+              uniquePreRegistrants.add(log.member_name);
           } else if (log.type === 'Actual') {
-              uniqueActualRegistrants.add(log.name);
+              uniqueActualRegistrants.add(log.member_name);
           }
       });
       
@@ -500,29 +514,18 @@ export default function DashboardPage() {
           preRegistrations: uniquePreRegistrants.size,
           actualRegistrations: uniqueActualRegistrants.size,
       };
-  }, [combinedLogs]);
+  }, [latestLogs]);
   
   const { qrCheckins, faceCheckins } = useMemo(() => {
-      const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
-
-      combinedLogs.forEach(log => {
-          const existing = latestCheckins.get(log.name);
-          if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
-              latestCheckins.set(log.name, log);
-          }
-      });
-
       let qr = 0;
       let face = 0;
-      latestCheckins.forEach(log => {
+      latestLogs.forEach(log => {
           if (log.method === 'QR') qr++;
           if (log.method === 'Face') face++;
       });
       return { qrCheckins: qr, faceCheckins: face };
-  }, [combinedLogs]);
+  }, [latestLogs]);
   
-  const sortedLogsForDisplay = [...combinedLogs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
   const attendanceReportDefaults = useMemo(() => {
     if (!eventConfig) {
       const today = new Date();
@@ -578,7 +581,7 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
             <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
@@ -609,7 +612,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <AttendanceDataTable columns={columns} data={attendanceLogs} isLoading={loading} />
+      <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} />
 
     </div>
   );
