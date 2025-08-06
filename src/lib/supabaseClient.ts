@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js';
 import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog, User } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
@@ -537,18 +538,18 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
-export const getUserByEmail = async (email: string): Promise<User | null> => {
+export const getUserByUsername = async (username: string): Promise<User | null> => {
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
-        .eq('email', email)
+        .eq('username', username)
         .single();
     
     if (error) {
         if (error.code === 'PGRST116') {
-            return null;
+            return null; // This is an expected case, not an error.
         }
-        console.error('Error fetching user by email:', error);
+        console.error('Error fetching user by username:', error);
         throw error;
     }
     return data;
@@ -564,7 +565,7 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
         .insert({
             id: newUserId,
             full_name: formData.full_name,
-            email: formData.email,
+            username: formData.username,
             role: formData.role,
         })
         .select()
@@ -572,9 +573,9 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
 
     if (error) {
         console.error('Error adding user:', error);
-        // Handle specific errors, e.g., unique constraint violation for email
+        // Handle specific errors, e.g., unique constraint violation for username
         if (error.code === '23505') {
-            throw new Error('A user with this email address already exists.');
+            throw new Error('A user with this username already exists.');
         }
         throw error;
     }
@@ -586,7 +587,7 @@ export const updateUser = async (id: string, formData: UserFormValues): Promise<
         .from('user_qrface')
         .update({
             full_name: formData.full_name,
-            email: formData.email,
+            username: formData.username,
             role: formData.role,
         })
         .eq('id', id)
@@ -596,7 +597,7 @@ export const updateUser = async (id: string, formData: UserFormValues): Promise<
     if (error) {
         console.error('Error updating user:', error);
         if (error.code === '23505') {
-            throw new Error('A user with this email address already exists.');
+            throw new Error('A user with this username already exists.');
         }
         throw error;
     }

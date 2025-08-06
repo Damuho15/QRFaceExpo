@@ -57,7 +57,7 @@ export type UserRole = 'admin' | 'viewer' | 'check_in_only';
 export type User = {
     id: string;
     full_name: string;
-    email: string;
+    username: string;
     role: UserRole;
     created_at: string;
 };

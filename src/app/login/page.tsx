@@ -19,7 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('password'); // Dummy password
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -31,7 +31,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const user = await login(email, password);
+      const user = await login(username, password);
       if (user) {
         toast({
           title: 'Login Successful',
@@ -45,7 +45,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'The email provided does not exist in our records.',
+        description: error.message || 'The username provided does not exist in our records.',
       });
     } finally {
       setIsLoading(false);
@@ -85,21 +85,21 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl">ExpAttendance Login</CardTitle>
             <CardDescription>
-              Enter your email below to login to your account.
+              Enter your username and password to login.
               <br/>
               <span className="text-xs text-destructive/80">(This is a simplified login for demonstration purposes)</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
+                id="username"
+                type="text"
+                placeholder="e.g., admin"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
               />
             </div>

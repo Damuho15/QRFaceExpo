@@ -3,12 +3,12 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { User } from '@/lib/types';
-import { getUserByEmail } from '@/lib/supabaseClient';
+import { getUserByUsername } from '@/lib/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password?: string) => Promise<User | null>;
+  login: (username: string, password?: string) => Promise<User | null>;
   logout: () => void;
 }
 
@@ -17,11 +17,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password?: string): Promise<User | null> => {
+  const login = async (username: string, password?: string): Promise<User | null> => {
     // In a real app, you would validate the password.
-    // Here we are just fetching the user by email for demonstration.
+    // Here we are just fetching the user by username for demonstration.
     try {
-        const fetchedUser = await getUserByEmail(email);
+        const fetchedUser = await getUserByUsername(username);
 
         if (fetchedUser) {
             setUser(fetchedUser);

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -65,17 +66,17 @@ export default function UserManagementDataTable<TData, TValue>({
     }
   });
 
-  const [emailFilter, setEmailFilter] = React.useState('');
+  const [usernameFilter, setUsernameFilter] = React.useState('');
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
-        table.getColumn('email')?.setFilterValue(emailFilter);
+        table.getColumn('username')?.setFilterValue(usernameFilter);
     }, 300);
 
     return () => {
         clearTimeout(handler);
     };
-  }, [emailFilter, table]);
+  }, [usernameFilter, table]);
 
 
   return (
@@ -83,9 +84,9 @@ export default function UserManagementDataTable<TData, TValue>({
       <div className="flex items-center justify-between py-4">
         <div className="flex items-center gap-2">
             <Input
-            placeholder="Filter by email..."
-            value={emailFilter}
-            onChange={(event) => setEmailFilter(event.target.value)}
+            placeholder="Filter by username..."
+            value={usernameFilter}
+            onChange={(event) => setUsernameFilter(event.target.value)}
             className="max-w-sm"
             />
         </div>

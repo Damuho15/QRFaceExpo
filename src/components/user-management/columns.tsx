@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -56,8 +57,8 @@ export const columns: ColumnDef<User>[] = [
     },
   },
   {
-    accessorKey: 'email',
-    header: 'Email',
+    accessorKey: 'username',
+    header: 'Username',
   },
   {
     accessorKey: 'role',

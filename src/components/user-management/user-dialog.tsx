@@ -34,7 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 const userSchema = z.object({
   id: z.string().uuid().optional(), // Only for edit mode
   full_name: z.string().min(2, 'Full name must be at least 2 characters.'),
-  email: z.string().email('Invalid email address.'),
+  username: z.string().min(3, 'Username must be at least 3 characters.'),
   role: z.enum(['admin', 'viewer', 'check_in_only']),
 });
 
@@ -62,7 +62,7 @@ export default function UserDialog({
     resolver: zodResolver(userSchema),
     defaultValues: {
       full_name: '',
-      email: '',
+      username: '',
       role: 'viewer',
     },
   });
@@ -72,7 +72,7 @@ export default function UserDialog({
       form.reset({
         id: userToEdit.id,
         full_name: userToEdit.full_name || '',
-        email: userToEdit.email || '',
+        username: userToEdit.username || '',
         role: userToEdit.role || 'viewer',
       });
     } else if (!open) {
@@ -149,12 +149,12 @@ export default function UserDialog({
                         />
                         <FormField
                         control={form.control}
-                        name="email"
+                        name="username"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Email Address</FormLabel>
+                            <FormLabel>Username</FormLabel>
                             <FormControl>
-                                <Input placeholder="user@example.com" {...field} disabled={isSubmitting} />
+                                <Input placeholder="johndoe" {...field} disabled={isSubmitting} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>

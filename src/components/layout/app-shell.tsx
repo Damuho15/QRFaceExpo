@@ -22,7 +22,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
-  // If a role is required but user is not authenticated, show login page.
+  // If auth is required but user is not authenticated, show login page.
   if (requiredRole && !isAuthenticated) {
     return <LoginPage />;
   }
@@ -80,7 +80,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{user?.full_name}</p>
-                                        <p className="text-sm text-muted-foreground">{user?.email}</p>
+                                        <p className="text-sm text-muted-foreground">{user?.username}</p>
                                     </div>
                                     </div>
                                     <Badge variant={user?.role === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
