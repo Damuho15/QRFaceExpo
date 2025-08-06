@@ -1078,16 +1078,10 @@ const NewComerCheckinTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSt
 export default function CheckInPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    const { user } = useAuth();
     
     // Dates from DB
     const [eventDate, setEventDate] = useState<Date | null>(null);
     const [preRegStartDate, setPreRegStartDate] = useState<Date | null>(null);
-    
-    // Temp dates for inputs
-    const [tempEventDate, setTempEventDate] = useState<Date | null>(null);
-    const [tempPreRegStartDate, setTempPreRegStartDate] = useState<Date | null>(null);
 
     const [members, setMembers] = useState<Member[]>([]);
     const [firstTimers, setFirstTimers] = useState<FirstTimer[]>([]);
@@ -1098,7 +1092,7 @@ export default function CheckInPage() {
         setCheckInCounter(prev => prev + 1);
     }
 
-     const fetchAndSetDates = useCallback(async () => {
+     const fetchAndSetData = useCallback(async () => {
         setIsLoading(true);
         try {
             const [config, allMembers, allFirstTimers] = await Promise.all([
@@ -1111,47 +1105,15 @@ export default function CheckInPage() {
             setFirstTimers(allFirstTimers);
 
             if (config) {
-                // This is a test block to simulate a past date for rollover testing
-                // In a real scenario, you'd use the actual current date.
-                // const today = new Date('2026-01-01T12:00:00Z');
-                const today = new Date();
-                today.setUTCHours(0, 0, 0, 0);
-
-                const dbEventDate = parseDateAsUTC(config.event_date);
-                
-                if (today > dbEventDate) {
-                    const newEventDate = getNextSunday(today);
-                    const newPreRegDate = getPreviousTuesday(newEventDate);
-                    
-                    await updateEventConfig({
-                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
-                        event_date: newEventDate.toISOString().split('T')[0],
-                    });
-                    
-                    setEventDate(newEventDate);
-                    setPreRegStartDate(newPreRegDate);
-                    setTempEventDate(newEventDate);
-                    setTempPreRegStartDate(newPreRegDate);
-
-                     toast({
-                        title: 'Event Dates Updated',
-                        description: 'The event has been automatically rolled over to the next week.',
-                    });
-
-                } else {
-                    const storedEventDate = parseDateAsUTC(config.event_date);
-                    const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
-
-                    setEventDate(storedEventDate);
-                    setPreRegStartDate(storedPreRegDate);
-                    setTempEventDate(storedEventDate);
-                    setTempPreRegStartDate(storedPreRegDate);
-                }
+                const storedEventDate = parseDateAsUTC(config.event_date);
+                const storedPreRegDate = parseDateAsUTC(config.pre_reg_start_date);
+                setEventDate(storedEventDate);
+                setPreRegStartDate(storedPreRegDate);
             } else {
-                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration. Please set it in Event Creation.' });
             }
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch or update event dates.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch event data.' });
             console.error(error);
         } finally {
             setIsLoading(false);
@@ -1159,72 +1121,8 @@ export default function CheckInPage() {
     }, [toast]);
     
     useEffect(() => {
-        fetchAndSetDates();
-    }, [fetchAndSetDates]);
-
-    const handleManualDateUpdate = async (newPreRegDate: Date, newEventDate: Date) => {
-        setIsSaving(true);
-        try {
-            await updateEventConfig({
-                pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
-                event_date: newEventDate.toISOString().split('T')[0],
-            });
-            setPreRegStartDate(newPreRegDate);
-            setEventDate(newEventDate);
-            setTempPreRegStartDate(newPreRegDate);
-            setTempEventDate(newEventDate);
-            
-            toast({
-                title: 'Dates Updated',
-                description: 'The event dates have been successfully saved.',
-            });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save updated dates.' });
-            if(preRegStartDate && eventDate) {
-                setTempPreRegStartDate(preRegStartDate);
-                setTempEventDate(eventDate);
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const onApplyChanges = () => {
-         if (!tempPreRegStartDate || !tempEventDate) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Dates cannot be empty.' });
-            return;
-         }
-
-         if (tempPreRegStartDate >= tempEventDate) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid Dates',
-                description: 'The pre-registration date must be before the event date.',
-            });
-            return;
-        }
-        handleManualDateUpdate(tempPreRegStartDate, tempEventDate);
-    };
-    
-    const onPreRegDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.value) {
-            const newDate = parseDateAsUTC(e.target.value);
-            setTempPreRegStartDate(newDate);
-        }
-    };
-
-    const onEventDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.value) {
-            const newDate = parseDateAsUTC(e.target.value);
-            setTempEventDate(newDate);
-        }
-    };
-    
-    const areDatesChanged =
-        (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
-        (tempEventDate?.getTime() !== eventDate?.getTime());
-        
-    const canEditDates = user?.role === 'admin';
+        fetchAndSetData();
+    }, [fetchAndSetData]);
 
   return (
     <div className="space-y-6">
@@ -1234,62 +1132,6 @@ export default function CheckInPage() {
           Select a method to record member attendance.
         </p>
       </div>
-      
-    <Card>
-        <CardHeader>
-            <CardTitle>Event Configuration</CardTitle>
-            <CardDescription>
-                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Actual day check-in is from 9:00 AM to 11:30 PM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
-            </CardDescription>
-        </CardHeader>
-        {isLoading ? (
-             <CardContent>
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="flex flex-col space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                </div>
-            </CardContent>
-        ) : (
-            <>
-                <CardContent className="grid gap-6 md:grid-cols-2">
-                    <div className="flex flex-col space-y-2">
-                            <Label>Pre-registration Start Date</Label>
-                            <Input
-                            type="date"
-                            value={tempPreRegStartDate ? format(tempPreRegStartDate, 'yyyy-MM-dd') : ''}
-                            onChange={onPreRegDateChange}
-                            className="w-full"
-                            disabled={isSaving || !canEditDates}
-                            />
-                    </div>
-                    <div className="flex flex-col space-y-2">
-                            <Label>Event Date (Sunday)</Label>
-                            <Input
-                            type="date"
-                            value={tempEventDate ? format(tempEventDate, 'yyyy-MM-dd') : ''}
-                            onChange={onEventDateChange}
-                            className="w-full"
-                            disabled={isSaving || !canEditDates}
-                            />
-                    </div>
-                </CardContent>
-                {areDatesChanged && canEditDates && (
-                    <CardFooter>
-                        <Button onClick={onApplyChanges} disabled={isSaving}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                            Apply Changes
-                        </Button>
-                    </CardFooter>
-                )}
-            </>
-        )}
-    </Card>
 
       <Tabs defaultValue="member-qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-3">
