@@ -177,17 +177,12 @@ export const columns: ColumnDef<FirstTimer>[] = [
                 firstTimerToEdit={firstTimer}
                 onSuccess={() => table.options.meta?.onAction()}
               >
-                <button className="w-full text-left">Edit</button>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>
               </FirstTimerDialog>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="w-full"
-                onSelect={(e) => e.preventDefault()}
-              >
-                <QrCodeDialog firstTimer={firstTimer}>
-                  <div className="w-full">View QR Code</div>
-                </QrCodeDialog>
-              </DropdownMenuItem>
+              <QrCodeDialog firstTimer={firstTimer}>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View QR Code</DropdownMenuItem>
+              </QrCodeDialog>
 
                 <AlertDialogTrigger asChild>
                    <DropdownMenuItem

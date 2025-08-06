@@ -43,7 +43,7 @@ interface FirstTimerDialogProps {
   mode: 'add' | 'edit';
   firstTimerToEdit?: FirstTimer;
   onSuccess?: () => void;
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export default function FirstTimerDialog({
@@ -140,22 +140,9 @@ export default function FirstTimerDialog({
     }
   }
 
-  const TriggerComponent = isEditMode ? (
-    <div onClick={() => setOpen(true)} className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-        {children}
-    </div>
-  ) : (
-    <DialogTrigger asChild>
-      <Button>
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Add New Comer
-      </Button>
-    </DialogTrigger>
-  );
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {TriggerComponent}
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
           if (showQr || isSubmitting) {
             e.preventDefault();

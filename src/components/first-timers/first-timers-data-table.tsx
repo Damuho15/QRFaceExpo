@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import FirstTimerDialog from './first-timer-dialog';
 import { Skeleton } from '../ui/skeleton';
+import { PlusCircle } from 'lucide-react';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -96,7 +97,12 @@ export default function FirstTimersDataTable<TData, TValue>({
             <FirstTimerDialog
                 mode="add"
                 onSuccess={onAction}
-            />
+            >
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Comer
+              </Button>
+            </FirstTimerDialog>
         </div>
       </div>
       <div className="rounded-md border">

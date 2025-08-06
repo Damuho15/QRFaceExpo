@@ -187,31 +187,26 @@ export const columns: ColumnDef<Member>[] = [
       return (
         <div className="text-right">
           <AlertDialog>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <MemberDialog
-                mode="edit"
-                memberToEdit={member}
-                onSuccess={() => table.options.meta?.onAction()}
-              >
-                <button className="w-full text-left">Edit</button>
-              </MemberDialog>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="w-full"
-                onSelect={(e) => e.preventDefault()}
-              >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <MemberDialog
+                  mode="edit"
+                  memberToEdit={member}
+                  onSuccess={() => table.options.meta?.onAction()}
+                >
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>
+                </MemberDialog>
+                <DropdownMenuSeparator />
                 <QrCodeDialog member={member}>
-                  <div className="w-full">View QR Code</div>
+                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View QR Code</DropdownMenuItem>
                 </QrCodeDialog>
-              </DropdownMenuItem>
 
                 <AlertDialogTrigger asChild>
                    <DropdownMenuItem
@@ -221,8 +216,8 @@ export const columns: ColumnDef<Member>[] = [
                     Delete
                   </DropdownMenuItem>
                 </AlertDialogTrigger>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -236,7 +231,7 @@ export const columns: ColumnDef<Member>[] = [
                     <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+          </AlertDialog>
         </div>
       );
     },

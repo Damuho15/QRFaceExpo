@@ -14,6 +14,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '../ui/button';
+import { useSidebar } from '../ui/sidebar';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -48,12 +50,18 @@ const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function Nav() {
   const pathname = usePathname();
+  const { toggleSidebar } = useSidebar();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b p-4">
-        <MonkeyIcon className="h-8 w-8 text-primary" />
-        <h1 className="text-xl font-bold font-headline">ExpAttendance</h1>
+      <div className="flex items-center justify-between border-b p-4">
+        <div className="flex items-center gap-2">
+            <MonkeyIcon className="h-8 w-8 text-primary" />
+            <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">ExpAttendance</h1>
+        </div>
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="group-data-[collapsible=icon]:hidden">
+            <LayoutDashboard className="h-4 w-4" />
+        </Button>
       </div>
       <SidebarMenu className="p-4 space-y-2">
         {navItems.map((item) => (
@@ -65,7 +73,7 @@ export default function Nav() {
                 tooltip={item.label}
                 >
                 <item.icon />
-                <span>{item.label}</span>
+                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

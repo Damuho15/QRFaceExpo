@@ -34,6 +34,7 @@ import {
 import MemberDialog from './member-dialog';
 import BatchAddDialog from './batch-add-dialog';
 import { Skeleton } from '../ui/skeleton';
+import { PlusCircle } from 'lucide-react';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -121,7 +122,12 @@ export default function MembersDataTable<TData, TValue>({
             <MemberDialog 
                 mode="add"
                 onSuccess={onAction} 
-            />
+            >
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Member
+              </Button>
+            </MemberDialog>
         </div>
       </div>
       <div className="rounded-md border">
