@@ -10,7 +10,7 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon }: StatCardProps) {
   return (
-    <Card>
+    <Card className="flex-1 min-w-[200px]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <div className="flex items-center gap-1">

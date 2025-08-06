@@ -135,8 +135,8 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                    <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                    <div className="space-y-2 w-full">
                       <Label htmlFor="start-date">Start Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
@@ -162,7 +162,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
                         </PopoverContent>
                       </Popover>
                     </div>
-                     <div className="space-y-2">
+                     <div className="space-y-2 w-full">
                        <Label htmlFor="end-date">End Date</Label>
                        <Popover>
                         <PopoverTrigger asChild>
@@ -188,7 +188,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <Button onClick={() => startDate && endDate && handleGenerateReport(startDate, endDate)} disabled={isLoading}>
+                    <Button onClick={() => startDate && endDate && handleGenerateReport(startDate, endDate)} disabled={isLoading} className="w-full sm:w-auto">
                         {isLoading ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -578,7 +578,7 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
             <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
@@ -597,8 +597,8 @@ export default function DashboardPage() {
 
       <PromotionHistory members={members} isLoading={loading} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle>Attendance Over Time</CardTitle>
                 <CardDescription>A summary of check-ins throughout the event.</CardDescription>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                 <AttendanceChart data={attendanceLogs} />
             </CardContent>
         </Card>
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-2">
              <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>The latest members to check-in.</CardDescription>
