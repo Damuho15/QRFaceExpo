@@ -102,22 +102,22 @@ export default function MembersDataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between py-4 gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
             <Input
             placeholder="Filter by full name..."
             value={fullNameFilter}
             onChange={(event) => setFullNameFilter(event.target.value)}
-            className="max-w-sm"
+            className="w-full sm:max-w-sm"
             />
             <Input
             placeholder="Filter by nickname..."
             value={nicknameFilter}
             onChange={(event) => setNicknameFilter(event.target.value)}
-            className="max-w-sm"
+            className="w-full sm:max-w-sm"
             />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-start">
             <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
                 mode="add"
