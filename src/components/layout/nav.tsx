@@ -63,7 +63,7 @@ export default function Nav() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/');
   }
 
   const userHasRole = (roles: string[]) => {
@@ -72,12 +72,11 @@ export default function Nav() {
   }
 
   const visibleNavItems = navItems.filter(item => {
-    // If auth is not required, show it.
-    if (!item.requiresAuth) {
-      return true;
+    if (!isAuthenticated) {
+        return !item.requiresAuth;
     }
-    // If auth is required, check if user is authenticated and has the role.
-    return isAuthenticated && (item.roles.length === 0 || userHasRole(item.roles));
+    // If authenticated, show everything that doesn't require a specific role, or if user has the role
+    return item.roles.length === 0 || userHasRole(item.roles);
   });
 
   return (
