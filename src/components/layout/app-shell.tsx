@@ -16,28 +16,11 @@ import { useRouter } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import LoginPage from '@/app/login/page';
 import { Skeleton } from '../ui/skeleton';
 
 export default function AppShell({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'viewer' | 'check_in_only' }) {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
-  
-  if (loading) {
-     return (
-      <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // If auth is required but user is not authenticated, show login page.
-  if (requiredRole && !isAuthenticated) {
-    return <LoginPage />;
-  }
-  
-  // If a role is required and user is authenticated, check for permissions.
-  const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
   
   const handleLogout = () => {
     logout();
@@ -45,21 +28,51 @@ export default function AppShell({ children, requiredRole }: { children: React.R
   }
 
   const renderContent = () => {
-    if (requiredRole && !hasPermission) {
+    if (loading) {
+       return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
+
+    if (requiredRole && !isAuthenticated) {
+        // Redirect to login if a role is required and the user is not logged in.
+        // In a real app, this would be handled by middleware.
+        router.push('/login');
         return (
-            <div className="p-8 text-center">
-                <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
-                <p className="text-muted-foreground">You do not have the required permissions to view this page.</p>
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
             </div>
         );
     }
+
+    if (requiredRole && !hasPermission) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="p-8 text-center bg-card rounded-lg shadow-lg">
+                    <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+                    <p className="text-muted-foreground mt-2">You do not have the required permissions to view this page.</p>
+                     <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
+                </div>
+            </div>
+        );
+    }
+
     return children;
+  }
+
+  // If the content itself is the login page, we don't need the full shell.
+  if (router.pathname === '/login') {
+    return <>{children}</>;
   }
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <Sidebar className="flex-shrink-0">
+        <Sidebar className="flex-shrink-0 hidden md:block">
           <SidebarContent className="p-0 backdrop-blur-lg">
             <Nav />
           </SidebarContent>
@@ -73,7 +86,9 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                   </Button>
                 </SidebarTrigger>
                 <div className="ml-auto">
-                    {isAuthenticated ? (
+                    {loading ? (
+                       <Skeleton className="h-9 w-9 rounded-full" />
+                    ) : isAuthenticated ? (
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -111,7 +126,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                     )}
                 </div>
             </header>
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <main className="flex-1 overflow-y-auto">
                 {renderContent()}
             </main>
         </div>
