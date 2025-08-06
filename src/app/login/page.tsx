@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -116,7 +116,11 @@ export default function LoginPage() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex gap-2">
+            <Button variant="outline" type="button" className="w-full" onClick={() => router.push('/')} disabled={isLoading}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel
+            </Button>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                   <>
