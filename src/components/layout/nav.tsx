@@ -29,7 +29,7 @@ const navItems = [
   { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
   { href: '/event-creation', label: 'Event Creation', icon: CalendarPlus, requiresAuth: true, roles: ['admin'] },
-  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: ['admin', 'viewer', 'check_in_only'] },
+  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: true, roles: ['admin', 'viewer', 'check_in_only'] },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, requiresAuth: false, roles: [] },
 ];
 
@@ -67,20 +67,12 @@ export default function Nav() {
   }
 
   const checkPermission = (item: typeof navItems[0]) => {
-    if (!item.requiresAuth) {
-        // Allow public pages, but also allow them for authenticated users if roles are specified
-        if (item.roles.length > 0 && isAuthenticated && user) {
-             return item.roles.includes(user.role);
-        }
-        return true;
-    }
-    if (!isAuthenticated || !user) {
-        return false;
-    }
+    if (!item.requiresAuth) return true;
+    if (!isAuthenticated || !user) return false;
     if (item.roles.length > 0) {
         return item.roles.includes(user.role);
     }
-    return true; // Requires auth, but no specific role, so any authenticated user can see it
+    return true; 
   };
 
 
@@ -95,13 +87,10 @@ export default function Nav() {
       <SidebarMenu className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
             const hasAccess = checkPermission(item);
-            const Comp = hasAccess ? Link : 'div';
-          
-          return (
-          <SidebarMenuItem key={item.href}>
-            <Comp href={item.href} passHref={hasAccess} legacyBehavior={!hasAccess}>
+            const button = (
                 <SidebarMenuButton
                   as="a"
+                  href={item.href}
                   isActive={pathname === item.href}
                   tooltip={item.label}
                   disabled={!hasAccess}
@@ -111,7 +100,11 @@ export default function Nav() {
                   <item.icon />
                   <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
-            </Comp>
+            );
+          
+          return (
+          <SidebarMenuItem key={item.href}>
+             {hasAccess ? <Link href={item.href} passHref legacyBehavior>{button}</Link> : button}
           </SidebarMenuItem>
         )})}
       </SidebarMenu>
