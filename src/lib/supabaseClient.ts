@@ -545,15 +545,12 @@ export const loginUser = async (username: string): Promise<User | null> => {
         .eq('username', username)
         .single();
     
-    if (error) {
-        if (error.code === 'PGRST116') { // This code means "no rows returned"
-            return null; // This is an expected case for a failed login, not an application error.
-        }
-        // For other, unexpected errors, log and re-throw them.
-        console.error('Error during login:', error);
-        throw error;
+    if (error && error.code !== 'PGRST116') {
+        // Log unexpected errors, but don't throw. Let the AuthContext handle it.
+        console.error('Error during login query:', error);
     }
 
+    // Return the user data (which will be null if not found)
     return data;
 };
 
@@ -638,3 +635,5 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
     return true;
 };
+
+    
