@@ -21,7 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This can be used later to check for a session token from localStorage
+    // This effect runs once on mount to check for a "session".
+    // Since we don't have persistent sessions, we just set loading to false.
+    // This is the key fix: ensuring loading becomes false for all users.
     setLoading(false);
   }, []);
 
