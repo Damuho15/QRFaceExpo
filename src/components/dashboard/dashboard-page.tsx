@@ -960,13 +960,13 @@ export default function DashboardPage() {
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
              <StatCard 
                 title="Total Pre-registered" 
                 value={totalPreRegistrations} 
                 icon={ClipboardCheck}
                 onClick={() => handleStatCardClick("Total Pre-registered", allPreRegisteredNames)}
             />
+            <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
                 title="Members (Actual Only)" 
                 value={membersActualOnly.length} 
@@ -1001,12 +1001,12 @@ export default function DashboardPage() {
         </div>
       </div>
       
+      <CelebrantsDashboard members={members} isLoading={loading} />
+
       <AttendanceReport {...attendanceReportDefaults} />
 
       <MonthlyAverageChart allLogs={allTimeLogs} />
       
-      <CelebrantsDashboard members={members} isLoading={loading} />
-
       <PromotionHistory members={members} isLoading={loading} />
 
       <div className="grid grid-cols-1 gap-4">
