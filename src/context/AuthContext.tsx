@@ -22,8 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // This effect runs once on mount to check for a "session".
-    // Since we don't have persistent sessions, we just set loading to false.
-    // This is the key fix: ensuring loading becomes false for all users.
+    // In our case, we just need to signal that the initial auth check is done.
     setLoading(false);
   }, []);
 
@@ -32,22 +31,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!password) {
         throw new Error('Password is required.');
     }
+    setLoading(true);
     try {
         const potentialUser = await loginUser(username);
 
         if (potentialUser && potentialUser.password === password) {
-            // In a real app, never store the password in the client-side state.
             const { password: _, ...userToStore } = potentialUser;
             setUser(userToStore);
             return userToStore;
         } else {
-            // This will be caught by the UI and shown as a toast.
             throw new Error("The username or password you entered is incorrect.");
         }
     } catch (error) {
-        // Re-throw the error to be handled by the calling function (e.g., in the login page component).
         console.error("Login failed:", error);
         throw error;
+    } finally {
+        setLoading(false);
     }
   };
 

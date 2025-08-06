@@ -49,6 +49,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
     // If a requiredRole is present, we must enforce authentication.
     if (requiredRole) {
         if (!isAuthenticated) {
+             // This case is handled by the useEffect above which redirects to /login
              return (
                  <div className="flex items-center justify-center min-h-screen">
                     <Loader2 className="h-16 w-16 animate-spin text-primary" />

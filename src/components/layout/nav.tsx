@@ -29,7 +29,7 @@ const navItems = [
   { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
   { href: '/event-creation', label: 'Event Creation', icon: CalendarPlus, requiresAuth: true, roles: ['admin'] },
-  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
+  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: ['admin', 'viewer', 'check_in_only'] },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, requiresAuth: false, roles: [] },
 ];
 
@@ -66,18 +66,23 @@ export default function Nav() {
     router.push('/');
   }
 
-  const userHasRole = (roles: string[]) => {
-      if (!user) return false;
-      return roles.includes(user.role);
-  }
-
-  const visibleNavItems = navItems.filter(item => {
-    if (!isAuthenticated) {
-        return !item.requiresAuth;
+  const checkPermission = (item: typeof navItems[0]) => {
+    if (!item.requiresAuth) {
+        // Allow public pages, but also allow them for authenticated users if roles are specified
+        if (item.roles.length > 0 && isAuthenticated && user) {
+             return item.roles.includes(user.role);
+        }
+        return true;
     }
-    // If authenticated, show everything that doesn't require a specific role, or if user has the role
-    return item.roles.length === 0 || userHasRole(item.roles);
-  });
+    if (!isAuthenticated || !user) {
+        return false;
+    }
+    if (item.roles.length > 0) {
+        return item.roles.includes(user.role);
+    }
+    return true; // Requires auth, but no specific role, so any authenticated user can see it
+  };
+
 
   return (
     <div className="flex h-full flex-col">
@@ -88,20 +93,27 @@ export default function Nav() {
         </div>
       </div>
       <SidebarMenu className="flex-1 p-4 space-y-2">
-        {visibleNavItems.map((item) => (
+        {navItems.map((item) => {
+            const hasAccess = checkPermission(item);
+            const Comp = hasAccess ? Link : 'div';
+          
+          return (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref>
+            <Comp href={item.href} passHref={hasAccess} legacyBehavior={!hasAccess}>
                 <SidebarMenuButton
-                as="a"
-                isActive={pathname === item.href}
-                tooltip={item.label}
+                  as="a"
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                  disabled={!hasAccess}
+                  aria-disabled={!hasAccess}
+                  className={!hasAccess ? 'cursor-not-allowed text-muted-foreground' : ''}
                 >
-                <item.icon />
-                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  <item.icon />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
-            </Link>
+            </Comp>
           </SidebarMenuItem>
-        ))}
+        )})}
       </SidebarMenu>
        <div className="p-4 mt-auto">
         {isAuthenticated && (
