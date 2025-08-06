@@ -31,11 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Password is required.');
     }
     try {
-        const loggedInUser = await loginUser(username, password);
+        const potentialUser = await loginUser(username);
 
-        if (loggedInUser) {
+        if (potentialUser && potentialUser.password === password) {
             // In a real app, never store the password in the client-side state.
-            const { password: _, ...userToStore } = loggedInUser;
+            const { password: _, ...userToStore } = potentialUser;
             setUser(userToStore);
             return userToStore;
         } else {

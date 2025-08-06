@@ -538,12 +538,11 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
-export const loginUser = async (username: string, password_input: string): Promise<User | null> => {
+export const loginUser = async (username: string): Promise<User | null> => {
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
         .eq('username', username)
-        .eq('password', password_input)
         .single();
     
     if (error) {
