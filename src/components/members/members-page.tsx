@@ -10,10 +10,12 @@ import StatCard from '../dashboard/stat-card';
 import { Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const refreshData = useCallback(async () => {
     setLoading(true);
@@ -57,7 +59,7 @@ export default function MembersPage() {
         )}
       </div>
 
-      <MembersDataTable columns={columns} data={members} onAction={refreshData} isLoading={loading} />
+      <MembersDataTable columns={columns} data={members} onAction={refreshData} isLoading={loading} canEdit={user?.role === 'admin'} />
     </div>
   );
 }

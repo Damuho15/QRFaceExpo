@@ -537,6 +537,23 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+    const { data, error } = await supabase
+        .from('user_QRface')
+        .select('*')
+        .eq('email', email)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') { // Not found
+            return null;
+        }
+        console.error('Error fetching user by email:', error);
+        throw error;
+    }
+    return data;
+};
+
 export const addUser = async (formData: UserFormValues): Promise<User> => {
      // This is a placeholder. In a real app, you would use Supabase Auth to create a user,
      // which returns an ID that you would use here.

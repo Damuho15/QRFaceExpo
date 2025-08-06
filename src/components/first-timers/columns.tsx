@@ -53,7 +53,10 @@ const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
 export const columns: ColumnDef<FirstTimer>[] = [
   {
     id: 'select',
-    header: ({ table }) => (
+    header: ({ table }) => {
+        const canEdit = table.options.meta?.canEdit;
+        if (!canEdit) return null;
+      return (
       <Checkbox
         checked={
           table.getIsAllPageRowsSelected() ||
@@ -62,14 +65,19 @@ export const columns: ColumnDef<FirstTimer>[] = [
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
-    ),
-    cell: ({ row }) => (
+      )
+    },
+    cell: ({ row, table }) => {
+        const canEdit = table.options.meta?.canEdit;
+        if (!canEdit) return null;
+      return (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
       />
-    ),
+      )
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -142,6 +150,9 @@ export const columns: ColumnDef<FirstTimer>[] = [
     cell: ({ row, table }) => {
       const firstTimer = row.original;
       const { toast } = useToast();
+      const canEdit = table.options.meta?.canEdit;
+
+      if (!canEdit) return null;
 
       const handleDelete = async () => {
           try {

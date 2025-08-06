@@ -34,13 +34,15 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onAction: () => void;
   isLoading: boolean;
+  canEdit: boolean;
 }
 
 export default function FirstTimersDataTable<TData, TValue>({
   columns,
   data,
   onAction,
-  isLoading
+  isLoading,
+  canEdit,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -65,7 +67,8 @@ export default function FirstTimersDataTable<TData, TValue>({
       rowSelection,
     },
      meta: {
-      onAction: onAction
+      onAction: onAction,
+      canEdit: canEdit
     }
   });
 
@@ -93,6 +96,7 @@ export default function FirstTimersDataTable<TData, TValue>({
             className="max-w-sm"
             />
         </div>
+        {canEdit && (
         <div className="flex items-center gap-2">
             <FirstTimerDialog
                 mode="add"
@@ -104,6 +108,7 @@ export default function FirstTimersDataTable<TData, TValue>({
               </Button>
             </FirstTimerDialog>
         </div>
+        )}
       </div>
       <div className="rounded-md border">
         <Table>

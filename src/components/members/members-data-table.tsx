@@ -41,13 +41,15 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onAction: () => void;
   isLoading: boolean;
+  canEdit: boolean;
 }
 
 export default function MembersDataTable<TData, TValue>({
   columns,
   data,
   onAction,
-  isLoading
+  isLoading,
+  canEdit,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -72,7 +74,8 @@ export default function MembersDataTable<TData, TValue>({
       rowSelection,
     },
      meta: {
-      onAction: onAction
+      onAction: onAction,
+      canEdit: canEdit
     }
   });
 
@@ -117,6 +120,7 @@ export default function MembersDataTable<TData, TValue>({
             className="w-full sm:max-w-xs"
             />
         </div>
+        {canEdit && (
         <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
             <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
@@ -129,6 +133,7 @@ export default function MembersDataTable<TData, TValue>({
               </Button>
             </MemberDialog>
         </div>
+        )}
       </div>
       <div className="rounded-md border">
         <Table>

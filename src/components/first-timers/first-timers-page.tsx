@@ -12,6 +12,7 @@ import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowRight, Crown, Loader2, Star } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
 
 interface AttendanceCount {
     [key: string]: {
@@ -21,7 +22,7 @@ interface AttendanceCount {
     }
 }
 
-const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuccess, isLoading }: { firstTimers: FirstTimer[], attendanceLogs: NewComerAttendanceLog[], onPromoteSuccess: () => void, isLoading: boolean }) => {
+const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuccess, isLoading, canPromote }: { firstTimers: FirstTimer[], attendanceLogs: NewComerAttendanceLog[], onPromoteSuccess: () => void, isLoading: boolean, canPromote: boolean }) => {
     const { toast } = useToast();
     const [isPromoting, setIsPromoting] = useState<string | null>(null);
 
@@ -106,7 +107,7 @@ const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuc
                                             <span className="font-bold">{count}</span>
                                             <span className="text-sm">Attendance</span>
                                         </div>
-                                        {count >= 4 && (
+                                        {count >= 4 && canPromote && (
                                             <Button
                                                 size="sm"
                                                 onClick={() => handlePromote(firstTimer)}
@@ -140,6 +141,7 @@ export default function FirstTimersPage() {
   const [firstTimers, setFirstTimers] = useState<FirstTimer[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<NewComerAttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const refreshData = useCallback(async () => {
     setLoading(true);
@@ -176,9 +178,10 @@ export default function FirstTimersPage() {
         attendanceLogs={attendanceLogs}
         onPromoteSuccess={refreshData}
         isLoading={loading}
+        canPromote={user?.role === 'admin'}
       />
 
-      <FirstTimersDataTable columns={columns} data={firstTimers} onAction={refreshData} isLoading={loading} />
+      <FirstTimersDataTable columns={columns} data={firstTimers} onAction={refreshData} isLoading={loading} canEdit={user?.role === 'admin'} />
     </div>
   );
 }

@@ -50,23 +50,31 @@ const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => 
 export const columns: ColumnDef<Member>[] = [
   {
     id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
+    header: ({ table }) => {
+        const canEdit = table.options.meta?.canEdit;
+        if (!canEdit) return null;
+        return (
+            <Checkbox
+                checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && 'indeterminate')
+                }
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
+            />
+        )
+    },
+    cell: ({ row, table }) => {
+       const canEdit = table.options.meta?.canEdit;
+        if (!canEdit) return null;
+      return (
       <Checkbox
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
       />
-    ),
+      )
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -166,6 +174,9 @@ export const columns: ColumnDef<Member>[] = [
     cell: ({ row, table }) => {
       const member = row.original;
       const { toast } = useToast();
+      const canEdit = table.options.meta?.canEdit;
+      
+      if (!canEdit) return null;
 
       const handleDelete = async () => {
           try {

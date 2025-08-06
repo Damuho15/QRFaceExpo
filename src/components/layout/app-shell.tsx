@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -9,9 +10,29 @@ import {
 } from '@/components/ui/sidebar';
 import Nav from './nav';
 import { Button } from '../ui/button';
-import { PanelLeft } from 'lucide-react';
+import { LogOut, PanelLeft, User as UserIcon } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
+import LoginPage from '@/app/login/page';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'viewer' | 'check_in_only' }) {
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+  
+  const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
+  
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -28,9 +49,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="sr-only">Toggle Menu</span>
                   </Button>
                 </SidebarTrigger>
+                <div className="ml-auto">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <UserIcon className="h-5 w-5" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 mr-4">
+                           <div className="grid gap-4">
+                               <div className="space-y-2">
+                                   <div className="flex items-center gap-2">
+                                    <Avatar>
+                                        <AvatarFallback>{user?.full_name?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-medium">{user?.full_name}</p>
+                                        <p className="text-sm text-muted-foreground">{user?.email}</p>
+                                    </div>
+                                   </div>
+                                    <Badge variant={user?.role === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
+                                        {user?.role.replace('_', ' ')}
+                                    </Badge>
+                               </div>
+                                <Button variant="outline" onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Logout
+                                </Button>
+                           </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
             </header>
             <main className="flex-1 overflow-y-auto">
-                {children}
+                {hasPermission ? (
+                    children
+                ) : (
+                    <div className="p-8 text-center">
+                        <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+                        <p className="text-muted-foreground">You do not have the required permissions to view this page.</p>
+                    </div>
+                )}
             </main>
         </div>
       </div>

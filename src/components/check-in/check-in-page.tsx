@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -40,6 +39,7 @@ import { format } from 'date-fns';
 import { Member, FirstTimer } from '@/lib/types';
 import { isValidUUID } from '@/lib/validation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { useAuth } from '@/context/AuthContext';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -1079,6 +1079,7 @@ export default function CheckInPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const { user } = useAuth();
     
     // Dates from DB
     const [eventDate, setEventDate] = useState<Date | null>(null);
@@ -1222,6 +1223,8 @@ export default function CheckInPage() {
     const areDatesChanged =
         (tempPreRegStartDate?.getTime() !== preRegStartDate?.getTime()) ||
         (tempEventDate?.getTime() !== eventDate?.getTime());
+        
+    const canEditDates = user?.role === 'admin';
 
   return (
     <div className="space-y-6">
@@ -1262,7 +1265,7 @@ export default function CheckInPage() {
                             value={tempPreRegStartDate ? format(tempPreRegStartDate, 'yyyy-MM-dd') : ''}
                             onChange={onPreRegDateChange}
                             className="w-full"
-                            disabled={isSaving}
+                            disabled={isSaving || !canEditDates}
                             />
                     </div>
                     <div className="flex flex-col space-y-2">
@@ -1272,11 +1275,11 @@ export default function CheckInPage() {
                             value={tempEventDate ? format(tempEventDate, 'yyyy-MM-dd') : ''}
                             onChange={onEventDateChange}
                             className="w-full"
-                            disabled={isSaving}
+                            disabled={isSaving || !canEditDates}
                             />
                     </div>
                 </CardContent>
-                {areDatesChanged && (
+                {areDatesChanged && canEditDates && (
                     <CardFooter>
                         <Button onClick={onApplyChanges} disabled={isSaving}>
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}

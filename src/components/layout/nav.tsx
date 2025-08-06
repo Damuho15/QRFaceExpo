@@ -14,18 +14,21 @@ import {
   MessageSquareHeart,
   UserPlus,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
 import { useSidebar } from '../ui/sidebar';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/members', label: 'Members', icon: Users },
-  { href: '/first-timers', label: 'New Comers', icon: UserPlus },
-  { href: '/user-management', label: 'User Management', icon: ShieldCheck },
-  { href: '/check-in', label: 'Check-in', icon: QrCode },
-  { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer'] },
+  { href: '/members', label: 'Members', icon: Users, roles: ['admin', 'viewer'] },
+  { href: '/first-timers', label: 'New Comers', icon: UserPlus, roles: ['admin', 'viewer'] },
+  { href: '/user-management', label: 'User Management', icon: ShieldCheck, roles: ['admin'] },
+  { href: '/check-in', label: 'Check-in', icon: QrCode, roles: ['admin', 'check_in_only'] },
+  { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, roles: ['admin', 'viewer'] },
 ];
 
 const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -53,7 +56,18 @@ const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function Nav() {
   const pathname = usePathname();
-  const { toggleSidebar } = useSidebar();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  }
+
+  const userHasRole = (roles: string[]) => {
+      if (!user) return false;
+      return roles.includes(user.role);
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -63,8 +77,8 @@ export default function Nav() {
             <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">ExpAttendance</h1>
         </div>
       </div>
-      <SidebarMenu className="p-4 space-y-2">
-        {navItems.map((item) => (
+      <SidebarMenu className="flex-1 p-4 space-y-2">
+        {navItems.filter(item => userHasRole(item.roles)).map((item) => (
           <SidebarMenuItem key={item.href}>
             <Link href={item.href} passHref>
                 <SidebarMenuButton
@@ -79,6 +93,12 @@ export default function Nav() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
+       <div className="p-4 mt-auto">
+          <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4"/>
+              <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+          </Button>
+      </div>
     </div>
   );
 }

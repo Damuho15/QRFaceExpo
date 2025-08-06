@@ -4,7 +4,7 @@ import UserManagementPage from '@/components/user-management/user-management-pag
 
 export default function UserManagement() {
   return (
-    <AppShell>
+    <AppShell requiredRole="admin">
       <UserManagementPage />
     </AppShell>
   );
