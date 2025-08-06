@@ -4,11 +4,12 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User } from '@/lib/types';
 import { loginUser } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  loading: boolean; // Add loading state
+  loading: boolean;
   login: (username: string, password?: string) => Promise<User | null>;
   logout: () => void;
 }
@@ -17,11 +18,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This effect can be used in the future to check for a session token
-    // For now, we just set loading to false as there's no persistent session
+    // This can be used later to check for a session token from localStorage
     setLoading(false);
   }, []);
 
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     } catch (error) {
         // Re-throw the error to be handled by the calling function (e.g., in the login page component).
+        console.error("Login failed:", error);
         throw error;
     }
   };
