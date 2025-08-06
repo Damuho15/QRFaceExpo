@@ -87,22 +87,24 @@ export default function Nav() {
       <SidebarMenu className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const hasAccess = checkPermission(item);
+          
           const button = (
-            <SidebarMenuButton
-              isActive={pathname === item.href}
-              tooltip={item.label}
-              disabled={!hasAccess}
+             <SidebarMenuButton
+                isActive={pathname === item.href}
+                tooltip={item.label}
+                disabled={!hasAccess}
+                className={!hasAccess ? "text-muted-foreground/50 cursor-not-allowed" : ""}
             >
               <item.icon />
               <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
             </SidebarMenuButton>
-          );
-          
+          )
+
           return (
-            <SidebarMenuItem key={item.href}>
-              {hasAccess ? <Link href={item.href}>{button}</Link> : button}
-            </SidebarMenuItem>
-          )})}
+          <SidebarMenuItem key={item.href}>
+             {hasAccess ? <Link href={item.href}>{button}</Link> : button}
+          </SidebarMenuItem>
+        )})}
       </SidebarMenu>
        <div className="p-4 mt-auto">
         {isAuthenticated && (
