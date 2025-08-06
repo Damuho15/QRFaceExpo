@@ -578,7 +578,7 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
             <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
