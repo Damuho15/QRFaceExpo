@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -12,7 +12,7 @@ import Nav from './nav';
 import { Button } from '../ui/button';
 import { LogOut, PanelLeft, User as UserIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
@@ -21,16 +21,19 @@ import { Skeleton } from '../ui/skeleton';
 export default function AppShell({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'viewer' | 'check_in_only' }) {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   
   const handleLogout = () => {
     logout();
     router.push('/login');
   }
   
-  // If the content itself is the login page, we don't need the full shell logic.
-  if (router.pathname === '/login') {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    if (!loading && !isAuthenticated && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [loading, isAuthenticated, pathname, router]);
+
 
   const renderContent = () => {
     if (loading) {
@@ -40,19 +43,21 @@ export default function AppShell({ children, requiredRole }: { children: React.R
         </div>
       );
     }
-
-    if (!isAuthenticated) {
-        router.push('/login');
+    
+    // If not authenticated and not on the login page, show loading while redirect happens
+    if (!isAuthenticated && pathname !== '/login') {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+             <div className="flex items-center justify-center min-h-screen">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
             </div>
         );
     }
-    
+
+    // If on a protected route without being authenticated, the useEffect will handle the redirect.
+    // We only need to handle the case where the user IS authenticated but does NOT have the role.
     const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
     
-    if (requiredRole && !hasPermission) {
+    if (isAuthenticated && requiredRole && !hasPermission) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="p-8 text-center bg-card rounded-lg shadow-lg">
