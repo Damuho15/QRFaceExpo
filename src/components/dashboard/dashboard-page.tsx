@@ -1,10 +1,9 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck, Cake, PartyPopper } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -596,6 +595,138 @@ const InactiveMembersDialog = ({
     )
 }
 
+const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoading: boolean }) => {
+    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+    const { birthdayCelebrants, anniversaryCelebrants } = useMemo(() => {
+        const birthdays: { name: string, date: string }[] = [];
+        const anniversaries: { name: string, date: string }[] = [];
+
+        members.forEach(member => {
+            if (member.birthday) {
+                const birthDate = new Date(member.birthday);
+                if (birthDate.getUTCMonth() === selectedMonth) {
+                    birthdays.push({
+                        name: member.fullName,
+                        date: format(birthDate, 'MMMM d')
+                    });
+                }
+            }
+            if (member.weddingAnniversary) {
+                const anniversaryDate = new Date(member.weddingAnniversary);
+                if (anniversaryDate.getUTCMonth() === selectedMonth) {
+                    anniversaries.push({
+                        name: member.fullName,
+                        date: format(anniversaryDate, 'MMMM d')
+                    });
+                }
+            }
+        });
+        
+        const sortCelebrants = (a: { name: string, date: string }, b: { name: string, date: string }) => {
+            return new Date(a.date).getDate() - new Date(b.date).getDate();
+        }
+
+        return {
+            birthdayCelebrants: birthdays.sort(sortCelebrants),
+            anniversaryCelebrants: anniversaries.sort(sortCelebrants)
+        };
+    }, [members, selectedMonth, selectedYear]);
+
+    const months = Array.from({ length: 12 }, (_, i) => ({
+        value: i,
+        label: format(new Date(0, i), 'MMMM')
+    }));
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <CardTitle>Monthly Celebrants</CardTitle>
+                        <CardDescription>Members celebrating birthdays and anniversaries.</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Select Month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {months.map(month => (
+                                    <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+                            <SelectTrigger className="w-full sm:w-[120px]">
+                                <SelectValue placeholder="Select Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="text-lg font-semibold flex items-center mb-4"><Cake className="mr-2 h-5 w-5 text-pink-500" /> Birthday Celebrants</h3>
+                        <Separator />
+                        <ScrollArea className="h-60 mt-4">
+                            {isLoading ? (
+                                <div className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
+                                </div>
+                            ) : birthdayCelebrants.length > 0 ? (
+                                <div className="space-y-2 pr-4">
+                                {birthdayCelebrants.map(c => (
+                                    <div key={c.name} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
+                                        <span>{c.name}</span>
+                                        <span className="font-medium">{c.date}</span>
+                                    </div>
+                                ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center pt-10">No birthdays this month.</p>
+                            )}
+                        </ScrollArea>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold flex items-center mb-4"><PartyPopper className="mr-2 h-5 w-5 text-amber-500" /> Wedding Anniversaries</h3>
+                        <Separator />
+                        <ScrollArea className="h-60 mt-4">
+                           {isLoading ? (
+                                <div className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
+                                </div>
+                            ) : anniversaryCelebrants.length > 0 ? (
+                                <div className="space-y-2 pr-4">
+                                {anniversaryCelebrants.map(c => (
+                                    <div key={c.name} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted/50">
+                                        <span>{c.name}</span>
+                                        <span className="font-medium">{c.date}</span>
+                                    </div>
+                                ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center pt-10">No anniversaries this month.</p>
+                            )}
+                        </ScrollArea>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
@@ -887,6 +1018,8 @@ export default function DashboardPage() {
       <AttendanceReport {...attendanceReportDefaults} />
 
       <MonthlyAverageChart allLogs={allTimeLogs} />
+      
+      <CelebrantsDashboard members={members} isLoading={loading} />
 
       <PromotionHistory members={members} isLoading={loading} />
 
@@ -920,3 +1053,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
