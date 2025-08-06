@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -529,23 +529,27 @@ export default function DashboardPage() {
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [combinedLogs]);
 
-  const { preRegistrations, actualRegistrations } = useMemo(() => {
-      const uniquePreRegistrants = new Set<string>();
-      const uniqueActualRegistrants = new Set<string>();
+  const { preRegistrations, actualRegistrations, preRegisteredNoShows } = useMemo(() => {
+        const allPreRegistered = new Set<string>();
+        const allActual = new Set<string>();
 
-      latestLogs.forEach(log => {
-          if (log.type === 'Pre-registration') {
-              uniquePreRegistrants.add(log.member_name);
-          } else if (log.type === 'Actual') {
-              uniqueActualRegistrants.add(log.member_name);
-          }
-      });
-      
-      return {
-          preRegistrations: uniquePreRegistrants.size,
-          actualRegistrations: uniqueActualRegistrants.size,
-      };
-  }, [latestLogs]);
+        combinedLogs.forEach(log => {
+            const name = log.member_name;
+            if (log.type === 'Pre-registration') {
+                allPreRegistered.add(name);
+            } else if (log.type === 'Actual') {
+                allActual.add(name);
+            }
+        });
+
+        const noShows = new Set([...allPreRegistered].filter(name => !allActual.has(name)));
+
+        return {
+            preRegistrations: allPreRegistered.size,
+            actualRegistrations: allActual.size,
+            preRegisteredNoShows: Array.from(noShows),
+        };
+    }, [combinedLogs]);
   
   const { qrCheckins, faceCheckins } = useMemo(() => {
       let qr = 0;
@@ -651,7 +655,13 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
-            <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
+            <StatCard 
+                title="Pre-registrations" 
+                value={preRegistrations} 
+                icon={UserCheck}
+                onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
+                subIcon={UserMinus}
+            />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
                 title="Check-in Methods" 
