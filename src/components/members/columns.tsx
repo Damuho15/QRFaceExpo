@@ -138,12 +138,12 @@ export const columns: ColumnDef<Member>[] = [
   {
     accessorKey: 'birthday',
     header: 'Birthday',
-    cell: ({ row }) => <Input type="date" value={row.original.birthday || ''} readOnly className="border-none"/>,
+    cell: ({ row }) => <Input type="date" value={row.original.birthday || ''} readOnly className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"/>,
   },
   {
     accessorKey: 'weddingAnniversary',
     header: 'Wedding Anniversary',
-    cell: ({ row }) => <Input type="date" value={row.original.weddingAnniversary || ''} readOnly className="border-none"/>,
+    cell: ({ row }) => <Input type="date" value={row.original.weddingAnniversary || ''} readOnly className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"/>,
   },
   {
     accessorKey: 'email',
