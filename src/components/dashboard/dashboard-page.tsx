@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -406,6 +406,25 @@ const NamesListDialog = ({
     title: string;
     names: string[];
 }) => {
+    const { toast } = useToast();
+
+    const handleCopy = () => {
+        const textToCopy = names.join('\n');
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            toast({
+                title: 'Copied to Clipboard',
+                description: `${names.length} names have been copied.`
+            });
+        }, (err) => {
+            console.error('Could not copy text: ', err);
+            toast({
+                variant: 'destructive',
+                title: 'Copy Failed',
+                description: 'Could not copy the list to your clipboard.'
+            });
+        });
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
@@ -430,8 +449,14 @@ const NamesListDialog = ({
                         )}
                     </div>
                 </ScrollArea>
-                <DialogFooter className="pt-4">
-                    <Button variant="outline" onClick={onClose}>Close</Button>
+                <DialogFooter className="pt-4 sm:justify-between">
+                    {names.length > 0 && (
+                        <Button variant="secondary" onClick={handleCopy}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy All
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={onClose} className={cn(names.length === 0 && 'w-full')}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -508,7 +533,6 @@ export default function DashboardPage() {
     }, [fetchData]);
 
 
-  const totalMembers = members.length;
   
   const combinedLogs = useMemo(() => [
       ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
@@ -655,8 +679,8 @@ export default function DashboardPage() {
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             <StatCard 
-                title="Pre-registrations" 
-                value={preRegistrations} 
+                title="Pre-registered (No-Show)" 
+                value={preRegisteredNoShows.length} 
                 icon={UserCheck}
                 onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
                 subIcon={UserMinus}
