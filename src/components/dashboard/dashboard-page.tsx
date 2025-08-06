@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import * as XLSX from 'xlsx';
+import { Badge } from '../ui/badge';
 
 const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
@@ -396,6 +397,8 @@ const PromotionHistory = ({ members, isLoading }: { members: Member[], isLoading
     )
 }
 
+type DetailedName = { name: string, type: 'Member' | 'New Comer' };
+
 const NamesListDialog = ({
     isOpen,
     onClose,
@@ -405,12 +408,18 @@ const NamesListDialog = ({
     isOpen: boolean;
     onClose: () => void;
     title: string;
-    names: string[];
+    names: (string | DetailedName)[];
 }) => {
     const { toast } = useToast();
 
     const handleCopy = () => {
-        const textToCopy = names.join('\n');
+        const textToCopy = names.map(item => {
+            if (typeof item === 'string') {
+                return item;
+            }
+            return `${item.name}\t${item.type}`;
+        }).join('\n');
+        
         navigator.clipboard.writeText(textToCopy).then(() => {
             toast({
                 title: 'Copied to Clipboard',
@@ -438,11 +447,18 @@ const NamesListDialog = ({
                 <ScrollArea className="h-72 mt-4">
                     <div className="space-y-2 pr-4">
                         {names.length > 0 ? (
-                            names.map((name, index) => (
-                                <div key={index} className="text-sm p-2 rounded-md bg-muted/50">
-                                    {name}
+                            names.map((item, index) => {
+                                const isDetailed = typeof item !== 'string';
+                                const name = isDetailed ? item.name : item;
+                                const type = isDetailed ? item.type : null;
+
+                                return (
+                                <div key={index} className="text-sm p-2 rounded-md bg-muted/50 flex justify-between items-center">
+                                    <span>{name}</span>
+                                    {type && <Badge variant={type === 'Member' ? 'secondary' : 'default'}>{type}</Badge>}
                                 </div>
-                            ))
+                                )
+                            })
                         ) : (
                             <p className="text-sm text-muted-foreground text-center pt-8">
                                 No attendees in this category.
@@ -558,7 +574,7 @@ export default function DashboardPage() {
     // State for the names list dialog
     const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
-    const [dialogNames, setDialogNames] = useState<string[]>([]);
+    const [dialogNames, setDialogNames] = useState<(string | DetailedName)[]>([]);
     
     // State for inactive members dialog
     const [isInactiveDialogOpen, setIsInactiveDialogOpen] = useState(false);
@@ -637,8 +653,8 @@ export default function DashboardPage() {
 
   
   const combinedLogs = useMemo(() => [
-      ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id })),
-      ...firstTimerLogs.map(l => ({ ...l, id: l.id, member_name: l.first_timer_name, member_id: l.first_timer_id, type: l.type, method: l.method, timestamp: l.timestamp }))
+      ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id, attendeeType: 'Member' as const })),
+      ...firstTimerLogs.map(l => ({ ...l, id: l.id, member_name: l.first_timer_name, member_id: l.first_timer_id, type: l.type, method: l.method, timestamp: l.timestamp, attendeeType: 'New Comer' as const }))
   ], [attendanceLogs, firstTimerLogs]);
 
   const latestLogs = useMemo(() => {
@@ -656,26 +672,35 @@ export default function DashboardPage() {
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [combinedLogs]);
 
-  const { totalPreRegistrations, actualRegistrations, preRegisteredNoShows, allPreRegisteredNames } = useMemo(() => {
-        const allPreRegistered = new Set<string>();
+  const {
+        totalPreRegistrations,
+        allPreRegisteredNames,
+        actualRegistrations,
+        preRegisteredNoShows
+    } = useMemo(() => {
+        const allPreRegistered = new Map<string, DetailedName>();
         const allActual = new Set<string>();
 
         combinedLogs.forEach(log => {
             const name = log.member_name;
             if (log.type === 'Pre-registration') {
-                allPreRegistered.add(name);
+                if (!allPreRegistered.has(name)) {
+                    allPreRegistered.set(name, { name, type: log.attendeeType });
+                }
             } else if (log.type === 'Actual') {
                 allActual.add(name);
             }
         });
 
-        const noShows = new Set([...allPreRegistered].filter(name => !allActual.has(name)));
+        const noShows = Array.from(allPreRegistered.values())
+            .filter(item => !allActual.has(item.name))
+            .map(item => item.name);
 
         return {
             totalPreRegistrations: allPreRegistered.size,
-            allPreRegisteredNames: Array.from(allPreRegistered),
+            allPreRegisteredNames: Array.from(allPreRegistered.values()),
             actualRegistrations: allActual.size,
-            preRegisteredNoShows: Array.from(noShows),
+            preRegisteredNoShows: noShows,
         };
     }, [combinedLogs]);
   
@@ -734,7 +759,7 @@ export default function DashboardPage() {
         };
     }, [attendanceLogs, firstTimerLogs]);
 
-    const handleStatCardClick = (title: string, names: string[]) => {
+    const handleStatCardClick = (title: string, names: (string | DetailedName)[]) => {
         setDialogTitle(title);
         setDialogNames(names);
         setIsNamesDialogOpen(true);
@@ -803,7 +828,7 @@ export default function DashboardPage() {
                 icon={UserPlus} 
                 onClick={() => handleStatCardClick("New Comers (Actual Only)", firstTimersActualOnly)}
             />
-            <StatCard 
+             <StatCard 
                 title="Pre-registered (No-Show)" 
                 value={preRegisteredNoShows.length} 
                 icon={UserCheck}
