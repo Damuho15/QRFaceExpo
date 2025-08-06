@@ -86,27 +86,34 @@ export default function Nav() {
       </div>
       <SidebarMenu className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
-            const hasAccess = checkPermission(item);
-            const button = (
+          const hasAccess = checkPermission(item);
+          return (
+            <SidebarMenuItem key={item.href}>
+              {hasAccess ? (
+                <Link href={item.href} passHref>
+                  <SidebarMenuButton
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                  >
+                    <item.icon />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
+              ) : (
                 <SidebarMenuButton
-                  as="a"
-                  href={item.href}
                   isActive={pathname === item.href}
                   tooltip={item.label}
-                  disabled={!hasAccess}
-                  aria-disabled={!hasAccess}
-                  className={!hasAccess ? 'cursor-not-allowed text-muted-foreground' : ''}
+                  disabled={true}
+                  aria-disabled={true}
+                  className='cursor-not-allowed text-muted-foreground'
                 >
                   <item.icon />
                   <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                 </SidebarMenuButton>
-            );
-          
-          return (
-          <SidebarMenuItem key={item.href}>
-             {hasAccess ? <Link href={item.href} passHref legacyBehavior>{button}</Link> : button}
-          </SidebarMenuItem>
-        )})}
+              )}
+            </SidebarMenuItem>
+          );
+        })}
       </SidebarMenu>
        <div className="p-4 mt-auto">
         {isAuthenticated && (
