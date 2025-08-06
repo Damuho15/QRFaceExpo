@@ -4,7 +4,7 @@ import DashboardPage from '@/components/dashboard/dashboard-page';
 
 export default function Home() {
   return (
-    <AppShell requiredRole="viewer">
+    <AppShell>
       <DashboardPage />
     </AppShell>
   );

@@ -4,7 +4,7 @@ import CheckInPage from '@/components/check-in/check-in-page';
 
 export default function CheckIn() {
   return (
-    <AppShell requiredRole="check_in_only">
+    <AppShell>
       <CheckInPage />
     </AppShell>
   );

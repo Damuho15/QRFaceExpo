@@ -4,7 +4,7 @@ import FeedbackPage from '@/components/feedback/feedback-page';
 
 export default function Feedback() {
   return (
-    <AppShell requiredRole="viewer">
+    <AppShell>
       <FeedbackPage />
     </AppShell>
   );

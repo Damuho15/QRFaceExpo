@@ -23,12 +23,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'viewer'] },
-  { href: '/members', label: 'Members', icon: Users, roles: ['admin', 'viewer'] },
-  { href: '/first-timers', label: 'New Comers', icon: UserPlus, roles: ['admin', 'viewer'] },
-  { href: '/user-management', label: 'User Management', icon: ShieldCheck, roles: ['admin'] },
-  { href: '/check-in', label: 'Check-in', icon: QrCode, roles: ['admin', 'check_in_only'] },
-  { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, roles: ['admin', 'viewer'] },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: false, roles: [] },
+  { href: '/members', label: 'Members', icon: Users, requiresAuth: true, roles: ['admin', 'viewer'] },
+  { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
+  { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
+  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
+  { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, requiresAuth: false, roles: [] },
 ];
 
 const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -56,7 +56,7 @@ const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function Nav() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -69,6 +69,15 @@ export default function Nav() {
       return roles.includes(user.role);
   }
 
+  const visibleNavItems = navItems.filter(item => {
+    // If auth is not required, show it.
+    if (!item.requiresAuth) {
+      return true;
+    }
+    // If auth is required, check if user is authenticated and has the role.
+    return isAuthenticated && (item.roles.length === 0 || userHasRole(item.roles));
+  });
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-4">
@@ -78,7 +87,7 @@ export default function Nav() {
         </div>
       </div>
       <SidebarMenu className="flex-1 p-4 space-y-2">
-        {navItems.filter(item => userHasRole(item.roles)).map((item) => (
+        {visibleNavItems.map((item) => (
           <SidebarMenuItem key={item.href}>
             <Link href={item.href} passHref>
                 <SidebarMenuButton
@@ -94,10 +103,12 @@ export default function Nav() {
         ))}
       </SidebarMenu>
        <div className="p-4 mt-auto">
+        {isAuthenticated && (
           <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4"/>
               <span className="group-data-[collapsible=icon]:hidden">Logout</span>
           </Button>
+        )}
       </div>
     </div>
   );

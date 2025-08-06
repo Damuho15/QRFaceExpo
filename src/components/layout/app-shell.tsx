@@ -22,15 +22,29 @@ export default function AppShell({ children, requiredRole }: { children: React.R
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
-  if (!isAuthenticated) {
+  // If a role is required but user is not authenticated, show login page.
+  if (requiredRole && !isAuthenticated) {
     return <LoginPage />;
   }
   
+  // If a role is required and user is authenticated, check for permissions.
   const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
   
   const handleLogout = () => {
     logout();
     router.push('/login');
+  }
+
+  const renderContent = () => {
+    if (requiredRole && !hasPermission) {
+        return (
+            <div className="p-8 text-center">
+                <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+                <p className="text-muted-foreground">You do not have the required permissions to view this page.</p>
+            </div>
+        );
+    }
+    return children;
   }
 
   return (
@@ -50,16 +64,17 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                   </Button>
                 </SidebarTrigger>
                 <div className="ml-auto">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <UserIcon className="h-5 w-5" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 mr-4">
-                           <div className="grid gap-4">
-                               <div className="space-y-2">
-                                   <div className="flex items-center gap-2">
+                    {isAuthenticated ? (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <UserIcon className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 mr-4">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
                                     <Avatar>
                                         <AvatarFallback>{user?.full_name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
@@ -67,29 +82,28 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                                         <p className="font-medium">{user?.full_name}</p>
                                         <p className="text-sm text-muted-foreground">{user?.email}</p>
                                     </div>
-                                   </div>
+                                    </div>
                                     <Badge variant={user?.role === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
-                                        {user?.role.replace('_', ' ')}
+                                        {user?.role?.replace('_', ' ')}
                                     </Badge>
-                               </div>
-                                <Button variant="outline" onClick={handleLogout}>
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    Logout
-                                </Button>
-                           </div>
-                        </PopoverContent>
-                    </Popover>
+                                </div>
+                                    <Button variant="outline" onClick={handleLogout}>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        Logout
+                                    </Button>
+                            </div>
+                            </PopoverContent>
+                        </Popover>
+                    ) : (
+                        <Button variant="outline" onClick={() => router.push('/login')}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Login
+                        </Button>
+                    )}
                 </div>
             </header>
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                {hasPermission ? (
-                    children
-                ) : (
-                    <div className="p-8 text-center">
-                        <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
-                        <p className="text-muted-foreground">You do not have the required permissions to view this page.</p>
-                    </div>
-                )}
+                {renderContent()}
             </main>
         </div>
       </div>
