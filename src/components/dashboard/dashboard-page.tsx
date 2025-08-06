@@ -597,27 +597,14 @@ export default function DashboardPage() {
 
       <PromotionHistory members={members} isLoading={loading} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+      <div className="grid grid-cols-1 gap-4">
+        <Card>
             <CardHeader>
                 <CardTitle>Attendance Over Time</CardTitle>
                 <CardDescription>A summary of check-ins throughout the event.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 <AttendanceChart data={attendanceLogs} />
-            </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-             <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>The latest members to check-in.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                {sortedLogsForDisplay.slice(0, 5).map(log => (
-                    <RecentActivityItem key={log.id} log={log as any} />
-                ))}
-                </div>
             </CardContent>
         </Card>
       </div>
