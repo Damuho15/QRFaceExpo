@@ -25,15 +25,16 @@ export default function AppShell({ children, requiredRole }: { children: React.R
   
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/');
   }
   
   useEffect(() => {
-    // If a required role is present and the user is not authenticated (after loading), redirect to login.
-    if (requiredRole && !loading && !isAuthenticated) {
-      router.push('/login');
+    if (!loading && requiredRole && !isAuthenticated) {
+        if (pathname !== '/login') {
+            router.push('/login');
+        }
     }
-  }, [requiredRole, loading, isAuthenticated, router]);
+  }, [requiredRole, loading, isAuthenticated, router, pathname]);
 
 
   const renderContent = () => {
@@ -45,8 +46,8 @@ export default function AppShell({ children, requiredRole }: { children: React.R
       );
     }
     
-    // If a page requires a role, but the user is not authenticated, show a loading spinner while the redirect happens.
-    if (requiredRole && !isAuthenticated) {
+    // While loading, or if redirecting, show a spinner.
+    if ((requiredRole && !isAuthenticated)) {
         return (
              <div className="flex items-center justify-center min-h-screen">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -129,7 +130,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
                     )}
                 </div>
             </header>
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-y-auto p-6">
                 {renderContent()}
             </main>
         </div>
