@@ -1,9 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
-import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog } from '@/lib/types';
+import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog, User } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
 import type { FirstTimerFormValues } from '@/components/first-timers/first-timer-dialog';
 import { v4 as uuidv4 } from 'uuid';
+import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 // Notice the `NEXT_PUBLIC_` prefix is required for Next.js to expose the variable to the browser.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -520,3 +521,82 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
     
     return newMember;
 }
+
+
+// User Management Functions
+export const getUsers = async (): Promise<User[]> => {
+    const { data, error } = await supabase
+        .from('user_QRface')
+        .select('*')
+        .order('full_name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+    }
+    return data || [];
+};
+
+export const addUser = async (formData: UserFormValues): Promise<User> => {
+     // This is a placeholder. In a real app, you would use Supabase Auth to create a user,
+     // which returns an ID that you would use here.
+    const newUserId = uuidv4();
+
+    const { data, error } = await supabase
+        .from('user_QRface')
+        .insert({
+            id: newUserId,
+            full_name: formData.full_name,
+            email: formData.email,
+            role: formData.role,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding user:', error);
+        // Handle specific errors, e.g., unique constraint violation for email
+        if (error.code === '23505') {
+            throw new Error('A user with this email address already exists.');
+        }
+        throw error;
+    }
+    return data;
+};
+
+export const updateUser = async (id: string, formData: UserFormValues): Promise<User> => {
+    const { data, error } = await supabase
+        .from('user_QRface')
+        .update({
+            full_name: formData.full_name,
+            email: formData.email,
+            role: formData.role,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating user:', error);
+        if (error.code === '23505') {
+            throw new Error('A user with this email address already exists.');
+        }
+        throw error;
+    }
+    return data;
+};
+
+export const deleteUser = async (id: string): Promise<boolean> => {
+    // In a real app with Supabase Auth, you would also need to delete the user from auth.users.
+    // This requires elevated 'service_role' privileges and should be handled in a server-side function.
+    // e.g., await supabase.auth.admin.deleteUser(id);
+
+    const { error } = await supabase.from('user_QRface').delete().eq('id', id);
+
+    if (error) {
+        console.error('Error deleting user:', error);
+        throw error;
+    }
+
+    return true;
+};

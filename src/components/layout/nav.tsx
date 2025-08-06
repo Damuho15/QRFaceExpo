@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -12,7 +13,7 @@ import {
   QrCode,
   MessageSquareHeart,
   UserPlus,
-  Cake,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/members', label: 'Members', icon: Users },
   { href: '/first-timers', label: 'New Comers', icon: UserPlus },
+  { href: '/user-management', label: 'User Management', icon: ShieldCheck },
   { href: '/check-in', label: 'Check-in', icon: QrCode },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart },
 ];
@@ -80,5 +82,3 @@ export default function Nav() {
     </div>
   );
 }
-
-    
