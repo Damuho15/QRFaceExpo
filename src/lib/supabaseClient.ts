@@ -538,20 +538,21 @@ export const getUsers = async (): Promise<User[]> => {
     return data || [];
 };
 
-export const loginUser = async (username: string, password?: string): Promise<User | null> => {
+export const loginUser = async (username: string): Promise<User | null> => {
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
         .eq('username', username)
-        .eq('password', password)
         .single();
     
-    if (error && error.code !== 'PGRST116') {
-        // Log unexpected errors, but don't throw. Let the AuthContext handle it.
-        console.error('Error during login query:', error);
+    if (error) {
+        if (error.code === 'PGRST116') {
+            return null; // This is an expected case, not an error.
+        }
+        console.error('Error fetching user during login:', error);
+        throw error;
     }
 
-    // Return the user data (which will be null if not found)
     return data;
 };
 
