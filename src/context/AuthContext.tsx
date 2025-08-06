@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User } from '@/lib/types';
-import { getUserByUsername } from '@/lib/supabaseClient';
+import { loginUser } from '@/lib/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
@@ -27,12 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const login = async (username: string, password?: string): Promise<User | null> => {
+    if (!password) {
+        throw new Error('Password is required.');
+    }
     try {
-        const fetchedUser = await getUserByUsername(username);
+        const loggedInUser = await loginUser(username, password);
 
-        if (fetchedUser && fetchedUser.password === password) {
+        if (loggedInUser) {
             // In a real app, never store the password in the client-side state.
-            const { password: _, ...userToStore } = fetchedUser;
+            const { password: _, ...userToStore } = loggedInUser;
             setUser(userToStore);
             return userToStore;
         } else {

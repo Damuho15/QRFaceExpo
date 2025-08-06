@@ -47,6 +47,7 @@ export default function LoginPage() {
         });
         router.push('/');
       } else {
+         // This case should ideally not be hit if login throws an error, but as a fallback:
          throw new Error('Invalid credentials');
       }
     } catch (error: any) {
