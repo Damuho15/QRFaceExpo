@@ -29,7 +29,7 @@ const navItems = [
   { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
   { href: '/event-creation', label: 'Event Creation', icon: CalendarPlus, requiresAuth: true, roles: ['admin'] },
-  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: true, roles: ['admin', 'viewer', 'check_in_only'] },
+  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, requiresAuth: false, roles: [] },
 ];
 
@@ -87,33 +87,22 @@ export default function Nav() {
       <SidebarMenu className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const hasAccess = checkPermission(item);
+          const button = (
+            <SidebarMenuButton
+              isActive={pathname === item.href}
+              tooltip={item.label}
+              disabled={!hasAccess}
+            >
+              <item.icon />
+              <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+            </SidebarMenuButton>
+          );
+          
           return (
             <SidebarMenuItem key={item.href}>
-              {hasAccess ? (
-                <Link href={item.href} passHref>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
-                  >
-                    <item.icon />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              ) : (
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                  disabled={true}
-                  aria-disabled={true}
-                  className='cursor-not-allowed text-muted-foreground'
-                >
-                  <item.icon />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </SidebarMenuButton>
-              )}
+              {hasAccess ? <Link href={item.href}>{button}</Link> : button}
             </SidebarMenuItem>
-          );
-        })}
+          )})}
       </SidebarMenu>
        <div className="p-4 mt-auto">
         {isAuthenticated && (
