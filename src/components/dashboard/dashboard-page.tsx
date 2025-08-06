@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -645,7 +645,7 @@ export default function DashboardPage() {
       const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
       
       combinedLogs.forEach(log => {
-          const name = 'member_name' in log ? log.member_name : log.first_timer_name;
+          const name = 'member_name' in log ? log.member_name : (log as any).first_timer_name;
           const existing = latestCheckins.get(name);
           if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
               latestCheckins.set(name, log);
@@ -656,7 +656,7 @@ export default function DashboardPage() {
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [combinedLogs]);
 
-  const { preRegistrations, actualRegistrations, preRegisteredNoShows } = useMemo(() => {
+  const { totalPreRegistrations, actualRegistrations, preRegisteredNoShows, allPreRegisteredNames } = useMemo(() => {
         const allPreRegistered = new Set<string>();
         const allActual = new Set<string>();
 
@@ -672,7 +672,8 @@ export default function DashboardPage() {
         const noShows = new Set([...allPreRegistered].filter(name => !allActual.has(name)));
 
         return {
-            preRegistrations: allPreRegistered.size,
+            totalPreRegistrations: allPreRegistered.size,
+            allPreRegisteredNames: Array.from(allPreRegistered),
             actualRegistrations: allActual.size,
             preRegisteredNoShows: Array.from(noShows),
         };
@@ -782,13 +783,19 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard 
                 title="Pre-registered (No-Show)" 
                 value={preRegisteredNoShows.length} 
                 icon={UserCheck}
                 onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
                 subIcon={UserMinus}
+            />
+             <StatCard 
+                title="Total Pre-registered" 
+                value={totalPreRegistrations} 
+                icon={ClipboardCheck}
+                onClick={() => handleStatCardClick("Total Pre-registered", allPreRegisteredNames)}
             />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
