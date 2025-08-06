@@ -783,12 +783,6 @@ export default function DashboardPage() {
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-             <StatCard 
-                title={`Inactive Members (${previousMonthName})`}
-                value={inactiveMembers.length} 
-                icon={UserX}
-                onClick={() => setIsInactiveDialogOpen(true)}
-            />
             <StatCard 
                 title="Pre-registered (No-Show)" 
                 value={preRegisteredNoShows.length} 
@@ -798,12 +792,6 @@ export default function DashboardPage() {
             />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
-                title="Check-in Methods" 
-                value={`${qrCheckins} QR / ${faceCheckins} Face`} 
-                icon={QrCode} 
-                subIcon={Fingerprint} 
-            />
-             <StatCard 
                 title="Members (Actual Only)" 
                 value={membersActualOnly.length} 
                 icon={UserRoundCheck} 
@@ -814,6 +802,18 @@ export default function DashboardPage() {
                 value={firstTimersActualOnly.length} 
                 icon={UserPlus} 
                 onClick={() => handleStatCardClick("New Comers (Actual Only)", firstTimersActualOnly)}
+            />
+            <StatCard 
+                title="Check-in Methods" 
+                value={`${qrCheckins} QR / ${faceCheckins} Face`} 
+                icon={QrCode} 
+                subIcon={Fingerprint} 
+            />
+            <StatCard 
+                title={`Inactive Members (${previousMonthName})`}
+                value={inactiveMembers.length} 
+                icon={UserX}
+                onClick={() => setIsInactiveDialogOpen(true)}
             />
         </div>
       </div>
