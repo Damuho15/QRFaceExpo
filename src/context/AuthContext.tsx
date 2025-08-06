@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(userToStore);
             return userToStore;
         } else {
-            // This will be caught by the UI and shown as a toast.
-            throw new Error("The username or password you entered is incorrect.");
+             // This will be caught by the UI and shown as a toast.
+             throw new Error("The username or password you entered is incorrect.");
         }
     } catch (error) {
         // Re-throw the error to be handled by the calling function (e.g., in the login page component).

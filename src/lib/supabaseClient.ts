@@ -545,18 +545,24 @@ export const loginUser = async (username: string, password?: string): Promise<Us
         .from('user_qrface')
         .select('*')
         .eq('username', username)
-        .eq('password', password)
         .single();
     
     if (error) {
-        if (error.code === 'PGRST116') { // This code means "No rows found"
-            return null; // This is an expected case for wrong username or password, not a system error.
+        // "PGRST116" is the code for "No rows found," which is an expected outcome for a wrong username.
+        // In this case, we don't want to throw an error, we just want to return null.
+        if (error.code === 'PGRST116') {
+            return null;
         }
+        // For any other unexpected database errors, we should still log and throw them.
         console.error('Error fetching user during login:', error);
-        throw error; // For other unexpected database errors
+        throw error;
     }
 
-    return data;
+    if (data && data.password === password) {
+        return data;
+    }
+
+    return null;
 };
 
 export const getUserByUsername = async (username: string): Promise<User | null> => {
