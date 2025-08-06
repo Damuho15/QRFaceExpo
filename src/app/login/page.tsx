@@ -45,7 +45,7 @@ export default function LoginPage() {
           title: 'Login Successful',
           description: `Welcome back, ${user.full_name}!`,
         });
-        router.push('/');
+        // The useEffect will handle the redirect
       } else {
          // This case should ideally not be hit if login throws an error, but as a fallback:
          throw new Error('Invalid credentials');

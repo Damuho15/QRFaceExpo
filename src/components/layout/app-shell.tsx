@@ -26,6 +26,11 @@ export default function AppShell({ children, requiredRole }: { children: React.R
     logout();
     router.push('/login');
   }
+  
+  // If the content itself is the login page, we don't need the full shell logic.
+  if (router.pathname === '/login') {
+    return <>{children}</>;
+  }
 
   const renderContent = () => {
     if (loading) {
@@ -36,11 +41,7 @@ export default function AppShell({ children, requiredRole }: { children: React.R
       );
     }
 
-    const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
-
-    if (requiredRole && !isAuthenticated) {
-        // Redirect to login if a role is required and the user is not logged in.
-        // In a real app, this would be handled by middleware.
+    if (!isAuthenticated) {
         router.push('/login');
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -48,7 +49,9 @@ export default function AppShell({ children, requiredRole }: { children: React.R
             </div>
         );
     }
-
+    
+    const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
+    
     if (requiredRole && !hasPermission) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -62,11 +65,6 @@ export default function AppShell({ children, requiredRole }: { children: React.R
     }
 
     return children;
-  }
-
-  // If the content itself is the login page, we don't need the full shell.
-  if (router.pathname === '/login') {
-    return <>{children}</>;
   }
 
   return (
