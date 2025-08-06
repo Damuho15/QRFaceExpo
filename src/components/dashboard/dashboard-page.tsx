@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2 } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -27,7 +27,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { ScrollArea } from '../ui/scroll-area';
 
 const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLog & { member_name: string } }) => {
   const [timeString, setTimeString] = useState('');
@@ -352,6 +354,64 @@ const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAt
     )
 }
 
+const PromotionHistory = ({ members, isLoading }: { members: Member[], isLoading: boolean }) => {
+    
+    const promotedMembers = useMemo(() => {
+        return members
+            .filter(member => !!member.promoted_at)
+            .sort((a, b) => new Date(b.promoted_at!).getTime() - new Date(a.promoted_at!).getTime());
+    }, [members]);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Promotion History</CardTitle>
+                <CardDescription>A log of new comers who have been promoted to members.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-72">
+                    {isLoading ? (
+                        <div className="space-y-4">
+                           {Array.from({ length: 5 }).map((_, i) => (
+                             <div key={i} className="flex items-center justify-between">
+                                 <Skeleton className="h-5 w-32" />
+                                 <Skeleton className="h-5 w-48" />
+                             </div>
+                           ))}
+                        </div>
+                    ) : promotedMembers.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Member Name</TableHead>
+                                    <TableHead className="text-right">Promotion Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {promotedMembers.map(member => (
+                                    <TableRow key={member.id}>
+                                        <TableCell className="font-medium flex items-center gap-2">
+                                            <Award className="h-4 w-4 text-accent" />
+                                            {member.fullName}
+                                        </TableCell>
+                                        <TableCell className="text-right text-muted-foreground">
+                                            {new Date(member.promoted_at!).toLocaleDateString()}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="flex h-full items-center justify-center pt-10">
+                            <p className="text-muted-foreground">No promotion history found.</p>
+                        </div>
+                    )}
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
@@ -465,7 +525,10 @@ export default function DashboardPage() {
 
   const attendanceReportDefaults = useMemo(() => {
     if (!eventConfig) {
-      return { defaultStartDate: undefined, defaultEndDate: undefined };
+      const today = new Date();
+      const defaultEndDate = subDays(today, 1);
+      const defaultStartDate = subDays(defaultEndDate, 6);
+      return { defaultStartDate, defaultEndDate };
     }
     // Calculate the week before the current event date.
     const eventDate = parseDateAsUTC(eventConfig.event_date);
@@ -532,6 +595,8 @@ export default function DashboardPage() {
 
       <MonthlyAverageChart allLogs={allTimeLogs} />
 
+      <PromotionHistory members={members} isLoading={loading} />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
             <CardHeader>
@@ -550,7 +615,7 @@ export default function DashboardPage() {
             <CardContent>
                 <div className="space-y-4">
                 {sortedLogsForDisplay.slice(0, 5).map(log => (
-                    <RecentActivityItem key={log.id} log={log} />
+                    <RecentActivityItem key={log.id} log={log as any} />
                 ))}
                 </div>
             </CardContent>

@@ -13,6 +13,7 @@ export type Member = {
   ministries?: string | null;
   lg?: string | null;
   created_at: string;
+  promoted_at?: string | null;
 };
 
 export type FirstTimer = {

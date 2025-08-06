@@ -109,6 +109,7 @@ export const getMembers = async (): Promise<Member[]> => {
         pictureUrl: member.pictureUrl ? String(member.pictureUrl) : null,
         ministries: String(member.ministries || ''),
         lg: String(member.lg || ''),
+        promoted_at: member.promoted_at ? String(member.promoted_at) : null,
         created_at: String(member.created_at || ''),
     })) as Member[];
 };
@@ -482,6 +483,7 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
         phone: firstTimer.phone,
         birthday: new Date().toISOString().split('T')[0], // Placeholder for required field
         qrCodePayload: firstTimer.fullName, // Generate new QR payload based on name
+        promoted_at: new Date().toISOString(),
     };
     
     const { data: newMember, error: addError } = await supabase
