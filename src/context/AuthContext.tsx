@@ -1,13 +1,14 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User } from '@/lib/types';
 import { getUserByUsername } from '@/lib/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  loading: boolean; // Add loading state
   login: (username: string, password?: string) => Promise<User | null>;
   logout: () => void;
 }
@@ -16,6 +17,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true); // Start with loading true
+
+  useEffect(() => {
+    // This effect can be used in the future to check for a session token
+    // For now, we just set loading to false as there's no persistent session
+    setLoading(false);
+  }, []);
+
 
   const login = async (username: string, password?: string): Promise<User | null> => {
     try {
@@ -43,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

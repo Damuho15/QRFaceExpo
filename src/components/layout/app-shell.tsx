@@ -10,17 +10,26 @@ import {
 } from '@/components/ui/sidebar';
 import Nav from './nav';
 import { Button } from '../ui/button';
-import { LogOut, PanelLeft, User as UserIcon } from 'lucide-react';
+import { LogOut, PanelLeft, User as UserIcon, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import LoginPage from '@/app/login/page';
+import { Skeleton } from '../ui/skeleton';
 
 export default function AppShell({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'viewer' | 'check_in_only' }) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
+  
+  if (loading) {
+     return (
+      <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // If auth is required but user is not authenticated, show login page.
   if (requiredRole && !isAuthenticated) {
