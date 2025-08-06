@@ -13,7 +13,7 @@ interface StatCardProps {
 export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon, onClick }: StatCardProps) {
   return (
     <Card 
-        className={cn("flex-1", onClick && "cursor-pointer hover:bg-muted/50 transition-colors")}
+        className={cn("flex flex-col", onClick && "cursor-pointer hover:bg-muted/50 transition-colors")}
         onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -29,5 +29,3 @@ export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon, o
     </Card>
   );
 }
-
-    

@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -15,7 +15,7 @@ import { Skeleton } from '../ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Calendar } from '../ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '../ui/label';
@@ -31,6 +31,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import * as XLSX from 'xlsx';
 
 const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
@@ -463,6 +464,88 @@ const NamesListDialog = ({
     );
 };
 
+const InactiveMembersDialog = ({
+    isOpen,
+    onClose,
+    inactiveMembers,
+    monthName
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    inactiveMembers: Member[];
+    monthName: string;
+}) => {
+    const { toast } = useToast();
+    
+    const handleDownload = () => {
+        const dataToExport = inactiveMembers.map(member => ({
+            'Full Name': member.fullName,
+            'Email': member.email || 'N/A',
+            'Phone Number': member.phone || 'N/A'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inactive Members");
+        XLSX.writeFile(workbook, `Inactive_Members_${monthName}.xlsx`);
+        
+        toast({
+            title: "Download Started",
+            description: `An Excel file with ${inactiveMembers.length} inactive members is being downloaded.`
+        });
+    };
+
+    return (
+         <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Inactive Members for {monthName}</DialogTitle>
+                    <DialogDescription>
+                        A list of {inactiveMembers.length} members with no "Actual" attendance last month.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-72 mt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Full Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Phone</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {inactiveMembers.length > 0 ? (
+                                inactiveMembers.map((member) => (
+                                    <TableRow key={member.id}>
+                                        <TableCell className="font-medium">{member.fullName}</TableCell>
+                                        <TableCell>{member.email || 'N/A'}</TableCell>
+                                        <TableCell>{member.phone || 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center">
+                                        No inactive members found for {monthName}.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+                <DialogFooter className="pt-4 sm:justify-between">
+                     {inactiveMembers.length > 0 && (
+                        <Button variant="secondary" onClick={handleDownload}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Excel
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={onClose} className={cn(inactiveMembers.length === 0 && 'w-full')}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
@@ -470,11 +553,15 @@ export default function DashboardPage() {
     const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
     const [allTimeLogs, setAllTimeLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
     const [eventConfig, setEventConfig] = useState<EventConfig | null>(null);
+    const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
 
     // State for the names list dialog
     const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
     const [dialogNames, setDialogNames] = useState<string[]>([]);
+    
+    // State for inactive members dialog
+    const [isInactiveDialogOpen, setIsInactiveDialogOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -487,6 +574,7 @@ export default function DashboardPage() {
             ]);
             
             setEventConfig(fetchedEventConfig);
+            setMembers(memberData);
 
             const combinedAllLogs = [
                 ...allMemberLogs,
@@ -516,9 +604,23 @@ export default function DashboardPage() {
                  currentFirstTimerLogs = allFirstTimerLogs;
             }
 
-            setMembers(memberData);
             setAttendanceLogs(currentEventLogs);
             setFirstTimerLogs(currentFirstTimerLogs);
+
+            // --- Inactive Member Calculation ---
+            const today = new Date();
+            const prevMonthDate = subMonths(today, 1);
+            const startOfPrevMonth = startOfMonth(prevMonthDate);
+            const endOfPrevMonth = endOfMonth(prevMonthDate);
+
+            const prevMonthLogs = allMemberLogs.filter(log => {
+                const logDate = new Date(log.timestamp);
+                return log.type === 'Actual' && logDate >= startOfPrevMonth && logDate <= endOfPrevMonth;
+            });
+            const attendedMemberIds = new Set(prevMonthLogs.map(log => log.member_id));
+            const inactive = memberData.filter(member => !attendedMemberIds.has(member.id));
+            setInactiveMembers(inactive);
+
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         } finally {
@@ -543,9 +645,10 @@ export default function DashboardPage() {
       const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
       
       combinedLogs.forEach(log => {
-          const existing = latestCheckins.get(log.member_name);
+          const name = 'member_name' in log ? log.member_name : log.first_timer_name;
+          const existing = latestCheckins.get(name);
           if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
-              latestCheckins.set(log.member_name, log);
+              latestCheckins.set(name, log);
           }
       });
       
@@ -635,6 +738,8 @@ export default function DashboardPage() {
         setDialogNames(names);
         setIsNamesDialogOpen(true);
     };
+
+    const previousMonthName = format(subMonths(new Date(), 1), 'MMMM yyyy');
   
   if (loading) {
       return (
@@ -677,7 +782,13 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+             <StatCard 
+                title={`Inactive Members (${previousMonthName})`}
+                value={inactiveMembers.length} 
+                icon={UserX}
+                onClick={() => setIsInactiveDialogOpen(true)}
+            />
             <StatCard 
                 title="Pre-registered (No-Show)" 
                 value={preRegisteredNoShows.length} 
@@ -688,7 +799,7 @@ export default function DashboardPage() {
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
                 title="Check-in Methods" 
-                value={`${qrCheckins} QR / ${faceCheckins}`} 
+                value={`${qrCheckins} QR / ${faceCheckins} Face`} 
                 icon={QrCode} 
                 subIcon={Fingerprint} 
             />
@@ -734,8 +845,12 @@ export default function DashboardPage() {
         title={dialogTitle}
         names={dialogNames}
     />
+     <InactiveMembersDialog 
+        isOpen={isInactiveDialogOpen}
+        onClose={() => setIsInactiveDialogOpen(false)}
+        inactiveMembers={inactiveMembers}
+        monthName={previousMonthName}
+     />
     </>
   );
 }
-
-    
