@@ -14,14 +14,14 @@ import { PanelLeft } from 'lucide-react';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-background">
         <Sidebar>
           <SidebarContent className="p-0 backdrop-blur-lg">
             <Nav />
           </SidebarContent>
         </Sidebar>
-        <div className="flex flex-col w-full">
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <div className="flex flex-col w-full min-w-0">
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/50 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                 <SidebarTrigger asChild>
                   <Button variant="ghost" size="icon" className="md:hidden">
                     <PanelLeft />
