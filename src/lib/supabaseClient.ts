@@ -473,16 +473,35 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
         throw new Error(`A member with the name "${firstTimer.fullName}" already exists.`);
     }
 
-    // 2. Add the new comer's data to the members table.
-    // Birthday is a required field in the members table, so we need to provide a default
-    // or handle this case. For now, we'll use today's date as a placeholder.
-    // In a real app, you might prompt the user for this information.
+    // 2. Delete the new comer's attendance logs.
+    const { error: logDeleteError } = await supabase
+        .from('attendance_log_1sttimer')
+        .delete()
+        .eq('first_timer_id', firstTimer.id);
+    
+    if (logDeleteError) {
+        console.error(`Failed to delete attendance logs for ${firstTimer.fullName} (ID: ${firstTimer.id}).`, logDeleteError);
+        throw new Error('Could not delete new comer attendance logs.');
+    }
+
+    // 3. Delete the original record from the first_timers table.
+    const { error: deleteError } = await supabase
+        .from('first_timers')
+        .delete()
+        .eq('id', firstTimer.id);
+    
+    if (deleteError) {
+        console.error(`Failed to delete first_timer record for ${firstTimer.fullName} (ID: ${firstTimer.id}).`, deleteError);
+        throw new Error('Could not delete the new comer record.');
+    }
+
+    // 4. Add the new comer's data to the members table.
     const newMemberPayload = {
         fullName: firstTimer.fullName,
         email: firstTimer.email,
         phone: firstTimer.phone,
         birthday: new Date().toISOString().split('T')[0], // Placeholder for required field
-        qrCodePayload: firstTimer.fullName, // Generate new QR payload based on name
+        qrCodePayload: firstTimer.fullName,
         promoted_at: new Date().toISOString(),
     };
     
@@ -494,20 +513,10 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
 
     if (addError) {
         console.error('Error adding new member during promotion:', addError);
-        throw new Error('Failed to create a new member record.');
-    }
-
-    // 3. Delete the original record from the first_timers table.
-    const { error: deleteError } = await supabase
-        .from('first_timers')
-        .delete()
-        .eq('id', firstTimer.id);
-    
-    if (deleteError) {
-        // This is a critical issue. We have a new member but failed to remove the old record.
-        // We will log this, but the function will still succeed from the user's perspective.
-        // Manual cleanup might be required in the database.
-        console.error(`CRITICAL: Failed to delete first_timer record for ${firstTimer.fullName} (ID: ${firstTimer.id}) after promotion.`, deleteError);
+        // Note: At this point, the first_timer record is already deleted.
+        // This is an inconsistent state that may need manual correction.
+        // For the user, we throw an error indicating the final step failed.
+        throw new Error('Failed to create a new member record after deleting the new comer data.');
     }
     
     return newMember;
