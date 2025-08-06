@@ -33,21 +33,20 @@ const parseDate = (dateInput: any): Date | null => {
     if (typeof dateInput === 'number') {
         // Excel's epoch starts on 1899-12-30. JavaScript's is 1970-01-01.
         // The calculation converts the number of days from Excel's epoch to milliseconds for JS.
-        const excelEpoch = new Date(1899, 11, 30);
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
         const jsDate = new Date(excelEpoch.getTime() + dateInput * 86400000);
-        // We must also account for the timezone offset of the resulting date.
-        const timezoneOffset = jsDate.getTimezoneOffset() * 60000;
-        const correctedDate = new Date(jsDate.getTime() + timezoneOffset);
-
-        return !isNaN(correctedDate.getTime()) ? correctedDate : null;
+        
+        return !isNaN(jsDate.getTime()) ? jsDate : null;
     }
 
     // Handle string dates (e.g., 'YYYY-MM-DD' or from date picker)
     if (typeof dateInput === 'string') {
-        // Add 'T00:00:00Z' to treat the date as UTC, preventing timezone shifts.
-        const date = new Date(dateInput.split('T')[0] + 'T00:00:00Z');
+        // Attempt to parse a variety of string formats
+        const date = new Date(dateInput);
         if (!isNaN(date.getTime())) {
-            return date;
+             // To prevent timezone shifts from the parsed date string, re-create it in UTC
+            const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            return utcDate;
         }
     }
     

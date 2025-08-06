@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Member } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type RawMemberData = {
   [key: string]: string | number | null;
@@ -170,6 +171,24 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
   }, [open]);
 
   const displayedHeaders = parsedData.length > 0 ? Object.keys(parsedData[0]) : [];
+  
+  const formatDateForDisplay = (date: any) => {
+    if (date instanceof Date) {
+        // add the timezone offset to prevent showing the previous day
+        const offset = date.getTimezoneOffset();
+        const correctedDate = new Date(date.getTime() + offset * 60 * 1000);
+        return format(correctedDate, 'yyyy-MM-dd');
+    }
+    if (typeof date === 'string') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            const offset = parsed.getTimezoneOffset();
+            const correctedDate = new Date(parsed.getTime() + offset * 60 * 1000);
+            return format(correctedDate, 'yyyy-MM-dd');
+        }
+    }
+    return String(date ?? '');
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -212,7 +231,9 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                                     <TableRow key={index}>
                                         {displayedHeaders.map(header => (
                                             <TableCell key={`${index}-${header}`}>
-                                                {row[header] instanceof Date ? row[header].toLocaleDateString() : String(row[header] ?? '')}
+                                                {(header === 'Birthday' || header === 'WeddingAnniversary') 
+                                                    ? formatDateForDisplay(row[header]) 
+                                                    : String(row[header] ?? '')}
                                             </TableCell>
                                         ))}
                                     </TableRow>
