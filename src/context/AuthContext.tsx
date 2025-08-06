@@ -20,17 +20,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password?: string): Promise<User | null> => {
     // In a real app, you would validate the password.
     // Here we are just fetching the user by email for demonstration.
-    console.log("Attempting login for email:", email);
-    const fetchedUser = await getUserByEmail(email);
+    try {
+        const fetchedUser = await getUserByEmail(email);
 
-    if (fetchedUser) {
-      console.log("User found:", fetchedUser);
-      setUser(fetchedUser);
-      return fetchedUser;
-    } else {
-      console.log("User not found for email:", email);
-      setUser(null);
-      throw new Error("User not found or invalid credentials.");
+        if (fetchedUser) {
+            setUser(fetchedUser);
+            return fetchedUser;
+        } else {
+            // This is the expected path for a non-existent user.
+            // Throw a specific error to be caught by the login form.
+            throw new Error("User not found or invalid credentials.");
+        }
+    } catch (error) {
+        // Log unexpected errors but re-throw for the UI to handle.
+        console.error("Login error:", error);
+        throw error;
     }
   };
 
