@@ -539,7 +539,7 @@ export default function DashboardPage() {
   
   if (loading) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 md:p-6">
             <div>
                 <Skeleton className="h-8 w-48 mb-2" />
                 <Skeleton className="h-4 w-64" />
@@ -568,7 +568,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-4 md:p-6">
        <div>
         <h1 className="text-2xl font-bold font-headline">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -578,13 +578,13 @@ export default function DashboardPage() {
       
       <div className="border-b pb-6">
         <h2 className="text-lg font-semibold mb-2">Current Event Stats</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard title="Total Members" value={totalMembers} icon={Users} />
             <StatCard title="Pre-registrations" value={preRegistrations} icon={UserCheck} />
             <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
             <StatCard 
                 title="Check-in Methods" 
-                value={`${qrCheckins} QR / ${faceCheckins} Face`} 
+                value={`${qrCheckins} QR / ${faceCheckins}`} 
                 icon={QrCode} 
                 subIcon={Fingerprint} 
             />
