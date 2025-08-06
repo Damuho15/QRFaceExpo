@@ -435,7 +435,7 @@ const NamesListDialog = ({
             if (typeof item === 'string') {
                 return item;
             }
-            return `${item.name}\t${item.type}`;
+            return item.name;
         }).join('\n');
         
         navigator.clipboard.writeText(textToCopy).then(() => {
