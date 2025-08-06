@@ -22,14 +22,15 @@ import { Button } from '../ui/button';
 import { useSidebar } from '../ui/sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: false, roles: [] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: false, roles: [] },
   { href: '/members', label: 'Members', icon: Users, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
   { href: '/event-creation', label: 'Event Creation', icon: CalendarPlus, requiresAuth: true, roles: ['admin'] },
-  { href: '/check-in', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
+  { href: '/', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
   { href: '/feedback', label: 'Feedback', icon: MessageSquareHeart, requiresAuth: false, roles: [] },
 ];
 
@@ -87,13 +88,14 @@ export default function Nav() {
       <SidebarMenu className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const hasAccess = checkPermission(item);
+          const isActive = pathname === item.href;
           
           const button = (
              <SidebarMenuButton
-                isActive={pathname === item.href}
+                isActive={isActive}
                 tooltip={item.label}
                 disabled={!hasAccess}
-                className={!hasAccess ? "text-muted-foreground/50 cursor-not-allowed" : ""}
+                className={cn(!isActive && !hasAccess && "text-muted-foreground/50 cursor-not-allowed")}
             >
               <item.icon />
               <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>

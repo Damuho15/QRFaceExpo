@@ -1,11 +1,11 @@
 
 import AppShell from '@/components/layout/app-shell';
-import DashboardPage from '@/components/dashboard/dashboard-page';
+import CheckInPage from '@/components/check-in/check-in-page';
 
 export default function Home() {
   return (
     <AppShell>
-      <DashboardPage />
+      <CheckInPage />
     </AppShell>
   );
 }
