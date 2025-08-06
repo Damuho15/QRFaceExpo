@@ -31,24 +31,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ScrollArea } from '../ui/scroll-area';
 
-const RecentActivityItem = ({ log }: { log: AttendanceLog | NewComerAttendanceLog & { member_name: string } }) => {
-  const [timeString, setTimeString] = useState('');
-
-  useEffect(() => {
-    setTimeString(new Date(log.timestamp).toLocaleTimeString());
-  }, [log.timestamp]);
-
-  return (
-    <div className="flex items-center">
-      <div className="flex-1 space-y-1">
-        <p className="text-sm font-medium leading-none">{log.member_name}</p>
-        <p className="text-sm text-muted-foreground">{log.method} check-in ({log.type})</p>
-      </div>
-      <div className="text-sm text-muted-foreground">{timeString}</div>
-    </div>
-  );
-};
-
 const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
     const { toast } = useToast();
     const [startDate, setStartDate] = useState<Date | undefined>(defaultStartDate);
@@ -129,7 +111,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Attendance Report</CardTitle>
+                <CardTitle>Actual Attendance Report</CardTitle>
                 <CardDescription>
                     Select a date range to see the total unique "Actual" attendance for events in that period.
                 </CardDescription>
@@ -617,5 +599,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
