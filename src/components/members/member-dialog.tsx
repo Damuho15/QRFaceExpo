@@ -316,7 +316,15 @@ export default function MemberDialog({
                             <FormItem>
                             <FormLabel>Telephone Number (Optional)</FormLabel>
                             <FormControl>
-                                <Input placeholder="123-456-7890" {...field} disabled={isSubmitting} />
+                                <Input 
+                                    placeholder="1234567890" 
+                                    {...field}
+                                    onChange={(e) => {
+                                        const { value } = e.target;
+                                        field.onChange(value.replace(/[^0-9]/g, ''));
+                                    }}
+                                    disabled={isSubmitting} 
+                                />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
