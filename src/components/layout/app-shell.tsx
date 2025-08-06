@@ -46,28 +46,29 @@ export default function AppShell({ children, requiredRole }: { children: React.R
       );
     }
     
-    // While loading, or if redirecting, show a spinner.
-    if ((requiredRole && !isAuthenticated)) {
-        return (
-             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    // If on a protected route and the user IS authenticated but does NOT have the role.
-    const hasPermission = !requiredRole || (user && (user.role === 'admin' || user.role === requiredRole));
-    
-    if (isAuthenticated && requiredRole && !hasPermission) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="p-8 text-center bg-card rounded-lg shadow-lg">
-                    <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
-                    <p className="text-muted-foreground mt-2">You do not have the required permissions to view this page.</p>
-                     <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
+    // If a requiredRole is present, we must enforce authentication.
+    if (requiredRole) {
+        if (!isAuthenticated) {
+             return (
+                 <div className="flex items-center justify-center min-h-screen">
+                    <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 </div>
-            </div>
-        );
+            );
+        }
+
+        const hasPermission = user && (user.role === 'admin' || user.role === requiredRole);
+        
+        if (!hasPermission) {
+            return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="p-8 text-center bg-card rounded-lg shadow-lg">
+                        <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+                        <p className="text-muted-foreground mt-2">You do not have the required permissions to view this page.</p>
+                         <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
+                    </div>
+                </div>
+            );
+        }
     }
 
     return children;
