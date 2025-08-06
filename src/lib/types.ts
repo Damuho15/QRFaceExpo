@@ -58,6 +58,7 @@ export type User = {
     id: string;
     full_name: string;
     username: string;
+    password?: string; // This is only used for checking during login, not stored in client state
     role: UserRole;
     created_at: string;
 };

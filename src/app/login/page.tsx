@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('password'); // Dummy password
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
@@ -45,7 +45,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'The username provided does not exist in our records.',
+        description: error.message || 'The username or password you entered is incorrect.',
       });
     } finally {
       setIsLoading(false);
@@ -86,8 +86,6 @@ export default function LoginPage() {
             <CardTitle className="text-2xl">ExpAttendance Login</CardTitle>
             <CardDescription>
               Enter your username and password to login.
-              <br/>
-              <span className="text-xs text-destructive/80">(This is a simplified login for demonstration purposes)</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">

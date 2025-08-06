@@ -528,7 +528,7 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
 export const getUsers = async (): Promise<User[]> => {
     const { data, error } = await supabase
         .from('user_qrface')
-        .select('*')
+        .select('id, full_name, username, role, created_at') // Explicitly exclude password
         .order('full_name', { ascending: true });
 
     if (error) {
@@ -556,8 +556,6 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 };
 
 export const addUser = async (formData: UserFormValues): Promise<User> => {
-     // This is a placeholder. In a real app, you would use Supabase Auth to create a user,
-     // which returns an ID that you would use here.
     const newUserId = uuidv4();
 
     const { data, error } = await supabase
@@ -566,14 +564,14 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
             id: newUserId,
             full_name: formData.full_name,
             username: formData.username,
+            password: formData.password, // Storing plain text, NOT FOR PRODUCTION
             role: formData.role,
         })
-        .select()
+        .select('id, full_name, username, role, created_at')
         .single();
 
     if (error) {
         console.error('Error adding user:', error);
-        // Handle specific errors, e.g., unique constraint violation for username
         if (error.code === '23505') {
             throw new Error('A user with this username already exists.');
         }
@@ -583,15 +581,22 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
 };
 
 export const updateUser = async (id: string, formData: UserFormValues): Promise<User> => {
+    const updateData: Partial<UserFormValues> = {
+        full_name: formData.full_name,
+        username: formData.username,
+        role: formData.role,
+    };
+
+    // Only include the password in the update if a new one was provided
+    if (formData.password) {
+        updateData.password = formData.password;
+    }
+
     const { data, error } = await supabase
         .from('user_qrface')
-        .update({
-            full_name: formData.full_name,
-            username: formData.username,
-            role: formData.role,
-        })
+        .update(updateData)
         .eq('id', id)
-        .select()
+        .select('id, full_name, username, role, created_at')
         .single();
 
     if (error) {
@@ -605,10 +610,6 @@ export const updateUser = async (id: string, formData: UserFormValues): Promise<
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
-    // In a real app with Supabase Auth, you would also need to delete the user from auth.users.
-    // This requires elevated 'service_role' privileges and should be handled in a server-side function.
-    // e.g., await supabase.auth.admin.deleteUser(id);
-
     const { error } = await supabase.from('user_qrface').delete().eq('id', id);
 
     if (error) {

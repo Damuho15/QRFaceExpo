@@ -18,22 +18,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (username: string, password?: string): Promise<User | null> => {
-    // In a real app, you would validate the password.
-    // Here we are just fetching the user by username for demonstration.
     try {
         const fetchedUser = await getUserByUsername(username);
 
-        if (fetchedUser) {
-            setUser(fetchedUser);
-            return fetchedUser;
+        if (fetchedUser && fetchedUser.password === password) {
+            // In a real app, never store the password in the client-side state.
+            const { password, ...userToStore } = fetchedUser;
+            setUser(userToStore);
+            return userToStore;
         } else {
-            // This is the expected path for a non-existent user.
-            // Throw a specific error to be caught by the login form.
-            throw new Error("User not found or invalid credentials.");
+            throw new Error("The username or password you entered is incorrect.");
         }
     } catch (error) {
-        // Re-throw the error for the UI to handle.
-        // This includes the "User not found" error from above.
         throw error;
     }
   };

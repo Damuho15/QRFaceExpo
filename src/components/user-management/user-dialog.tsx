@@ -32,11 +32,17 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const userSchema = z.object({
-  id: z.string().uuid().optional(), // Only for edit mode
+  id: z.string().uuid().optional(),
   full_name: z.string().min(2, 'Full name must be at least 2 characters.'),
   username: z.string().min(3, 'Username must be at least 3 characters.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(['admin', 'viewer', 'check_in_only']),
 });
+
+const userEditSchema = userSchema.extend({
+  password: z.string().min(6, 'Password must be at least 6 characters.').optional().or(z.literal('')),
+});
+
 
 export type UserFormValues = z.infer<typeof userSchema>;
 
@@ -59,10 +65,11 @@ export default function UserDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(isEditMode ? userEditSchema : userSchema),
     defaultValues: {
       full_name: '',
       username: '',
+      password: '',
       role: 'viewer',
     },
   });
@@ -73,6 +80,7 @@ export default function UserDialog({
         id: userToEdit.id,
         full_name: userToEdit.full_name || '',
         username: userToEdit.username || '',
+        password: '', // Password is not pre-filled for security
         role: userToEdit.role || 'viewer',
       });
     } else if (!open) {
@@ -126,7 +134,7 @@ export default function UserDialog({
               <DialogTitle>{isEditMode ? 'Edit User' : 'Add New User'}</DialogTitle>
               <DialogDescription>
                 {isEditMode
-                  ? "Update the user's details and role below."
+                  ? "Update the user's details and role below. Leave password blank to keep it unchanged."
                   : 'Fill in the details for the new user.'}
               </DialogDescription>
             </DialogHeader>
@@ -159,6 +167,19 @@ export default function UserDialog({
                             <FormMessage />
                             </FormItem>
                         )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                    <Input type="password" placeholder={isEditMode ? 'Leave blank to keep current password' : '••••••'} {...field} disabled={isSubmitting} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
                         />
                         <FormField
                           control={form.control}
