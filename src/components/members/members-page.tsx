@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Member } from '@/lib/types';
 import MembersDataTable from './members-data-table';
 import { columns } from './columns';
@@ -11,28 +11,55 @@ import { Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from 'use-debounce';
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageCount, setPageCount] = useState(0);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [fullNameFilter, setFullNameFilter] = useState('');
+  const [nicknameFilter, setNicknameFilter] = useState('');
+  const [debouncedFullNameFilter] = useDebounce(fullNameFilter, 500);
+  const [debouncedNicknameFilter] = useDebounce(nicknameFilter, 500);
+
   const { user } = useAuth();
+
+  const totalMembers = useMemo(() => {
+    // If we have a filter, the total should reflect the filtered count,
+    // otherwise it's the total count from the last fetch without filters.
+    return pageCount;
+  }, [pageCount]);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-        const fetchedMembers = await getMembers();
+        const { members: fetchedMembers, count } = await getMembers(
+            pagination.pageIndex, 
+            pagination.pageSize,
+            debouncedFullNameFilter,
+            debouncedNicknameFilter
+        );
         setMembers(fetchedMembers);
+        setPageCount(Math.ceil(count / pagination.pageSize));
     } catch (error) {
         console.error("Failed to fetch members:", error);
-        // Optionally, add toast notifications for errors
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [pagination, debouncedFullNameFilter, debouncedNicknameFilter]);
 
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  // Reset page index when filters change
+  useEffect(() => {
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+  }, [debouncedFullNameFilter, debouncedNicknameFilter]);
 
   return (
     <div className="space-y-6">
@@ -44,7 +71,7 @@ export default function MembersPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
+        {loading && members.length === 0 ? (
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <Skeleton className="h-5 w-32" />
@@ -55,11 +82,24 @@ export default function MembersPage() {
                 </CardContent>
             </Card>
         ) : (
-            <StatCard title="Total Members" value={members.length} icon={Users} />
+            <StatCard title="Total Members" value={pageCount * pagination.pageSize} icon={Users} />
         )}
       </div>
 
-      <MembersDataTable columns={columns} data={members} onAction={refreshData} isLoading={loading} canEdit={user?.role === 'admin'} />
+      <MembersDataTable 
+        columns={columns} 
+        data={members} 
+        onAction={refreshData} 
+        isLoading={loading} 
+        canEdit={user?.role === 'admin'}
+        pageCount={pageCount}
+        pagination={pagination}
+        setPagination={setPagination}
+        fullNameFilter={fullNameFilter}
+        setFullNameFilter={setFullNameFilter}
+        nicknameFilter={nicknameFilter}
+        setNicknameFilter={setNicknameFilter}
+      />
     </div>
   );
 }

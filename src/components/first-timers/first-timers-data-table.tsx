@@ -6,13 +6,9 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   useReactTable,
   type SortingState,
-  type ColumnFiltersState,
-  type VisibilityState,
+  type PaginationState,
 } from '@tanstack/react-table';
 
 import {
@@ -35,6 +31,11 @@ interface DataTableProps<TData, TValue> {
   onAction: () => void;
   isLoading: boolean;
   canEdit: boolean;
+  pageCount: number;
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  fullNameFilter: string;
+  setFullNameFilter: (value: string) => void;
 }
 
 export default function FirstTimersDataTable<TData, TValue>({
@@ -43,27 +44,27 @@ export default function FirstTimersDataTable<TData, TValue>({
   onAction,
   isLoading,
   canEdit,
+  pageCount,
+  pagination,
+  setPagination,
+  fullNameFilter,
+  setFullNameFilter,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
+    pageCount: pageCount,
+    onPaginationChange: setPagination,
+    manualPagination: true,
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
-      columnVisibility,
+      pagination,
       rowSelection,
     },
      meta: {
@@ -71,19 +72,6 @@ export default function FirstTimersDataTable<TData, TValue>({
       canEdit: canEdit
     }
   });
-
-  const [fullNameFilter, setFullNameFilter] = React.useState('');
-
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-        table.getColumn('fullName')?.setFilterValue(fullNameFilter);
-    }, 300);
-
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [fullNameFilter, table]);
-
 
   return (
     <div>
@@ -132,7 +120,7 @@ export default function FirstTimersDataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: pagination.pageSize }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
                         {columns.map((column, j) => (
                             <TableCell key={`skeleton-cell-${i}-${j}`}>

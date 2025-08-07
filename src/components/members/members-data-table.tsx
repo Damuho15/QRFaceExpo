@@ -6,13 +6,9 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   useReactTable,
   type SortingState,
-  type ColumnFiltersState,
-  type VisibilityState,
+  type PaginationState,
 } from '@tanstack/react-table';
 
 import {
@@ -25,12 +21,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import MemberDialog from './member-dialog';
 import BatchAddDialog from './batch-add-dialog';
 import { Skeleton } from '../ui/skeleton';
@@ -42,6 +32,13 @@ interface DataTableProps<TData, TValue> {
   onAction: () => void;
   isLoading: boolean;
   canEdit: boolean;
+  pageCount: number;
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  fullNameFilter: string;
+  setFullNameFilter: (value: string) => void;
+  nicknameFilter: string;
+  setNicknameFilter: (value: string) => void;
 }
 
 export default function MembersDataTable<TData, TValue>({
@@ -50,58 +47,33 @@ export default function MembersDataTable<TData, TValue>({
   onAction,
   isLoading,
   canEdit,
+  pageCount,
+  pagination,
+  setPagination,
+  fullNameFilter,
+  setFullNameFilter,
+  nicknameFilter,
+  setNicknameFilter,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
-
+  
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    pageCount: pageCount,
+    onPaginationChange: setPagination,
+    manualPagination: true,
     state: {
       sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
+      pagination,
     },
-     meta: {
+    meta: {
       onAction: onAction,
       canEdit: canEdit
     }
   });
-
-  const [fullNameFilter, setFullNameFilter] = React.useState('');
-  const [nicknameFilter, setNicknameFilter] = React.useState('');
-
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-        table.getColumn('fullName')?.setFilterValue(fullNameFilter);
-    }, 300);
-
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [fullNameFilter, table]);
-  
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-        table.getColumn('nickname')?.setFilterValue(nicknameFilter);
-    }, 300);
-
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [nicknameFilter, table]);
-
 
   return (
     <div>
@@ -157,7 +129,7 @@ export default function MembersDataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: pagination.pageSize }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
                         {columns.map((column, j) => (
                             <TableCell key={`skeleton-cell-${i}-${j}`}>

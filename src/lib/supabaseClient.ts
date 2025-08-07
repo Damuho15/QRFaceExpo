@@ -84,22 +84,33 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
     return publicUrl;
 };
 
-export const getMembers = async (): Promise<Member[]> => {
-    const { data, error } = await supabase
+export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
+    const rangeFrom = pageIndex * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+
+    let query = supabase
         .from('members')
-        .select('*')
-        .order('fullName', { ascending: true });
+        .select('*', { count: 'exact' })
+        .order('fullName', { ascending: true })
+        .range(rangeFrom, rangeTo);
+        
+    if (fullNameFilter) {
+        query = query.ilike('fullName', `%${fullNameFilter}%`);
+    }
+    if (nicknameFilter) {
+        query = query.ilike('nickname', `%${nicknameFilter}%`);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
         console.error('Error fetching members:', error);
         throw error;
     }
     
-    // Explicitly map and cast ALL relevant fields to ensure data integrity
-    return (data || []).map(member => ({
+    const members = (data || []).map(member => ({
         ...member,
         id: String(member.id),
-        // Ensure other fields that should be strings are not null
         fullName: String(member.fullName || ''), 
         nickname: String(member.nickname || ''),
         email: String(member.email || ''),
@@ -113,6 +124,8 @@ export const getMembers = async (): Promise<Member[]> => {
         promoted_at: member.promoted_at ? String(member.promoted_at) : null,
         created_at: String(member.created_at || ''),
     })) as Member[];
+
+    return { members, count: count || 0 };
 };
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
@@ -207,11 +220,22 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     if (!rawMembers || rawMembers.length === 0) {
         return [];
     }
+    
+    // Since batch adding is a one-time operation, we get all existing members once
+    // to check for duplicates efficiently in memory.
+    const { members: existingMembers } = await getMembers(0, 10000, '', '');
 
+    const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
+    
     const validMembersToInsert = rawMembers.map(rawMember => {
         const fullName = String(rawMember.FullName || '').trim();
         if (!fullName) {
             console.warn('Skipping row due to missing FullName:', rawMember);
+            return null;
+        }
+        
+        if (existingFullNames.has(fullName.toLowerCase())) {
+            console.log(`Skipping duplicate member: ${fullName}`);
             return null;
         }
 
@@ -238,7 +262,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     }).filter((m): m is Exclude<typeof m, null> => m !== null);
 
     if (validMembersToInsert.length === 0) {
-        console.log("No valid members to insert after cleaning and validation.");
+        console.log("No valid new members to insert after cleaning and validation.");
         return [];
     }
 
@@ -346,17 +370,27 @@ export const getAttendanceLogs = async (startDate?: Date, endDate?: Date): Promi
 };
 
 // New Comer Functions
-export const getFirstTimers = async (): Promise<FirstTimer[]> => {
-    const { data, error } = await supabase
+export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = ''): Promise<{ firstTimers: FirstTimer[], count: number }> => {
+    const rangeFrom = pageIndex * pageSize;
+    const rangeTo = rangeFrom + pageSize - 1;
+
+    let query = supabase
         .from('first_timers')
-        .select('*')
-        .order('fullName', { ascending: true });
+        .select('*', { count: 'exact' })
+        .order('fullName', { ascending: true })
+        .range(rangeFrom, rangeTo);
+        
+    if (fullNameFilter) {
+        query = query.ilike('fullName', `%${fullNameFilter}%`);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
         console.error('Error fetching new comers:', error);
         throw error;
     }
-    return data || [];
+    return { firstTimers: data || [], count: count || 0 };
 };
 
 export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<FirstTimer> => {

@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Crown, Loader2, Star } from 'lucide-react';
+import { Crown, Loader2, Star } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from 'use-debounce';
 
 interface AttendanceCount {
     [key: string]: {
@@ -22,9 +23,27 @@ interface AttendanceCount {
     }
 }
 
-const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuccess, isLoading, canPromote }: { firstTimers: FirstTimer[], attendanceLogs: NewComerAttendanceLog[], onPromoteSuccess: () => void, isLoading: boolean, canPromote: boolean }) => {
+const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote }: { firstTimers: FirstTimer[], onPromoteSuccess: () => void, canPromote: boolean }) => {
     const { toast } = useToast();
     const [isPromoting, setIsPromoting] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [attendanceLogs, setAttendanceLogs] = useState<NewComerAttendanceLog[]>([]);
+
+    useEffect(() => {
+        const fetchLogs = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch all logs for accurate attendance counting
+                const fetchedLogs = await getFirstTimerAttendanceLogs();
+                setAttendanceLogs(fetchedLogs);
+            } catch (error) {
+                console.error("Failed to fetch new comer attendance logs", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchLogs();
+    }, [onPromoteSuccess]); // Re-fetch logs when a promotion happens
 
     const handlePromote = async (firstTimer: FirstTimer) => {
         setIsPromoting(firstTimer.id);
@@ -49,7 +68,6 @@ const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuc
     const attendanceCounts = React.useMemo(() => {
         const counts: AttendanceCount = {};
         
-        // Filter for "Actual" logs and count unique days per person
         const actualLogs = attendanceLogs.filter(log => log.type === 'Actual');
         const uniqueCheckins = new Set<string>();
 
@@ -61,8 +79,9 @@ const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuc
                 uniqueCheckins.add(uniqueKey);
 
                 if (!counts[log.first_timer_id]) {
+                    // Find the firstTimer from the currently displayed page, if available
                     const firstTimer = firstTimers.find(ft => ft.id === log.first_timer_id);
-                    if (firstTimer) {
+                     if (firstTimer) {
                          counts[log.first_timer_id] = {
                             name: log.first_timer_name,
                             count: 0,
@@ -125,7 +144,7 @@ const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuc
                                 </div>
                             ))
                         ) : (
-                             <div className="flex h-full items-center justify-center">
+                             <div className="flex h-full items-center justify-center pt-24">
                                 <p className="text-muted-foreground">No "Actual" attendance records found for new comers.</p>
                             </div>
                         )}
@@ -139,30 +158,41 @@ const NewComerAttendanceDashboard = ({ firstTimers, attendanceLogs, onPromoteSuc
 
 export default function FirstTimersPage() {
   const [firstTimers, setFirstTimers] = useState<FirstTimer[]>([]);
-  const [attendanceLogs, setAttendanceLogs] = useState<NewComerAttendanceLog[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [pageCount, setPageCount] = useState(0);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [fullNameFilter, setFullNameFilter] = useState('');
+  const [debouncedFullNameFilter] = useDebounce(fullNameFilter, 500);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-        const [fetchedFirstTimers, fetchedLogs] = await Promise.all([
-            getFirstTimers(),
-            getFirstTimerAttendanceLogs()
-        ]);
+        const { firstTimers: fetchedFirstTimers, count } = await getFirstTimers(
+          pagination.pageIndex,
+          pagination.pageSize,
+          debouncedFullNameFilter
+        );
         setFirstTimers(fetchedFirstTimers);
-        setAttendanceLogs(fetchedLogs);
+        setPageCount(Math.ceil(count / pagination.pageSize));
     } catch (error) {
         console.error("Failed to fetch new comers data:", error);
-        // Optionally, add toast notifications for errors
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [pagination, debouncedFullNameFilter]);
 
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+  
+  // Reset page index when filter changes
+  useEffect(() => {
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+  }, [debouncedFullNameFilter]);
 
   return (
     <div className="space-y-6">
@@ -175,13 +205,22 @@ export default function FirstTimersPage() {
 
       <NewComerAttendanceDashboard 
         firstTimers={firstTimers}
-        attendanceLogs={attendanceLogs}
         onPromoteSuccess={refreshData}
-        isLoading={loading}
         canPromote={user?.role === 'admin'}
       />
 
-      <FirstTimersDataTable columns={columns} data={firstTimers} onAction={refreshData} isLoading={loading} canEdit={user?.role === 'admin'} />
+      <FirstTimersDataTable 
+        columns={columns} 
+        data={firstTimers} 
+        onAction={refreshData} 
+        isLoading={loading} 
+        canEdit={user?.role === 'admin'}
+        pageCount={pageCount}
+        pagination={pagination}
+        setPagination={setPagination}
+        fullNameFilter={fullNameFilter}
+        setFullNameFilter={setFullNameFilter}
+      />
     </div>
   );
 }
