@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   LogOut,
   CalendarPlus,
+  ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../ui/button';
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: false, roles: [] },
   { href: '/members', label: 'Members', icon: Users, requiresAuth: true, roles: ['admin', 'viewer'] },
   { href: '/first-timers', label: 'New Comers', icon: UserPlus, requiresAuth: true, roles: ['admin', 'viewer'] },
+  { href: '/attendance-logs', label: 'Attendance Logs', icon: ClipboardList, requiresAuth: true, roles: ['admin'] },
   { href: '/user-management', label: 'User Management', icon: ShieldCheck, requiresAuth: true, roles: ['admin'] },
   { href: '/event-creation', label: 'Event Creation', icon: CalendarPlus, requiresAuth: true, roles: ['admin'] },
   { href: '/', label: 'Check-in', icon: QrCode, requiresAuth: false, roles: [] },
