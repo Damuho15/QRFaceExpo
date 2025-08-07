@@ -1095,10 +1095,11 @@ export default function CheckInPage() {
      const fetchAndSetData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [config, allMembers, allFirstTimers] = await Promise.all([
+            // Fetch all members for check-in purposes
+            const [config, { members: allMembers }, { firstTimers: allFirstTimers }] = await Promise.all([
                 getEventConfig(), 
-                getMembers(),
-                getFirstTimers()
+                getMembers(0, 10000), // Fetch all for now
+                getFirstTimers(0, 10000) // Fetch all for now
             ]);
             
             setMembers(allMembers);
