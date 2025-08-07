@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -60,18 +59,10 @@ export default function AttendanceLogsPage() {
             <div>
                 <h1 className="text-2xl font-bold font-headline">Attendance Logs</h1>
                 <p className="text-muted-foreground">
-                    View and manage all attendance records.
+                    View and manage all attendance records for all event periods.
                 </p>
             </div>
-             <Card>
-                <CardHeader>
-                    <CardTitle>All Records</CardTitle>
-                    <CardDescription>A detailed list of all check-ins for all event periods.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} onAction={fetchData} />
-                </CardContent>
-            </Card>
+            <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} onAction={fetchData} />
         </div>
     );
 }

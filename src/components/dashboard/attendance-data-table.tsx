@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -68,11 +67,7 @@ export default function AttendanceDataTable<TData, TValue>({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Attendance Log</CardTitle>
-        <CardDescription>A detailed list of all check-ins for the current event period.</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="flex items-center py-4">
           <Input
             placeholder="Filter by attendee name..."
