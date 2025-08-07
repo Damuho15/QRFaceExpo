@@ -733,8 +733,8 @@ export default function DashboardPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [memberData, fetchedEventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
-                getMembers(),
+            const [{ members: memberData }, fetchedEventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
+                getMembers(0, 10000), // Fetch all members for dashboard stats
                 getEventConfig(),
                 getAttendanceLogs(), // Fetch all logs for monthly report
                 getFirstTimerAttendanceLogs() // Fetch all logs for monthly report
@@ -1039,5 +1039,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
