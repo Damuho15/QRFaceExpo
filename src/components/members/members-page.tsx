@@ -16,6 +16,7 @@ import { useDebounce } from 'use-debounce';
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalMembers, setTotalMembers] = useState(0);
   const [pageCount, setPageCount] = useState(0);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -28,12 +29,6 @@ export default function MembersPage() {
 
   const { user } = useAuth();
 
-  const totalMembers = useMemo(() => {
-    // If we have a filter, the total should reflect the filtered count,
-    // otherwise it's the total count from the last fetch without filters.
-    return pageCount;
-  }, [pageCount]);
-
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
@@ -44,6 +39,7 @@ export default function MembersPage() {
             debouncedNicknameFilter
         );
         setMembers(fetchedMembers);
+        setTotalMembers(count);
         setPageCount(Math.ceil(count / pagination.pageSize));
     } catch (error) {
         console.error("Failed to fetch members:", error);
@@ -82,7 +78,7 @@ export default function MembersPage() {
                 </CardContent>
             </Card>
         ) : (
-            <StatCard title="Total Members" value={pageCount * pagination.pageSize} icon={Users} />
+            <StatCard title="Total Members" value={totalMembers} icon={Users} />
         )}
       </div>
 
