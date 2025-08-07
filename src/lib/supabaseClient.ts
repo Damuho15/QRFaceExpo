@@ -85,23 +85,25 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
 };
 
 export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
-    const rangeFrom = pageIndex * pageSize;
-    const rangeTo = rangeFrom + pageSize - 1;
-
     let query = supabase
         .from('members')
-        .select('*', { count: 'exact' })
-        .order('fullName', { ascending: true })
-        .range(rangeFrom, rangeTo);
-        
+        .select('*', { count: 'exact' });
+
     if (fullNameFilter) {
         query = query.ilike('fullName', `%${fullNameFilter}%`);
     }
     if (nicknameFilter) {
         query = query.ilike('nickname', `%${nicknameFilter}%`);
     }
+    
+    // Only apply pagination if pageSize is greater than 0
+    if (pageSize > 0) {
+        const rangeFrom = pageIndex * pageSize;
+        const rangeTo = rangeFrom + pageSize - 1;
+        query = query.range(rangeFrom, rangeTo);
+    }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await query.order('fullName', { ascending: true });
 
     if (error) {
         console.error('Error fetching members:', error);
@@ -223,7 +225,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
     
     // Since batch adding is a one-time operation, we get all existing members once
     // to check for duplicates efficiently in memory.
-    const { members: existingMembers } = await getMembers(0, 10000, '', '');
+    const { members: existingMembers } = await getMembers(0, 0, '', '');
 
     const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
     

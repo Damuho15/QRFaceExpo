@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -219,8 +220,28 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[] }) => {
-    
+const MonthlyAverageChart = () => {
+    const [allLogs, setAllLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAllLogs = async () => {
+            setIsLoading(true);
+            try {
+                const [memberLogs, firstTimerLogs] = await Promise.all([
+                    getAttendanceLogs(),
+                    getFirstTimerAttendanceLogs(),
+                ]);
+                setAllLogs([...memberLogs, ...firstTimerLogs]);
+            } catch (error) {
+                console.error("Failed to fetch all logs for monthly chart:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAllLogs();
+    }, []);
+
     const availableYears = useMemo(() => {
         const years = new Set(allLogs.map(log => new Date(log.timestamp).getFullYear()));
         return Array.from(years).sort((a,b) => b - a);
@@ -293,7 +314,7 @@ const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAt
                         <Select
                             value={String(selectedYear)}
                             onValueChange={(value) => setSelectedYear(Number(value))}
-                            disabled={availableYears.length === 0}
+                            disabled={availableYears.length === 0 || isLoading}
                         >
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Select a year" />
@@ -308,7 +329,11 @@ const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAt
                 </div>
             </CardHeader>
             <CardContent>
-                 {monthlyAverageData.length > 0 ? (
+                 {isLoading ? (
+                    <div className="flex justify-center items-center min-h-[250px]">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                 ) : monthlyAverageData.length > 0 ? (
                     <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
                         <BarChart accessibilityLayer data={monthlyAverageData}>
                             <XAxis
@@ -339,13 +364,28 @@ const MonthlyAverageChart = ({ allLogs }: { allLogs: (AttendanceLog | NewComerAt
     )
 }
 
-const PromotionHistory = ({ members, isLoading }: { members: Member[], isLoading: boolean }) => {
-    
-    const promotedMembers = useMemo(() => {
-        return members
-            .filter(member => !!member.promoted_at)
-            .sort((a, b) => new Date(b.promoted_at!).getTime() - new Date(a.promoted_at!).getTime());
-    }, [members]);
+const PromotionHistory = () => {
+    const [promotedMembers, setPromotedMembers] = useState<Member[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPromotedMembers = async () => {
+            setIsLoading(true);
+            try {
+                // We fetch all members but without pagination by setting pageSize to 0
+                const { members } = await getMembers(0, 0); 
+                const promoted = members
+                    .filter(member => !!member.promoted_at)
+                    .sort((a, b) => new Date(b.promoted_at!).getTime() - new Date(a.promoted_at!).getTime());
+                setPromotedMembers(promoted);
+            } catch (error) {
+                console.error("Failed to fetch promotion history:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchPromotedMembers();
+    }, []);
 
     return (
         <Card>
@@ -595,8 +635,26 @@ const InactiveMembersDialog = ({
     )
 }
 
-const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoading: boolean }) => {
+const CelebrantsDashboard = () => {
+    const [members, setMembers] = useState<Member[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+
+    useEffect(() => {
+        const fetchAllMembers = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch all members without pagination for celebrant calculations
+                const { members: allMembers } = await getMembers(0, 0);
+                setMembers(allMembers);
+            } catch (error) {
+                console.error("Failed to fetch members for celebrant dashboard:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAllMembers();
+    }, []);
 
     const { birthdayCelebrants, anniversaryCelebrants } = useMemo(() => {
         const birthdays: { name: string, date: string }[] = [];
@@ -647,7 +705,7 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
                         <CardDescription>Members celebrating birthdays and anniversaries.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))}>
+                        <Select value={String(selectedMonth)} onValueChange={(value) => setSelectedMonth(Number(value))} disabled={isLoading}>
                             <SelectTrigger className="w-full sm:w-[180px]">
                                 <SelectValue placeholder="Select Month" />
                             </SelectTrigger>
@@ -667,7 +725,7 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
                         <Separator />
                         <ScrollArea className="h-60 mt-4">
                             {isLoading ? (
-                                <div className="space-y-4">
+                                <div className="space-y-4 pr-4">
                                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
                                 </div>
                             ) : birthdayCelebrants.length > 0 ? (
@@ -689,7 +747,7 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
                         <Separator />
                         <ScrollArea className="h-60 mt-4">
                            {isLoading ? (
-                                <div className="space-y-4">
+                                <div className="space-y-4 pr-4">
                                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}
                                 </div>
                             ) : anniversaryCelebrants.length > 0 ? (
@@ -715,10 +773,8 @@ const CelebrantsDashboard = ({ members, isLoading }: { members: Member[], isLoad
 
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
-    const [members, setMembers] = useState<Member[]>([]);
     const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
     const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
-    const [allTimeLogs, setAllTimeLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
     const [eventConfig, setEventConfig] = useState<EventConfig | null>(null);
     const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
 
@@ -733,21 +789,8 @@ export default function DashboardPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [{ members: memberData }, fetchedEventConfig, allMemberLogs, allFirstTimerLogs] = await Promise.all([
-                getMembers(0, 10000), // Fetch all members for dashboard stats
-                getEventConfig(),
-                getAttendanceLogs(), // Fetch all logs for monthly report
-                getFirstTimerAttendanceLogs() // Fetch all logs for monthly report
-            ]);
-            
+            const fetchedEventConfig = await getEventConfig();
             setEventConfig(fetchedEventConfig);
-            setMembers(memberData);
-
-            const combinedAllLogs = [
-                ...allMemberLogs,
-                ...allFirstTimerLogs,
-            ];
-            setAllTimeLogs(combinedAllLogs);
             
             let currentEventLogs: AttendanceLog[] = [];
             let currentFirstTimerLogs: NewComerAttendanceLog[] = [];
@@ -756,19 +799,20 @@ export default function DashboardPage() {
                 const startDate = parseDateAsUTC(fetchedEventConfig.pre_reg_start_date);
                 const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
-
-                currentEventLogs = allMemberLogs.filter(log => {
-                    const logDate = new Date(log.timestamp);
-                    return logDate >= startDate && logDate <= endDate;
-                });
-                currentFirstTimerLogs = allFirstTimerLogs.filter(log => {
-                    const logDate = new Date(log.timestamp);
-                    return logDate >= startDate && logDate <= endDate;
-                })
-
+                
+                const [memberLogs, ftLogs] = await Promise.all([
+                    getAttendanceLogs(startDate, endDate),
+                    getFirstTimerAttendanceLogs(startDate, endDate)
+                ]);
+                currentEventLogs = memberLogs;
+                currentFirstTimerLogs = ftLogs;
             } else {
-                 currentEventLogs = allMemberLogs;
-                 currentFirstTimerLogs = allFirstTimerLogs;
+                 const [memberLogs, ftLogs] = await Promise.all([
+                    getAttendanceLogs(),
+                    getFirstTimerAttendanceLogs()
+                ]);
+                 currentEventLogs = memberLogs;
+                 currentFirstTimerLogs = ftLogs;
             }
 
             setAttendanceLogs(currentEventLogs);
@@ -780,12 +824,15 @@ export default function DashboardPage() {
             const startOfPrevMonth = startOfMonth(prevMonthDate);
             const endOfPrevMonth = endOfMonth(prevMonthDate);
 
-            const prevMonthLogs = allMemberLogs.filter(log => {
-                const logDate = new Date(log.timestamp);
-                return log.type === 'Actual' && logDate >= startOfPrevMonth && logDate <= endOfPrevMonth;
-            });
-            const attendedMemberIds = new Set(prevMonthLogs.map(log => log.member_id));
-            const inactive = memberData.filter(member => !attendedMemberIds.has(member.id));
+            // Fetch all members for inactive calculation
+            const { members: allMembers } = await getMembers(0, 0); 
+
+            const prevMonthLogs = await getAttendanceLogs(startOfPrevMonth, endOfPrevMonth);
+            const attendedMemberIds = new Set(prevMonthLogs
+                .filter(log => log.type === 'Actual')
+                .map(log => log.member_id)
+            );
+            const inactive = allMembers.filter(member => !attendedMemberIds.has(member.id));
             setInactiveMembers(inactive);
 
         } catch (error) {
@@ -797,8 +844,6 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchData();
-        const intervalId = setInterval(fetchData, 30000); 
-        return () => clearInterval(intervalId);
     }, [fetchData]);
 
 
@@ -1001,13 +1046,13 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <CelebrantsDashboard members={members} isLoading={loading} />
+      <CelebrantsDashboard />
 
       <AttendanceReport {...attendanceReportDefaults} />
 
-      <MonthlyAverageChart allLogs={allTimeLogs} />
+      <MonthlyAverageChart />
       
-      <PromotionHistory members={members} isLoading={loading} />
+      <PromotionHistory />
 
       <div className="grid grid-cols-1 gap-4">
         <Card>
