@@ -77,7 +77,8 @@ const recognizeFaceFlow = ai.defineFlow(
     outputSchema: RecognizeFaceOutputSchema,
   },
   async (input) => {
-    const allMembers = await getMembers();
+    // Fetch all members for face recognition; we need to check against everyone.
+    const { members: allMembers } = await getMembers(0, 10000); 
     const membersWithPictures = allMembers.filter(m => m.pictureUrl);
     
     if (membersWithPictures.length === 0) {
