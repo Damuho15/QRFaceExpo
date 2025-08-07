@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -34,25 +35,20 @@ export default function AttendanceLogsPage() {
         fetchData();
     }, [fetchData]);
 
-    const combinedLogs = useMemo(() => [
-        ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id, attendeeType: 'Member' as const })),
-        ...firstTimerLogs.map(l => ({ ...l, id: l.id, member_name: l.first_timer_name, member_id: l.first_timer_id, type: l.type, method: l.method, timestamp: l.timestamp, attendeeType: 'New Comer' as const }))
-    ], [attendanceLogs, firstTimerLogs]);
-
-    const latestLogs = useMemo(() => {
-        const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
-
-        combinedLogs.forEach(log => {
-            const name = 'member_name' in log ? log.member_name : (log as any).first_timer_name;
-            const existing = latestCheckins.get(name);
-            if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
-                latestCheckins.set(name, log);
-            }
-        });
-
-        return Array.from(latestCheckins.values())
+    const combinedLogs = useMemo(() => {
+        const memberLogsMapped = attendanceLogs.map(l => ({ ...l, attendeeType: 'Member' as const }));
+        const firstTimerLogsMapped = firstTimerLogs.map(l => ({ 
+            ...l, 
+            id: l.id, 
+            member_name: l.first_timer_name, 
+            member_id: l.first_timer_id, 
+            attendeeType: 'New Comer' as const 
+        }));
+        
+        return [...memberLogsMapped, ...firstTimerLogsMapped]
             .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [combinedLogs]);
+            
+    }, [attendanceLogs, firstTimerLogs]);
 
     return (
         <div className="space-y-6">
@@ -62,7 +58,7 @@ export default function AttendanceLogsPage() {
                     View and manage all attendance records for all event periods.
                 </p>
             </div>
-            <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} onAction={fetchData} />
+            <AttendanceDataTable columns={columns} data={combinedLogs} isLoading={loading} onAction={fetchData} />
         </div>
     );
 }
