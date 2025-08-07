@@ -371,6 +371,15 @@ export const getAttendanceLogs = async (startDate?: Date, endDate?: Date): Promi
     return (data || []).map(log => ({ ...log, id: String(log.id) }));
 };
 
+export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
+    const { error } = await supabase.from('attendance_logs').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting attendance log:', error);
+        throw error;
+    }
+    return true;
+};
+
 // New Comer Functions
 export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = ''): Promise<{ firstTimers: FirstTimer[], count: number }> => {
     const rangeFrom = pageIndex * pageSize;
@@ -493,6 +502,16 @@ export const getFirstTimerAttendanceLogs = async (startDate?: Date, endDate?: Da
 
     return (data || []).map(log => ({ ...log, id: String(log.id) }));
 };
+
+export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean> => {
+    const { error } = await supabase.from('attendance_log_1sttimer').delete().eq('id', id);
+    if (error) {
+        console.error('Error deleting new comer attendance log:', error);
+        throw error;
+    }
+    return true;
+};
+
 
 export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise<Member> => {
     // 1. Check if a member with the same fullName already exists to prevent duplicates.

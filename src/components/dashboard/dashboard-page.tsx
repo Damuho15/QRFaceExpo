@@ -1066,7 +1066,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} />
+      <AttendanceDataTable columns={columns} data={latestLogs} isLoading={loading} onAction={fetchData} />
 
     </div>
     <NamesListDialog

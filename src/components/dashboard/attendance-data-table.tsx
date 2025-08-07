@@ -31,12 +31,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   isLoading: boolean;
+  onAction: () => void;
 }
 
 export default function AttendanceDataTable<TData, TValue>({
   columns,
   data,
   isLoading,
+  onAction,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -59,6 +61,9 @@ export default function AttendanceDataTable<TData, TValue>({
       sorting,
       columnFilters,
     },
+    meta: {
+      onAction: onAction,
+    }
   });
 
   return (
@@ -70,7 +75,7 @@ export default function AttendanceDataTable<TData, TValue>({
       <CardContent>
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filter by member name..."
+            placeholder="Filter by attendee name..."
             value={(table.getColumn('member_name')?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
               table.getColumn('member_name')?.setFilterValue(event.target.value)
