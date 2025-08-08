@@ -998,14 +998,6 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <CelebrantsDashboard allMembers={allMembers} isLoading={loading} />
-
-      <AttendanceReport {...attendanceReportDefaults} allLogs={allLogs} />
-
-      <MonthlyAverageChart allLogs={allLogs} isLoading={loading} />
-      
-      <PromotionHistory allMembers={allMembers} isLoading={loading} />
-
       <div className="grid grid-cols-1 gap-4">
         <Card>
             <CardHeader>
@@ -1021,6 +1013,14 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
       </div>
+
+      <CelebrantsDashboard allMembers={allMembers} isLoading={loading} />
+
+      <AttendanceReport {...attendanceReportDefaults} allLogs={allLogs} />
+
+      <MonthlyAverageChart allLogs={allLogs} isLoading={loading} />
+      
+      <PromotionHistory allMembers={allMembers} isLoading={loading} />
 
     </div>
     <NamesListDialog
@@ -1038,6 +1038,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-
-
