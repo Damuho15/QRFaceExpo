@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX } from 'lucide-react';
+import { Camera, Upload, UserCheck, Loader2, CheckCircle, UserX, AlertTriangle, ShieldQuestion } from 'lucide-react';
 import jsQR from 'jsqr';
 import { recognizeFace, RecognizeFaceOutput } from '@/ai/flows/face-recognition-flow';
 import { getEventConfig, updateEventConfig, parseDateAsUTC, getMembers, addAttendanceLog, getFirstTimers, addFirstTimerAttendanceLog } from '@/lib/supabaseClient';
@@ -481,18 +481,17 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-    const [showDialog, setShowDialog] = useState(false);
     
-    // Simplified state for confirmed member details
-    const [confirmedMemberId, setConfirmedMemberId] = useState<string | null>(null);
-    const [confirmedMemberName, setConfirmedMemberName] = useState<string | null>(null);
+    // Dialog and state management
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showDialog, setShowDialog] = useState(false);
+
+    // State to hold the full result from the AI
+    const [aiResult, setAiResult] = useState<RecognizeFaceOutput | null>(null);
 
     // State to hold the registration type determined at the time of verification.
     const [registrationType, setRegistrationType] = useState<'Pre-registration' | 'Actual' | null>(null);
-
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-
 
     useEffect(() => {
         const getCameraPermission = async () => {
@@ -543,11 +542,10 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             });
             return;
         }
-
+        
         setIsProcessing(true);
-        // Reset previous verification data
-        setConfirmedMemberId(null);
-        setConfirmedMemberName(null);
+        setAiResult(null); // Reset previous result
+        setRegistrationType(currentRegistrationType);
         
         toast({
             title: 'Verifying Member...',
@@ -568,33 +566,19 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
         try {
             const result: RecognizeFaceOutput = await recognizeFace({ imageDataUri });
-            setIsProcessing(false);
-            
-            if (result.matchFound && result.fullName) {
-                const foundMember = members.find(m => m.fullName === result.fullName);
-                if (foundMember) {
-                    setConfirmedMemberId(foundMember.id);
-                    setConfirmedMemberName(foundMember.fullName);
-                    setRegistrationType(currentRegistrationType);
-                } else {
-                     setConfirmedMemberName(result.fullName); // Name found, but not in DB
-                }
-            }
-            setShowDialog(true);
+            setAiResult(result);
         } catch (error) {
             console.error('Face recognition error:', error);
             const errorMessage = error instanceof Error ? error.message : 'An error occurred during face recognition analysis.';
-            toast({
-                variant: 'destructive',
-                title: 'AI Error',
-                description: errorMessage,
-            });
+            setAiResult({ matchFound: false, confidence: 0, reason: errorMessage });
+        } finally {
             setIsProcessing(false);
+            setShowDialog(true);
         }
     };
     
     const confirmAndSaveChanges = async () => {
-        if (!confirmedMemberId || !confirmedMemberName || !registrationType) {
+        if (!aiResult || !aiResult.matchFound || !aiResult.fullName || !registrationType) {
              toast({
                 title: 'Save Failed',
                 description: 'Cannot save attendance due to missing member data.',
@@ -603,23 +587,24 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             closeDialog();
             return;
         }
-
-        if (!isValidUUID(confirmedMemberId)) {
-            toast({
+        
+        const member = members.find(m => m.fullName === aiResult.fullName);
+        if (!member) {
+             toast({
                 title: 'Save Failed',
-                description: 'Cannot save attendance due to invalid member ID.',
+                description: `Could not find member details for ${aiResult.fullName} in the local list.`,
                 variant: 'destructive',
             });
             closeDialog();
             return;
         }
-        
+
         setIsSaving(true);
 
         try {
             await addAttendanceLog({
-                member_id: confirmedMemberId,
-                member_name: confirmedMemberName,
+                member_id: member.id,
+                member_name: member.fullName,
                 type: registrationType,
                 method: 'Face',
                 timestamp: new Date()
@@ -627,7 +612,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
 
             toast({
                 title: 'Thank you for registering',
-                description: `${confirmedMemberName} has been successfully checked in.`,
+                description: `${member.fullName} has been successfully checked in.`,
             });
             onCheckInSuccess();
         } catch(error: any) {
@@ -645,10 +630,59 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     
     const closeDialog = () => {
         setIsSaving(false);
-        setConfirmedMemberId(null);
-        setConfirmedMemberName(null);
+        setAiResult(null);
         setRegistrationType(null);
         setShowDialog(false);
+    }
+    
+    const renderDialogContent = () => {
+        if (!aiResult) return null;
+
+        const confidence = aiResult.confidence;
+        const isMatch = aiResult.matchFound;
+
+        let title = '';
+        let description = '';
+        let showConfirmButton = false;
+
+        // Tiered Logic for Dialog Content
+        if (isMatch && confidence >= 0.9) {
+            title = `Welcome, ${aiResult.fullName}!`;
+            description = 'Your identity has been confirmed with high confidence. Click confirm to complete check-in.';
+            showConfirmButton = true;
+        } else if (isMatch && confidence >= 0.7 && confidence < 0.9) {
+            title = `Please Confirm: Is this you, ${aiResult.fullName}?`;
+            description = 'Your identity was recognized with medium confidence. Please confirm to complete your check-in.';
+            showConfirmButton = true;
+        } else { // confidence < 0.7 or no match
+            title = 'Could Not Recognize Face';
+            description = aiResult.reason 
+                ? `Reason: ${aiResult.reason}. Please try again in better lighting or use the QR code.`
+                : "We couldn't find a matching member in our records. Please try again or use the QR code check-in.";
+            showConfirmButton = false;
+        }
+
+        return (
+            <AlertDialogContent>
+                <AlertDialogHeader className="text-center">
+                     <div className="flex justify-center">
+                        {showConfirmButton ? <CheckCircle className="h-12 w-12 text-green-500" /> : <AlertTriangle className="h-12 w-12 text-amber-500" />}
+                    </div>
+                    <AlertDialogTitle>{title}</AlertDialogTitle>
+                    <AlertDialogDescription>{description}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>
+                        {showConfirmButton ? 'Cancel' : 'OK'}
+                    </AlertDialogCancel>
+                    {showConfirmButton && (
+                        <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
+                            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
+                        </AlertDialogAction>
+                    )}
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        );
     }
 
     return (
@@ -698,30 +732,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     </Card>
 
     <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>
-                     {confirmedMemberId 
-                        ? `Welcome, ${confirmedMemberName}! Is this you?` 
-                        : "Face Not Recognized"}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                    {confirmedMemberId 
-                        ? "Please confirm your identity to complete the check-in." 
-                        : "We couldn't find a matching member in our records. Please try again or use the QR code check-in."}
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                 <AlertDialogCancel onClick={closeDialog} disabled={isSaving}>Cancel</AlertDialogCancel>
-                {confirmedMemberId ? (
-                    <AlertDialogAction onClick={confirmAndSaveChanges} disabled={isSaving}>
-                         {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Yes, it's me"}
-                    </AlertDialogAction>
-                ) : (
-                     <AlertDialogAction onClick={closeDialog}>OK</AlertDialogAction>
-                )}
-            </AlertDialogFooter>
-        </AlertDialogContent>
+      {renderDialogContent()}
     </AlertDialog>
     </>
     );
