@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Line, Legend, CartesianGrid, LineChart } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import type { AttendanceLog, NewComerAttendanceLog } from '@/lib/types';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { format, eachDayOfInterval } from 'date-fns';
@@ -14,47 +14,39 @@ interface AttendanceChartProps {
 }
 
 const chartConfig = {
-  "Pre-registered (Cumulative)": {
-    label: "Pre-registered (Cumulative)",
+  "Pre-registrations": {
+    label: "Pre-registrations",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
 
 export default function AttendanceChart({ data, startDate, endDate }: AttendanceChartProps) {
     const processData = (logs: (AttendanceLog | NewComerAttendanceLog)[], start?: Date | null, end?: Date | null) => {
-        if (!start || !end) {
+        if (!start || !end || end < start) {
             return [];
         }
         
         const interval = eachDayOfInterval({ start, end });
-        const dateKeys = interval.map(d => format(d, 'yyyy-MM-dd'));
+        
+        const dailyData = interval.map(day => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            
+            // Filter logs for the specific day and type 'Pre-registration'
+            const logsThisDay = logs.filter(log => {
+                const logDateKey = format(new Date(log.timestamp), 'yyyy-MM-dd');
+                return logDateKey === dayKey && log.type === 'Pre-registration';
+            });
 
-        const dailyData: { [key: string]: { "Pre-registered (Cumulative)": number } } = {};
-        dateKeys.forEach(key => {
-            dailyData[key] = { "Pre-registered (Cumulative)": 0 };
-        });
-        
-        const preRegLogs = logs.filter(log => log.type === 'Pre-registration')
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        
-        // Calculate cumulative counts for pre-registrations
-        let cumulativeCount = 0;
-        dateKeys.forEach(dayKey => {
-            const logsThisDay = preRegLogs.filter(log => format(new Date(log.timestamp), 'yyyy-MM-dd') === dayKey);
-            cumulativeCount += logsThisDay.length;
-            if (dailyData[dayKey]) {
-                dailyData[dayKey]["Pre-registered (Cumulative)"] = cumulativeCount;
-            }
-        });
-        
-        const combinedData = dateKeys.map(dayKey => {
+            // Count unique attendees for that day
+            const uniqueAttendees = new Set(logsThisDay.map(log => 'member_id' in log ? log.member_id : log.first_timer_id));
+
             return {
-                name: format(new Date(dayKey), 'EEE, MMM d'),
-                "Pre-registered (Cumulative)": dailyData[dayKey]?.["Pre-registered (Cumulative)"] || 0,
-            }
+                name: format(day, 'EEE, MMM d'),
+                "Pre-registrations": uniqueAttendees.size,
+            };
         });
 
-        return combinedData;
+        return dailyData;
     }
 
     const chartData = processData(data, startDate, endDate);
@@ -62,7 +54,7 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
   return (
     <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
         <ResponsiveContainer>
-            <LineChart data={chartData}>
+            <BarChart data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
                     dataKey="name"
@@ -81,10 +73,9 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
                 />
                 <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                 <Legend />
-                <Line type="monotone" dataKey="Pre-registered (Cumulative)" stroke="var(--color-Pre-registered (Cumulative))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}/>
-            </LineChart>
+                <Bar dataKey="Pre-registrations" fill="var(--color-Pre-registrations)" radius={[4, 4, 0, 0]} />
+            </BarChart>
         </ResponsiveContainer>
     </ChartContainer>
   );
 }
-
