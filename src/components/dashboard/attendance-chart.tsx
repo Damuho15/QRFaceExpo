@@ -5,9 +5,12 @@ import React from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Line, Legend, CartesianGrid } from 'recharts';
 import type { AttendanceLog, NewComerAttendanceLog } from '@/lib/types';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { format, eachDayOfInterval, startOfDay } from 'date-fns';
 
 interface AttendanceChartProps {
   data: (AttendanceLog | NewComerAttendanceLog)[];
+  startDate?: Date | null;
+  endDate?: Date | null;
 }
 
 const chartConfig = {
@@ -21,55 +24,55 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export default function AttendanceChart({ data }: AttendanceChartProps) {
-    const processData = (logs: (AttendanceLog | NewComerAttendanceLog)[]) => {
+export default function AttendanceChart({ data, startDate, endDate }: AttendanceChartProps) {
+    const processData = (logs: (AttendanceLog | NewComerAttendanceLog)[], start?: Date | null, end?: Date | null) => {
+        if (!start || !end) {
+            return [];
+        }
+        
+        const interval = eachDayOfInterval({ start, end });
+        const dateKeys = interval.map(d => format(d, 'yyyy-MM-dd'));
+
+        const dailyData: { [key: string]: { "Pre-registered (Cumulative)": number; "Actual Check-ins": number } } = {};
+        dateKeys.forEach(key => {
+            dailyData[key] = { "Pre-registered (Cumulative)": 0, "Actual Check-ins": 0 };
+        });
+        
         const preRegLogs = logs.filter(log => log.type === 'Pre-registration')
             .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         
         const actualLogs = logs.filter(log => log.type === 'Actual');
 
-        const hourlyCounts: { [key: string]: { "Actual Check-ins": number } } = {};
+        // Calculate daily counts for actual check-ins
         actualLogs.forEach(log => {
-            const hour = new Date(log.timestamp).getUTCHours();
-            const hourKey = `${hour}:00`;
-            if (!hourlyCounts[hourKey]) {
-                hourlyCounts[hourKey] = { "Actual Check-ins": 0 };
+            const dayKey = format(new Date(log.timestamp), 'yyyy-MM-dd');
+            if (dailyData[dayKey]) {
+                dailyData[dayKey]["Actual Check-ins"]++;
             }
-            hourlyCounts[hourKey]["Actual Check-ins"]++;
         });
 
-        const cumulativePreReg: { [key: string]: { "Pre-registered (Cumulative)": number } } = {};
+        // Calculate cumulative counts for pre-registrations
         let cumulativeCount = 0;
+        dateKeys.forEach(dayKey => {
+            const logsThisDay = preRegLogs.filter(log => format(new Date(log.timestamp), 'yyyy-MM-dd') === dayKey);
+            cumulativeCount += logsThisDay.length;
+            if (dailyData[dayKey]) {
+                dailyData[dayKey]["Pre-registered (Cumulative)"] = cumulativeCount;
+            }
+        });
         
-        // Find the earliest pre-registration hour
-        const firstPreRegHour = preRegLogs.length > 0 ? new Date(preRegLogs[0].timestamp).getUTCHours() : 0;
-
-        for (let i = 0; i < 24; i++) {
-             const hourKey = `${i}:00`;
-             const logsThisHour = preRegLogs.filter(log => new Date(log.timestamp).getUTCHours() === i);
-             cumulativeCount += logsThisHour.length;
-
-             // Only start showing cumulative data from the first hour someone actually pre-registered
-             if (i >= firstPreRegHour) {
-                cumulativePreReg[hourKey] = { "Pre-registered (Cumulative)": cumulativeCount };
-             } else {
-                 cumulativePreReg[hourKey] = { "Pre-registered (Cumulative)": 0 };
-             }
-        }
-        
-        const allHours = Array.from({length: 24}, (_, i) => `${i}:00`);
-        const combinedData = allHours.map(hourKey => {
+        const combinedData = dateKeys.map(dayKey => {
             return {
-                name: hourKey,
-                "Pre-registered (Cumulative)": cumulativePreReg[hourKey]?.["Pre-registered (Cumulative)"] || 0,
-                "Actual Check-ins": hourlyCounts[hourKey]?.["Actual Check-ins"] || 0,
+                name: format(new Date(dayKey), 'EEE, MMM d'),
+                "Pre-registered (Cumulative)": dailyData[dayKey]?.["Pre-registered (Cumulative)"] || 0,
+                "Actual Check-ins": dailyData[dayKey]?.["Actual Check-ins"] || 0,
             }
         });
 
         return combinedData;
     }
 
-    const chartData = processData(data);
+    const chartData = processData(data, startDate, endDate);
 
   return (
     <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
@@ -82,7 +85,6 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => value.split(':')[0]}
                 />
                 <YAxis
                     yAxisId="left"
@@ -92,6 +94,7 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
                     axisLine={false}
                     tickFormatter={(value) => `${value}`}
                     allowDecimals={false}
+                    label={{ value: 'Actual Check-ins (per day)', angle: -90, position: 'insideLeft', offset: 10, style: { textAnchor: 'middle', fill: '#888888' } }}
                 />
                 <YAxis
                     yAxisId="right"
@@ -102,6 +105,7 @@ export default function AttendanceChart({ data }: AttendanceChartProps) {
                     axisLine={false}
                     tickFormatter={(value) => `${value}`}
                     allowDecimals={false}
+                    label={{ value: 'Pre-registered (cumulative)', angle: 90, position: 'insideRight', offset: 10, style: { textAnchor: 'middle', fill: 'hsl(var(--chart-1))' } }}
                 />
                 <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                 <Legend />

@@ -907,6 +907,13 @@ export default function DashboardPage() {
     };
 
     const previousMonthName = format(subMonths(new Date(), 1), 'MMMM yyyy');
+
+    const chartDateRange = useMemo(() => {
+        if (!eventConfig) return { startDate: null, endDate: null };
+        const startDate = parseDateAsUTC(eventConfig.pre_reg_start_date);
+        const endDate = parseDateAsUTC(eventConfig.event_date);
+        return { startDate, endDate };
+    }, [eventConfig]);
   
   if (loading) {
       return (
@@ -1003,10 +1010,14 @@ export default function DashboardPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Attendance Over Time</CardTitle>
-                <CardDescription>A summary of check-ins throughout the event.</CardDescription>
+                <CardDescription>A summary of check-ins throughout the event week.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                <AttendanceChart data={currentEventLogs} />
+                <AttendanceChart 
+                    data={currentEventLogs} 
+                    startDate={chartDateRange.startDate} 
+                    endDate={chartDateRange.endDate} 
+                />
             </CardContent>
         </Card>
       </div>
@@ -1027,5 +1038,6 @@ export default function DashboardPage() {
     </>
   );
 }
+
 
 
