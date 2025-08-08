@@ -204,7 +204,7 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate, allLogs }: { defau
     );
 }
 
-const chartConfig = {
+const monthlyChartConfig = {
   averageAttendance: {
     label: "Average Attendance",
     color: "hsl(var(--primary))",
@@ -304,8 +304,14 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                  ) : monthlyAverageData.length > 0 ? (
-                    <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+                    <ChartContainer config={monthlyChartConfig} className="min-h-[250px] w-full">
                         <BarChart accessibilityLayer data={monthlyAverageData}>
+                             <defs>
+                                <linearGradient id="colorAverageAttendance" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--color-averageAttendance)" stopOpacity={0.9} />
+                                    <stop offset="95%" stopColor="var(--color-averageAttendance)" stopOpacity={0.4} />
+                                </linearGradient>
+                            </defs>
                             <XAxis
                                 dataKey="month"
                                 stroke="#888888"
@@ -321,7 +327,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
                                 allowDecimals={false}
                             />
                             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                            <Bar dataKey="averageAttendance" fill="var(--color-averageAttendance)" radius={4} />
+                            <Bar dataKey="averageAttendance" fill="url(#colorAverageAttendance)" radius={4} />
                         </BarChart>
                     </ChartContainer>
                  ) : (
@@ -997,12 +1003,12 @@ export default function DashboardPage() {
             />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-4">
         <Card>
             <CardHeader>
                 <CardTitle>Attendance Over Time</CardTitle>
-                <CardDescription>A summary of check-ins throughout the event week.</CardDescription>
+                <CardDescription>A summary of unique pre-registrations throughout the event week.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 <AttendanceChart 
