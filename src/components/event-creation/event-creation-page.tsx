@@ -61,23 +61,24 @@ export default function EventCreationPage() {
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
                 
-                // If the event date has passed, propose the next week's dates in the UI
-                // without automatically saving them.
+                // If the event date has passed, automatically roll over to the next week's dates
                 if (today > dbEventDate) {
                     const newEventDate = getNextSunday(today);
                     const newPreRegDate = getPreviousTuesday(newEventDate);
                     
-                    // Set the DB dates to what they were
-                    setEventDate(dbEventDate);
-                    setPreRegStartDate(parseDateAsUTC(config.pre_reg_start_date));
-
-                    // Set the temp dates to the new proposed dates
+                    await updateEventConfig({
+                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
+                        event_date: newEventDate.toISOString().split('T')[0],
+                    });
+                    
+                    setEventDate(newEventDate);
+                    setPreRegStartDate(newPreRegDate);
                     setTempEventDate(newEventDate);
                     setTempPreRegStartDate(newPreRegDate);
 
-                     toast({
-                        title: 'Event Date Passed',
-                        description: 'New dates for the next event have been proposed. Please review and apply the changes.',
+                    toast({
+                        title: 'Dates Automatically Updated',
+                        description: 'The event date has been rolled over to the next week.',
                     });
 
                 } else {
@@ -181,7 +182,7 @@ export default function EventCreationPage() {
         <CardHeader>
             <CardTitle>Event Configuration</CardTitle>
             <CardDescription>
-                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Actual day check-in is from 9:00 AM to 11:30 PM. All changes require clicking 'Apply'.
+                Configure the event and pre-registration dates. If the event date has passed, it will be automatically rolled over to the next week upon loading this page. All changes require clicking 'Apply'.
             </CardDescription>
         </CardHeader>
         {isLoading ? (
