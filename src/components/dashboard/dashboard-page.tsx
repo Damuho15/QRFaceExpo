@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
 import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck, Cake, PartyPopper } from 'lucide-react';
-import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC } from '@/lib/supabaseClient';
+import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC, getMemberCount, getMemberAttendanceForPeriod } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import AttendanceDataTable from './attendance-data-table';
@@ -725,21 +725,23 @@ export default function DashboardPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            // Fetch critical data in parallel
             const [
                 fetchedEventConfig, 
-                { members },
                 { logs: memberLogs },
-                { logs: firstTimerLogs }
+                { logs: firstTimerLogs },
+                { members: allMembersData },
             ] = await Promise.all([
                 getEventConfig(),
-                getMembers(0, 0), // Fetch all members once
                 getAttendanceLogs(), // Fetch all member logs once
-                getFirstTimerAttendanceLogs() // Fetch all 1st timer logs once
+                getFirstTimerAttendanceLogs(), // Fetch all 1st timer logs once
+                getMembers(0, 0), // Fetch all members once
             ]);
 
             setEventConfig(fetchedEventConfig);
-            setAllMembers(members);
-            setAllLogs([...memberLogs, ...firstTimerLogs]);
+            setAllMembers(allMembersData);
+            const combinedLogs = [...memberLogs, ...firstTimerLogs];
+            setAllLogs(combinedLogs);
             
             // --- Current Event Logs Calculation ---
             if (fetchedEventConfig) {
@@ -747,13 +749,15 @@ export default function DashboardPage() {
                 const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
                 
-                const currentLogs = [...memberLogs, ...firstTimerLogs].filter(log => {
+                const currentLogs = combinedLogs.filter(log => {
                     const logDate = new Date(log.timestamp);
                     return logDate >= startDate && logDate <= endDate;
                 });
                 setCurrentEventLogs(currentLogs);
             } else {
-                setCurrentEventLogs([...memberLogs, ...firstTimerLogs]);
+                // If no config, maybe show all logs as "current"? Or an empty array?
+                // For now, let's keep it consistent with the original logic
+                 setCurrentEventLogs(combinedLogs);
             }
 
             // --- Inactive Member Calculation ---
@@ -762,6 +766,7 @@ export default function DashboardPage() {
             const startOfPrevMonth = startOfMonth(prevMonthDate);
             const endOfPrevMonth = endOfMonth(prevMonthDate);
 
+            // Filter logs for the previous month (already in memory)
             const prevMonthMemberLogs = memberLogs.filter(log => {
                 const logDate = new Date(log.timestamp);
                 return logDate >= startOfPrevMonth && logDate <= endOfPrevMonth;
@@ -771,7 +776,8 @@ export default function DashboardPage() {
                 .filter(log => log.type === 'Actual')
                 .map(log => log.member_id)
             );
-            const inactive = members.filter(member => !attendedMemberIds.has(member.id));
+            
+            const inactive = allMembersData.filter(member => !attendedMemberIds.has(member.id));
             setInactiveMembers(inactive);
 
         } catch (error) {
@@ -780,6 +786,7 @@ export default function DashboardPage() {
             setLoading(false);
         }
     }, []);
+
 
     useEffect(() => {
         fetchData();
@@ -999,7 +1006,7 @@ export default function DashboardPage() {
                 <CardDescription>A summary of check-ins throughout the event.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                <AttendanceChart data={currentEventLogs as AttendanceLog[]} />
+                <AttendanceChart data={currentEventLogs} />
             </CardContent>
         </Card>
       </div>
@@ -1020,4 +1027,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
 
