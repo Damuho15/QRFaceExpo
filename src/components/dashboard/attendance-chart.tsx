@@ -16,7 +16,7 @@ interface AttendanceChartProps {
 const chartConfig = {
   "Pre-registrations": {
     label: "Pre-registrations",
-    color: "hsl(var(--chart-1))",
+    color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
 
