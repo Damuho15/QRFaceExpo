@@ -27,22 +27,37 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
         }
         
         const interval = eachDayOfInterval({ start, end });
-        
+        const alreadyCounted = new Set<string>();
+
         const dailyData = interval.map(day => {
             const dayKey = format(day, 'yyyy-MM-dd');
             
-            // Filter logs for the specific day and type 'Pre-registration'
             const logsThisDay = logs.filter(log => {
                 const logDateKey = format(new Date(log.timestamp), 'yyyy-MM-dd');
                 return logDateKey === dayKey && log.type === 'Pre-registration';
             });
+            
+            let uniqueRegistrationsThisDay = 0;
+            const uniqueAttendeesForDay = new Set<string>();
 
-            // Count unique attendees for that day
-            const uniqueAttendees = new Set(logsThisDay.map(log => 'member_id' in log ? log.member_id : log.first_timer_id));
+            logsThisDay.forEach(log => {
+                const attendeeId = 'member_id' in log ? log.member_id : log.first_timer_id;
+                
+                // Only count if this person hasn't been counted on a previous day
+                // and hasn't already been counted for today.
+                if (!alreadyCounted.has(attendeeId) && !uniqueAttendeesForDay.has(attendeeId)) {
+                    uniqueRegistrationsThisDay++;
+                    uniqueAttendeesForDay.add(attendeeId);
+                }
+            });
+
+            // After counting for the day, add these attendees to the master "alreadyCounted" set
+            // so they won't be counted on subsequent days.
+            uniqueAttendeesForDay.forEach(id => alreadyCounted.add(id));
 
             return {
                 name: format(day, 'EEE, MMM d'),
-                "Pre-registrations": uniqueAttendees.size,
+                "Pre-registrations": uniqueRegistrationsThisDay,
             };
         });
 
