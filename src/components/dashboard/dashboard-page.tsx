@@ -35,7 +35,7 @@ import * as XLSX from 'xlsx';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 
-const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDate?: Date; defaultEndDate?: Date; }) => {
+const AttendanceReport = ({ defaultStartDate, defaultEndDate, allLogs }: { defaultStartDate?: Date; defaultEndDate?: Date; allLogs: (AttendanceLog | NewComerAttendanceLog)[] }) => {
     const { toast } = useToast();
     const [startDate, setStartDate] = useState<Date | undefined>(defaultStartDate);
     const [endDate, setEndDate] = useState<Date | undefined>(defaultEndDate);
@@ -64,45 +64,36 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
         
         setIsLoading(true);
         setTotalActualAttendance(null);
-        try {
-            // Set end date to the end of the day to include all logs for that day
-            const adjustedEndDate = new Date(end);
-            adjustedEndDate.setHours(23, 59, 59, 999);
 
-            const [{ logs: memberLogs }, { logs: firstTimerLogs }] = await Promise.all([
-                getAttendanceLogs({ startDate: start, endDate: adjustedEndDate }),
-                getFirstTimerAttendanceLogs({ startDate: start, endDate: adjustedEndDate })
-            ]);
-            
-            const combinedLogs = [
-                ...memberLogs.map(l => ({ ...l, name: l.member_name, timestamp: l.timestamp, type: l.type })), 
-                ...firstTimerLogs.map(l => ({ ...l, name: l.first_timer_name, timestamp: l.timestamp, type: l.type }))
-            ];
+        // Filter logs that are already in memory
+        const adjustedEndDate = new Date(end);
+        adjustedEndDate.setHours(23, 59, 59, 999);
 
-            const actualLogs = combinedLogs.filter(log => log.type === 'Actual');
-            
-            const uniqueAttendance = new Set<string>();
+        const logsInRange = allLogs.filter(log => {
+            const logDate = new Date(log.timestamp);
+            return logDate >= start && logDate <= adjustedEndDate;
+        });
+        
+        const combinedLogs = logsInRange.map(l => ({ 
+            ...l, 
+            name: 'member_name' in l ? l.member_name : l.first_timer_name, 
+            timestamp: l.timestamp, 
+            type: l.type 
+        }));
 
-            actualLogs.forEach(log => {
-                const eventDate = new Date(log.timestamp).toISOString().split('T')[0];
-                const uniqueKey = `${log.name}-${eventDate}`;
-                uniqueAttendance.add(uniqueKey);
-            });
-            
-            setTotalActualAttendance(uniqueAttendance.size);
+        const actualLogs = combinedLogs.filter(log => log.type === 'Actual');
+        const uniqueAttendance = new Set<string>();
 
-        } catch (error) {
-            console.error("Failed to calculate attendance report:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to generate the attendance report.',
-            });
-            setTotalActualAttendance(0);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
+        actualLogs.forEach(log => {
+            const eventDate = new Date(log.timestamp).toISOString().split('T')[0];
+            const uniqueKey = `${log.name}-${eventDate}`;
+            uniqueAttendance.add(uniqueKey);
+        });
+        
+        setTotalActualAttendance(uniqueAttendance.size);
+        setIsLoading(false);
+
+    }, [toast, allLogs]);
     
     useEffect(() => {
         if (defaultStartDate && defaultEndDate && !hasFetchedOnLoad.current) {
@@ -220,28 +211,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const MonthlyAverageChart = () => {
-    const [allLogs, setAllLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchAllLogs = async () => {
-            setIsLoading(true);
-            try {
-                const [{ logs: memberLogs }, { logs: firstTimerLogs }] = await Promise.all([
-                    getAttendanceLogs(),
-                    getFirstTimerAttendanceLogs(),
-                ]);
-                setAllLogs([...memberLogs, ...firstTimerLogs]);
-            } catch (error) {
-                console.error("Failed to fetch all logs for monthly chart:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchAllLogs();
-    }, []);
-
+const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[], isLoading: boolean }) => {
     const availableYears = useMemo(() => {
         const years = new Set(allLogs.map(log => new Date(log.timestamp).getFullYear()));
         return Array.from(years).sort((a,b) => b - a);
@@ -364,28 +334,12 @@ const MonthlyAverageChart = () => {
     )
 }
 
-const PromotionHistory = () => {
-    const [promotedMembers, setPromotedMembers] = useState<Member[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchPromotedMembers = async () => {
-            setIsLoading(true);
-            try {
-                // We fetch all members but without pagination by setting pageSize to 0
-                const { members } = await getMembers(0, 0); 
-                const promoted = members
-                    .filter(member => !!member.promoted_at)
-                    .sort((a, b) => new Date(b.promoted_at!).getTime() - new Date(a.promoted_at!).getTime());
-                setPromotedMembers(promoted);
-            } catch (error) {
-                console.error("Failed to fetch promotion history:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchPromotedMembers();
-    }, []);
+const PromotionHistory = ({ allMembers, isLoading }: { allMembers: Member[], isLoading: boolean }) => {
+    const promotedMembers = useMemo(() => {
+        return allMembers
+            .filter(member => !!member.promoted_at)
+            .sort((a, b) => new Date(b.promoted_at!).getTime() - new Date(a.promoted_at!).getTime());
+    }, [allMembers]);
 
     return (
         <Card>
@@ -635,32 +589,14 @@ const InactiveMembersDialog = ({
     )
 }
 
-const CelebrantsDashboard = () => {
-    const [members, setMembers] = useState<Member[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+const CelebrantsDashboard = ({ allMembers, isLoading }: { allMembers: Member[], isLoading: boolean }) => {
     const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-
-    useEffect(() => {
-        const fetchAllMembers = async () => {
-            setIsLoading(true);
-            try {
-                // Fetch all members without pagination for celebrant calculations
-                const { members: allMembers } = await getMembers(0, 0);
-                setMembers(allMembers);
-            } catch (error) {
-                console.error("Failed to fetch members for celebrant dashboard:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchAllMembers();
-    }, []);
 
     const { birthdayCelebrants, anniversaryCelebrants } = useMemo(() => {
         const birthdays: { name: string, date: string }[] = [];
         const anniversaries: { name: string, date: string }[] = [];
 
-        members.forEach(member => {
+        allMembers.forEach(member => {
             if (member.birthday) {
                 const birthDate = new Date(member.birthday);
                 if (birthDate.getUTCMonth() === selectedMonth) {
@@ -689,7 +625,7 @@ const CelebrantsDashboard = () => {
             birthdayCelebrants: birthdays.sort(sortCelebrants),
             anniversaryCelebrants: anniversaries.sort(sortCelebrants)
         };
-    }, [members, selectedMonth]);
+    }, [allMembers, selectedMonth]);
 
     const months = Array.from({ length: 12 }, (_, i) => ({
         value: i,
@@ -773,50 +709,52 @@ const CelebrantsDashboard = () => {
 
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
-    const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
-    const [firstTimerLogs, setFirstTimerLogs] = useState<NewComerAttendanceLog[]>([]);
+    // Data states
     const [eventConfig, setEventConfig] = useState<EventConfig | null>(null);
+    const [currentEventLogs, setCurrentEventLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
+    const [allLogs, setAllLogs] = useState<(AttendanceLog | NewComerAttendanceLog)[]>([]);
+    const [allMembers, setAllMembers] = useState<Member[]>([]);
     const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
-
-    // State for the names list dialog
+    
+    // Dialog states
     const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
     const [dialogNames, setDialogNames] = useState<(string | DetailedName)[]>([]);
-    
-    // State for inactive members dialog
     const [isInactiveDialogOpen, setIsInactiveDialogOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const fetchedEventConfig = await getEventConfig();
-            setEventConfig(fetchedEventConfig);
-            
-            let currentEventLogs: AttendanceLog[] = [];
-            let currentFirstTimerLogs: NewComerAttendanceLog[] = [];
+            const [
+                fetchedEventConfig, 
+                { members },
+                { logs: memberLogs },
+                { logs: firstTimerLogs }
+            ] = await Promise.all([
+                getEventConfig(),
+                getMembers(0, 0), // Fetch all members once
+                getAttendanceLogs(), // Fetch all member logs once
+                getFirstTimerAttendanceLogs() // Fetch all 1st timer logs once
+            ]);
 
+            setEventConfig(fetchedEventConfig);
+            setAllMembers(members);
+            setAllLogs([...memberLogs, ...firstTimerLogs]);
+            
+            // --- Current Event Logs Calculation ---
             if (fetchedEventConfig) {
                 const startDate = parseDateAsUTC(fetchedEventConfig.pre_reg_start_date);
                 const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
                 
-                const [{ logs: memberLogs }, { logs: ftLogs }] = await Promise.all([
-                    getAttendanceLogs({ startDate, endDate }),
-                    getFirstTimerAttendanceLogs({ startDate, endDate })
-                ]);
-                currentEventLogs = memberLogs;
-                currentFirstTimerLogs = ftLogs;
+                const currentLogs = [...memberLogs, ...firstTimerLogs].filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    return logDate >= startDate && logDate <= endDate;
+                });
+                setCurrentEventLogs(currentLogs);
             } else {
-                 const [{ logs: memberLogs }, { logs: ftLogs }] = await Promise.all([
-                    getAttendanceLogs(),
-                    getFirstTimerAttendanceLogs()
-                ]);
-                 currentEventLogs = memberLogs;
-                 currentFirstTimerLogs = ftLogs;
+                setCurrentEventLogs([...memberLogs, ...firstTimerLogs]);
             }
-
-            setAttendanceLogs(currentEventLogs);
-            setFirstTimerLogs(currentFirstTimerLogs);
 
             // --- Inactive Member Calculation ---
             const today = new Date();
@@ -824,15 +762,16 @@ export default function DashboardPage() {
             const startOfPrevMonth = startOfMonth(prevMonthDate);
             const endOfPrevMonth = endOfMonth(prevMonthDate);
 
-            // Fetch all members for inactive calculation
-            const { members: allMembers } = await getMembers(0, 0); 
-
-            const { logs: prevMonthLogs } = await getAttendanceLogs({ startDate: startOfPrevMonth, endDate: endOfPrevMonth });
-            const attendedMemberIds = new Set(prevMonthLogs
+            const prevMonthMemberLogs = memberLogs.filter(log => {
+                const logDate = new Date(log.timestamp);
+                return logDate >= startOfPrevMonth && logDate <= endOfPrevMonth;
+            });
+            
+            const attendedMemberIds = new Set(prevMonthMemberLogs
                 .filter(log => log.type === 'Actual')
                 .map(log => log.member_id)
             );
-            const inactive = allMembers.filter(member => !attendedMemberIds.has(member.id));
+            const inactive = members.filter(member => !attendedMemberIds.has(member.id));
             setInactiveMembers(inactive);
 
         } catch (error) {
@@ -845,18 +784,11 @@ export default function DashboardPage() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-
   
-  const combinedLogs = useMemo(() => [
-      ...attendanceLogs.map(l => ({ ...l, member_name: l.member_name, type: l.type, method: l.method, timestamp: l.timestamp, id: l.id, attendeeType: 'Member' as const })),
-      ...firstTimerLogs.map(l => ({ ...l, id: l.id, member_name: l.first_timer_name, member_id: l.first_timer_id, type: l.type, method: l.method, timestamp: l.timestamp, attendeeType: 'New Comer' as const }))
-  ], [attendanceLogs, firstTimerLogs]);
-
   const latestLogs = useMemo(() => {
-      const latestCheckins = new Map<string, (typeof combinedLogs)[number]>();
+      const latestCheckins = new Map<string, (typeof currentEventLogs)[number]>();
       
-      combinedLogs.forEach(log => {
+      currentEventLogs.forEach(log => {
           const name = 'member_name' in log ? log.member_name : (log as any).first_timer_name;
           const existing = latestCheckins.get(name);
           if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
@@ -866,7 +798,7 @@ export default function DashboardPage() {
       
       return Array.from(latestCheckins.values())
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [combinedLogs]);
+  }, [currentEventLogs]);
 
   const {
         totalPreRegistrations,
@@ -877,11 +809,13 @@ export default function DashboardPage() {
         const allPreRegistered = new Map<string, DetailedName>();
         const allActual = new Set<string>();
 
-        combinedLogs.forEach(log => {
-            const name = log.member_name;
+        currentEventLogs.forEach(log => {
+            const name = 'member_name' in log ? log.member_name : log.first_timer_name;
+            const attendeeType = 'member_id' in log ? 'Member' : 'New Comer';
+            
             if (log.type === 'Pre-registration') {
                 if (!allPreRegistered.has(name)) {
-                    allPreRegistered.set(name, { name, type: log.attendeeType });
+                    allPreRegistered.set(name, { name, type: attendeeType });
                 }
             } else if (log.type === 'Actual') {
                 allActual.add(name);
@@ -898,7 +832,7 @@ export default function DashboardPage() {
             actualRegistrations: allActual.size,
             preRegisteredNoShows: noShows,
         };
-    }, [combinedLogs]);
+    }, [currentEventLogs]);
   
   const { qrCheckins, faceCheckins } = useMemo(() => {
       let qr = 0;
@@ -926,19 +860,23 @@ export default function DashboardPage() {
   
   const { membersActualOnly, firstTimersActualOnly } = useMemo(() => {
         const memberAttendance = new Map<string, Set<string>>();
-        attendanceLogs.forEach(log => {
-            if (!memberAttendance.has(log.member_name)) {
-                memberAttendance.set(log.member_name, new Set());
+        currentEventLogs.forEach(log => {
+            if ('member_id' in log) {
+                if (!memberAttendance.has(log.member_name)) {
+                    memberAttendance.set(log.member_name, new Set());
+                }
+                memberAttendance.get(log.member_name)!.add(log.type);
             }
-            memberAttendance.get(log.member_name)!.add(log.type);
         });
 
         const firstTimerAttendance = new Map<string, Set<string>>();
-        firstTimerLogs.forEach(log => {
-            if (!firstTimerAttendance.has(log.first_timer_name)) {
-                firstTimerAttendance.set(log.first_timer_name, new Set());
+        currentEventLogs.forEach(log => {
+            if ('first_timer_id' in log) {
+                if (!firstTimerAttendance.has(log.first_timer_name)) {
+                    firstTimerAttendance.set(log.first_timer_name, new Set());
+                }
+                firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
             }
-            firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
         });
 
         const membersActualOnlyList = Array.from(memberAttendance.entries())
@@ -953,7 +891,7 @@ export default function DashboardPage() {
             membersActualOnly: membersActualOnlyList,
             firstTimersActualOnly: firstTimersActualOnlyList,
         };
-    }, [attendanceLogs, firstTimerLogs]);
+    }, [currentEventLogs]);
 
     const handleStatCardClick = (title: string, names: (string | DetailedName)[]) => {
         setDialogTitle(title);
@@ -1046,13 +984,13 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      <CelebrantsDashboard />
+      <CelebrantsDashboard allMembers={allMembers} isLoading={loading} />
 
-      <AttendanceReport {...attendanceReportDefaults} />
+      <AttendanceReport {...attendanceReportDefaults} allLogs={allLogs} />
 
-      <MonthlyAverageChart />
+      <MonthlyAverageChart allLogs={allLogs} isLoading={loading} />
       
-      <PromotionHistory />
+      <PromotionHistory allMembers={allMembers} isLoading={loading} />
 
       <div className="grid grid-cols-1 gap-4">
         <Card>
@@ -1061,7 +999,7 @@ export default function DashboardPage() {
                 <CardDescription>A summary of check-ins throughout the event.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                <AttendanceChart data={attendanceLogs} />
+                <AttendanceChart data={currentEventLogs as AttendanceLog[]} />
             </CardContent>
         </Card>
       </div>
@@ -1082,3 +1020,4 @@ export default function DashboardPage() {
     </>
   );
 }
+
