@@ -650,11 +650,11 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             title = `Welcome, ${aiResult.fullName}!`;
             description = 'Your identity has been confirmed with high confidence. Click confirm to complete check-in.';
             showConfirmButton = true;
-        } else if (isMatch && confidence >= 0.7 && confidence < 0.9) {
+        } else if (isMatch && confidence >= 0.8 && confidence < 0.9) {
             title = `Please Confirm: Is this you, ${aiResult.fullName}?`;
             description = 'Your identity was recognized with medium confidence. Please confirm to complete your check-in.';
             showConfirmButton = true;
-        } else { // confidence < 0.7 or no match
+        } else { // confidence < 0.8 or no match
             title = 'Could Not Recognize Face';
             description = aiResult.reason 
                 ? `Reason: ${aiResult.reason}. Please try again in better lighting or use the QR code.`
