@@ -40,6 +40,7 @@ import { Member, FirstTimer } from '@/lib/types';
 import { isValidUUID } from '@/lib/validation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { useAuth } from '@/context/AuthContext';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const preRegStart = new Date(preRegStartDate);
@@ -481,6 +482,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
     const { toast } = useToast();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [hasConsented, setHasConsented] = useState(false);
     
     // Dialog and state management
     const [isProcessing, setIsProcessing] = useState(false);
@@ -716,7 +718,21 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
                 </AlertDescription>
             </Alert>
         )}
-        <Button onClick={handleVerification} disabled={isProcessing || hasCameraPermission !== true} className="w-full">
+        <div className="items-top flex space-x-3 rounded-md border p-4">
+            <Checkbox id="privacy-consent" onCheckedChange={(checked) => setHasConsented(checked as boolean)} />
+            <div className="grid gap-1.5 leading-none">
+                <label
+                htmlFor="privacy-consent"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                Data Privacy Consent
+                </label>
+                <p className="text-sm text-muted-foreground">
+                    I consent to the use of my camera for face recognition for check-in purposes. The captured image will be used for a one-time verification and will not be stored.
+                </p>
+            </div>
+        </div>
+        <Button onClick={handleVerification} disabled={isProcessing || hasCameraPermission !== true || !hasConsented} className="w-full">
             {isProcessing ? (
                 <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
