@@ -5,12 +5,9 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   useReactTable,
   type SortingState,
-  type ColumnFiltersState,
+  type PaginationState,
 } from '@tanstack/react-table';
 
 import {
@@ -23,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 
 interface DataTableProps<TData, TValue> {
@@ -31,6 +28,11 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   isLoading: boolean;
   onAction: () => void;
+  pageCount: number;
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  nameFilter: string;
+  setNameFilter: (value: string) => void;
 }
 
 export default function AttendanceDataTable<TData, TValue>({
@@ -38,27 +40,25 @@ export default function AttendanceDataTable<TData, TValue>({
   data,
   isLoading,
   onAction,
+  pageCount,
+  pagination,
+  setPagination,
+  nameFilter,
+  setNameFilter,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-
+  
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
-    initialState: {
-        pagination: {
-            pageSize: 5,
-        }
-    },
+    pageCount: pageCount,
+    onPaginationChange: setPagination,
+    manualPagination: true,
     state: {
       sorting,
-      columnFilters,
+      pagination,
     },
     meta: {
       onAction: onAction,
@@ -71,9 +71,9 @@ export default function AttendanceDataTable<TData, TValue>({
         <div className="flex items-center py-4">
           <Input
             placeholder="Filter by attendee name..."
-            value={(table.getColumn('member_name')?.getFilterValue() as string) ?? ''}
+            value={nameFilter}
             onChange={(event) =>
-              table.getColumn('member_name')?.setFilterValue(event.target.value)
+              setNameFilter(event.target.value)
             }
             className="max-w-sm"
           />
@@ -100,7 +100,7 @@ export default function AttendanceDataTable<TData, TValue>({
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: pagination.pageSize }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
                         {columns.map((column, j) => (
                             <TableCell key={`skeleton-cell-${i}-${j}`}>

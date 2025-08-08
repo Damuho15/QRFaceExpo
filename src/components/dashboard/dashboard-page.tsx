@@ -69,9 +69,9 @@ const AttendanceReport = ({ defaultStartDate, defaultEndDate }: { defaultStartDa
             const adjustedEndDate = new Date(end);
             adjustedEndDate.setHours(23, 59, 59, 999);
 
-            const [memberLogs, firstTimerLogs] = await Promise.all([
-                getAttendanceLogs(start, adjustedEndDate),
-                getFirstTimerAttendanceLogs(start, adjustedEndDate)
+            const [{ logs: memberLogs }, { logs: firstTimerLogs }] = await Promise.all([
+                getAttendanceLogs({ startDate: start, endDate: adjustedEndDate }),
+                getFirstTimerAttendanceLogs({ startDate: start, endDate: adjustedEndDate })
             ]);
             
             const combinedLogs = [
@@ -228,7 +228,7 @@ const MonthlyAverageChart = () => {
         const fetchAllLogs = async () => {
             setIsLoading(true);
             try {
-                const [memberLogs, firstTimerLogs] = await Promise.all([
+                const [{ logs: memberLogs }, { logs: firstTimerLogs }] = await Promise.all([
                     getAttendanceLogs(),
                     getFirstTimerAttendanceLogs(),
                 ]);
@@ -800,14 +800,14 @@ export default function DashboardPage() {
                 const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
                 endDate.setUTCHours(23, 59, 59, 999);
                 
-                const [memberLogs, ftLogs] = await Promise.all([
-                    getAttendanceLogs(startDate, endDate),
-                    getFirstTimerAttendanceLogs(startDate, endDate)
+                const [{ logs: memberLogs }, { logs: ftLogs }] = await Promise.all([
+                    getAttendanceLogs({ startDate, endDate }),
+                    getFirstTimerAttendanceLogs({ startDate, endDate })
                 ]);
                 currentEventLogs = memberLogs;
                 currentFirstTimerLogs = ftLogs;
             } else {
-                 const [memberLogs, ftLogs] = await Promise.all([
+                 const [{ logs: memberLogs }, { logs: ftLogs }] = await Promise.all([
                     getAttendanceLogs(),
                     getFirstTimerAttendanceLogs()
                 ]);
@@ -827,7 +827,7 @@ export default function DashboardPage() {
             // Fetch all members for inactive calculation
             const { members: allMembers } = await getMembers(0, 0); 
 
-            const prevMonthLogs = await getAttendanceLogs(startOfPrevMonth, endOfPrevMonth);
+            const { logs: prevMonthLogs } = await getAttendanceLogs({ startDate: startOfPrevMonth, endDate: endOfPrevMonth });
             const attendedMemberIds = new Set(prevMonthLogs
                 .filter(log => log.type === 'Actual')
                 .map(log => log.member_id)

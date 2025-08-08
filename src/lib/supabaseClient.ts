@@ -348,11 +348,20 @@ export const addAttendanceLog = async (log: {
     return data;
 };
 
-export const getAttendanceLogs = async (startDate?: Date, endDate?: Date): Promise<AttendanceLog[]> => {
+type GetAttendanceLogsOptions = {
+    pageIndex?: number;
+    pageSize?: number;
+    memberNameFilter?: string;
+    startDate?: Date;
+    endDate?: Date;
+}
+
+export const getAttendanceLogs = async (options: GetAttendanceLogsOptions = {}): Promise<{ logs: AttendanceLog[], count: number }> => {
+    const { pageIndex = 0, pageSize = 0, memberNameFilter, startDate, endDate } = options;
+
     let query = supabase
         .from('attendance_logs')
-        .select('*')
-        .order('timestamp', { ascending: false });
+        .select('*', { count: 'exact' });
 
     if (startDate) {
         query = query.gte('timestamp', startDate.toISOString());
@@ -360,15 +369,25 @@ export const getAttendanceLogs = async (startDate?: Date, endDate?: Date): Promi
     if (endDate) {
         query = query.lte('timestamp', endDate.toISOString());
     }
+    if (memberNameFilter) {
+        query = query.ilike('member_name', `%${memberNameFilter}%`);
+    }
 
-    const { data, error } = await query;
+    if (pageSize > 0) {
+        const rangeFrom = pageIndex * pageSize;
+        const rangeTo = rangeFrom + pageSize - 1;
+        query = query.range(rangeFrom, rangeTo);
+    }
+    
+    const { data, error, count } = await query.order('timestamp', { ascending: false });
 
     if (error) {
         console.error('Error fetching attendance logs:', error);
         throw error;
     }
 
-    return (data || []).map(log => ({ ...log, id: String(log.id) }));
+    const logs = (data || []).map(log => ({ ...log, id: String(log.id) }));
+    return { logs, count: count || 0 };
 };
 
 export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
@@ -382,20 +401,22 @@ export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
 
 // New Comer Functions
 export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = ''): Promise<{ firstTimers: FirstTimer[], count: number }> => {
-    const rangeFrom = pageIndex * pageSize;
-    const rangeTo = rangeFrom + pageSize - 1;
-
     let query = supabase
         .from('first_timers')
-        .select('*', { count: 'exact' })
-        .order('fullName', { ascending: true })
-        .range(rangeFrom, rangeTo);
+        .select('*', { count: 'exact' });
         
     if (fullNameFilter) {
         query = query.ilike('fullName', `%${fullNameFilter}%`);
     }
+    
+    // Only apply pagination if pageSize is greater than 0
+    if (pageSize > 0) {
+        const rangeFrom = pageIndex * pageSize;
+        const rangeTo = rangeFrom + pageSize - 1;
+        query = query.range(rangeFrom, rangeTo);
+    }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await query.order('fullName', { ascending: true });
 
     if (error) {
         console.error('Error fetching new comers:', error);
@@ -480,11 +501,20 @@ export const addFirstTimerAttendanceLog = async (log: {
     return data;
 };
 
-export const getFirstTimerAttendanceLogs = async (startDate?: Date, endDate?: Date): Promise<NewComerAttendanceLog[]> => {
+type GetFirstTimerAttendanceLogsOptions = {
+    pageIndex?: number;
+    pageSize?: number;
+    nameFilter?: string;
+    startDate?: Date;
+    endDate?: Date;
+}
+
+export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendanceLogsOptions = {}): Promise<{ logs: NewComerAttendanceLog[], count: number }> => {
+    const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate } = options;
+
     let query = supabase
         .from('attendance_log_1sttimer')
-        .select('*')
-        .order('timestamp', { ascending: false });
+        .select('*', { count: 'exact' });
 
     if (startDate) {
         query = query.gte('timestamp', startDate.toISOString());
@@ -492,15 +522,25 @@ export const getFirstTimerAttendanceLogs = async (startDate?: Date, endDate?: Da
     if (endDate) {
         query = query.lte('timestamp', endDate.toISOString());
     }
+    if (nameFilter) {
+        query = query.ilike('first_timer_name', `%${nameFilter}%`);
+    }
 
-    const { data, error } = await query;
+    if (pageSize > 0) {
+        const rangeFrom = pageIndex * pageSize;
+        const rangeTo = rangeFrom + pageSize - 1;
+        query = query.range(rangeFrom, rangeTo);
+    }
+
+    const { data, error, count } = await query.order('timestamp', { ascending: false });
 
     if (error) {
         console.error('Error fetching new comer attendance logs:', error);
         throw error;
     }
 
-    return (data || []).map(log => ({ ...log, id: String(log.id) }));
+    const logs = (data || []).map(log => ({ ...log, id: String(log.id) }));
+    return { logs, count: count || 0 };
 };
 
 export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean> => {

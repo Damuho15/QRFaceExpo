@@ -34,8 +34,8 @@ const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote
             setIsLoading(true);
             try {
                 // Fetch all logs for accurate attendance counting
-                const fetchedLogs = await getFirstTimerAttendanceLogs();
-                setAttendanceLogs(fetchedLogs);
+                const { logs } = await getFirstTimerAttendanceLogs();
+                setAttendanceLogs(logs);
             } catch (error) {
                 console.error("Failed to fetch new comer attendance logs", error);
             } finally {
