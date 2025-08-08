@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
 import type { AttendanceLog, NewComerAttendanceLog } from '@/lib/types';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { format, eachDayOfInterval } from 'date-fns';
@@ -19,6 +19,16 @@ const chartConfig = {
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
+
+const GradientColors = () => {
+    return (
+      <linearGradient id="colorPreRegistrations" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="5%" stopColor="var(--color-Pre-registrations)" stopOpacity={0.9} />
+        <stop offset="95%" stopColor="var(--color-Pre-registrations)" stopOpacity={0.4} />
+      </linearGradient>
+    );
+};
+
 
 export default function AttendanceChart({ data, startDate, endDate }: AttendanceChartProps) {
     const processData = (logs: (AttendanceLog | NewComerAttendanceLog)[], start?: Date | null, end?: Date | null) => {
@@ -70,6 +80,9 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
     <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
         <ResponsiveContainer>
             <BarChart data={chartData}>
+                <defs>
+                  <GradientColors />
+                </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis
                     dataKey="name"
@@ -88,7 +101,7 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
                 />
                 <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
                 <Legend />
-                <Bar dataKey="Pre-registrations" fill="var(--color-Pre-registrations)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Pre-registrations" fill="url(#colorPreRegistrations)" radius={[4, 4, 0, 0]} />
             </BarChart>
         </ResponsiveContainer>
     </ChartContainer>
