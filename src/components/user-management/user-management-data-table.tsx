@@ -7,12 +7,9 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   useReactTable,
   type SortingState,
-  type ColumnFiltersState,
+  type PaginationState,
 } from '@tanstack/react-table';
 
 import {
@@ -34,50 +31,45 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onAction: () => void;
   isLoading: boolean;
+  pageCount: number;
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  usernameFilter: string;
+  setUsernameFilter: (value: string) => void;
 }
 
 export default function UserManagementDataTable<TData, TValue>({
   columns,
   data,
   onAction,
-  isLoading
+  isLoading,
+  pageCount,
+  pagination,
+  setPagination,
+  usernameFilter,
+  setUsernameFilter,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
+    pageCount: pageCount,
+    onPaginationChange: setPagination,
+    manualPagination: true,
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
+      pagination,
       rowSelection,
     },
      meta: {
       onAction: onAction
     }
   });
-
-  const [usernameFilter, setUsernameFilter] = React.useState('');
-
-  React.useEffect(() => {
-    const handler = setTimeout(() => {
-        table.getColumn('username')?.setFilterValue(usernameFilter);
-    }, 300);
-
-    return () => {
-        clearTimeout(handler);
-    };
-  }, [usernameFilter, table]);
-
 
   return (
     <div>
@@ -124,7 +116,7 @@ export default function UserManagementDataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: pagination.pageSize }).map((_, i) => (
                     <TableRow key={`skeleton-${i}`}>
                         {columns.map((column, j) => (
                             <TableCell key={`skeleton-cell-${i}-${j}`}>

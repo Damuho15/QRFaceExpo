@@ -6,27 +6,44 @@ import type { User } from '@/lib/types';
 import UserManagementDataTable from './user-management-data-table';
 import { columns } from './columns';
 import { getUsers } from '@/lib/supabaseClient';
+import { useDebounce } from 'use-debounce';
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pageCount, setPageCount] = useState(0);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [usernameFilter, setUsernameFilter] = useState('');
+  const [debouncedUsernameFilter] = useDebounce(usernameFilter, 500);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
-        const fetchedUsers = await getUsers();
+        const { users: fetchedUsers, count } = await getUsers({
+            pageIndex: pagination.pageIndex,
+            pageSize: pagination.pageSize,
+            usernameFilter: debouncedUsernameFilter
+        });
         setUsers(fetchedUsers);
+        setPageCount(Math.ceil(count / pagination.pageSize));
     } catch (error) {
         console.error("Failed to fetch users:", error);
-        // Optionally, add toast notifications for errors
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [pagination, debouncedUsernameFilter]);
 
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  // Reset page index when filter changes
+  useEffect(() => {
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+  }, [debouncedUsernameFilter]);
 
   return (
     <div className="space-y-6">
@@ -37,7 +54,17 @@ export default function UserManagementPage() {
         </p>
       </div>
 
-      <UserManagementDataTable columns={columns} data={users} onAction={refreshData} isLoading={loading} />
+      <UserManagementDataTable 
+        columns={columns} 
+        data={users} 
+        onAction={refreshData} 
+        isLoading={loading}
+        pageCount={pageCount}
+        pagination={pagination}
+        setPagination={setPagination}
+        usernameFilter={usernameFilter}
+        setUsernameFilter={setUsernameFilter}
+      />
     </div>
   );
 }

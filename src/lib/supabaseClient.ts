@@ -620,17 +620,36 @@ export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise
 
 
 // User Management Functions
-export const getUsers = async (): Promise<User[]> => {
-    const { data, error } = await supabase
+type GetUsersOptions = {
+    pageIndex?: number;
+    pageSize?: number;
+    usernameFilter?: string;
+}
+
+export const getUsers = async (options: GetUsersOptions = {}): Promise<{ users: User[], count: number }> => {
+    const { pageIndex = 0, pageSize = 0, usernameFilter } = options;
+    
+    let query = supabase
         .from('user_qrface')
-        .select('id, full_name, username, role, created_at') // Explicitly exclude password
-        .order('full_name', { ascending: true });
+        .select('id, full_name, username, role, created_at', { count: 'exact' });
+
+    if (usernameFilter) {
+        query = query.ilike('username', `%${usernameFilter}%`);
+    }
+
+    if (pageSize > 0) {
+        const rangeFrom = pageIndex * pageSize;
+        const rangeTo = rangeFrom + pageSize - 1;
+        query = query.range(rangeFrom, rangeTo);
+    }
+
+    const { data, error, count } = await query.order('full_name', { ascending: true });
 
     if (error) {
         console.error('Error fetching users:', error);
         throw error;
     }
-    return data || [];
+    return { users: data || [], count: count || 0 };
 };
 
 export const loginUser = async (username: string, password?: string): Promise<User | null> => {
