@@ -61,23 +61,23 @@ export default function EventCreationPage() {
 
                 const dbEventDate = parseDateAsUTC(config.event_date);
                 
+                // If the event date has passed, propose the next week's dates in the UI
+                // without automatically saving them.
                 if (today > dbEventDate) {
                     const newEventDate = getNextSunday(today);
                     const newPreRegDate = getPreviousTuesday(newEventDate);
                     
-                    await updateEventConfig({
-                        pre_reg_start_date: newPreRegDate.toISOString().split('T')[0],
-                        event_date: newEventDate.toISOString().split('T')[0],
-                    });
-                    
-                    setEventDate(newEventDate);
-                    setPreRegStartDate(newPreRegDate);
+                    // Set the DB dates to what they were
+                    setEventDate(dbEventDate);
+                    setPreRegStartDate(parseDateAsUTC(config.pre_reg_start_date));
+
+                    // Set the temp dates to the new proposed dates
                     setTempEventDate(newEventDate);
                     setTempPreRegStartDate(newPreRegDate);
 
                      toast({
-                        title: 'Event Dates Updated',
-                        description: 'The event has been automatically rolled over to the next week.',
+                        title: 'Event Date Passed',
+                        description: 'New dates for the next event have been proposed. Please review and apply the changes.',
                     });
 
                 } else {
@@ -93,7 +93,7 @@ export default function EventCreationPage() {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not load event configuration.' });
             }
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch or update event dates.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch event dates.' });
             console.error(error);
         } finally {
             setIsLoading(false);
@@ -181,7 +181,7 @@ export default function EventCreationPage() {
         <CardHeader>
             <CardTitle>Event Configuration</CardTitle>
             <CardDescription>
-                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Actual day check-in is from 9:00 AM to 11:30 PM. Automated changes are saved immediately. Manual changes require clicking 'Apply'.
+                Configure the event and pre-registration dates. Pre-registration is open until 8:59 AM on the event day. Actual day check-in is from 9:00 AM to 11:30 PM. All changes require clicking 'Apply'.
             </CardDescription>
         </CardHeader>
         {isLoading ? (
