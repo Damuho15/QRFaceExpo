@@ -41,22 +41,25 @@ export default function QrCodeDialog({ member, children }: QrCodeDialogProps) {
      setOpen(isOpen);
   }
 
-  const handleDownload = () => {
-    if (!member.qrCodePayload) return;
+  const handleDownload = async () => {
+    if (!member?.qrCodePayload) return;
     try {
-        const downloadUrl = `/api/qr-code?data=${encodeURIComponent(member.qrCodePayload)}&filename=${encodeURIComponent(member.fullName)}-QR.png`;
+        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(member.qrCodePayload)}`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = downloadUrl;
+        a.href = url;
         a.download = `${member.fullName}-QR.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error("Failed to initiate QR code download", error);
+        console.error("Failed to download QR code", error);
         toast({
             variant: "destructive",
             title: "Download failed",
-            description: "Could not start the QR code download."
+            description: "Could not download the QR code image."
         });
     }
   }
