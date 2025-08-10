@@ -46,27 +46,29 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     const scanDateTime = scanDate.getTime();
 
     // --- Pre-registration Window ---
+    // Starts at the beginning of the pre-registration start day.
     const preRegStart = new Date(preRegStartDate);
-    preRegStart.setUTCHours(0, 0, 0, 0);
+    preRegStart.setHours(0, 0, 0, 0);
 
     // --- Event Day Window ---
+    // "Actual" starts at 9am on the event day.
     const actualRegStart = new Date(eventDate);
-    actualRegStart.setUTCHours(9, 0, 0, 0);
+    actualRegStart.setHours(9, 0, 0, 0); 
     
-    // Pre-registration ends 1 millisecond before "Actual" registration begins.
+    // Pre-registration ends 1 millisecond before "Actual" registration begins on the event day.
     const preRegEnd = new Date(actualRegStart.getTime() - 1);
     
-    // Check for Pre-registration
+    // Check if the scan is within the valid pre-registration window.
     if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEnd.getTime()) {
         return 'Pre-registration';
     }
 
-    // Check for Actual-day Registration. The scan time must be on or after the 9am start time.
+    // Check if the scan is within the "Actual" day window (from 9am onwards).
     if (scanDateTime >= actualRegStart.getTime()) {
         return 'Actual';
     }
 
-    // If it falls outside of both windows, it's not a valid time for check-in.
+    // If it falls outside of both defined windows, it's not a valid time for check-in.
     return null;
 }
 
