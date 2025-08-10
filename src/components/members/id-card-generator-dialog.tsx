@@ -45,7 +45,7 @@ const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y:
             line = testLine;
         }
     }
-    context.fillText(line, x, y);
+    context.fillText(line.trim(), x, y);
 }
 
 
@@ -110,8 +110,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
         qrImg.onload = () => {
           
           const qrX = cardWidth / 2;
-          const qrY = cardHeight / 2 + 30; // Adjusted Y position
-          const qrRadius = 80; // Make circle smaller to ensure QR fits
+          const qrY = cardHeight / 2 + 30;
+          const qrRadius = 80; 
 
           ctx.save();
           // Create a circular clipping path
@@ -125,9 +125,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
           // Draw QR code image into the circle, leaving a small margin
-          const qrImageSize = (qrRadius - 10) * 2; // QR smaller than circle
+          const qrImageSize = (qrRadius - 10) * 2; 
           ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
-          ctx.restore(); // Restore the context to remove the clipping path
+          ctx.restore(); 
 
 
           // Draw logo if it exists
@@ -195,30 +195,40 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const cardWidth = 63; 
-      const cardHeight = 100;
-      const margin = 10;
-      const numColumns = 3;
-      const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * margin)) / (numColumns - 1);
       
-      let x = margin;
-      let y = margin;
+      // Adjusted card size for better fitting
+      const cardWidth = 60; 
+      const cardHeight = 95;
+      
+      const horizontalMargin = 10;
+      const verticalMargin = 15; // Increased top margin
+      const numColumns = 3;
+
+      const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * horizontalMargin)) / (numColumns - 1);
+      
+      let x = horizontalMargin;
+      let y = verticalMargin;
 
 
       cardDataUrls.forEach((cardDataUrl, index) => {
         const columnIndex = index % numColumns;
-
-        if (columnIndex === 0 && index > 0) { // Start of a new row
-             y += cardHeight + margin;
-        }
-
-        if (y + cardHeight > pageHeight) {
-          pdf.addPage();
-          y = margin;
-        }
-
-        x = margin + columnIndex * (cardWidth + spaceBetweenCards);
+        const rowIndex = Math.floor(index / numColumns);
         
+        // Check if we need to add a new page
+        if (rowIndex > 0 && columnIndex === 0) { // If it's a new row (and not the first one)
+            const nextY = y + cardHeight + verticalMargin;
+            if (nextY > pageHeight) { // Check if the next row would be clipped
+                pdf.addPage();
+                y = verticalMargin; // Reset y for the new page
+            }
+        }
+        
+        x = horizontalMargin + columnIndex * (cardWidth + spaceBetweenCards);
+        
+        if (columnIndex === 0 && index > 0) {
+            y += cardHeight + 10; // Add vertical space between rows
+        }
+
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
         
       });
