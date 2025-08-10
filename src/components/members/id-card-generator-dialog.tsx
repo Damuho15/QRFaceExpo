@@ -73,13 +73,13 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(member.nickname || member.fullName, cardWidth / 2, 100);
 
 
     // Generate QR Code
-    QRCode.toDataURL(member.qrCodePayload, { width: 160, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(member.qrCodePayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' })
       .then(qrUrl => {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
@@ -101,7 +101,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
           // Draw QR code image into the circle, leaving a small margin
-          const qrImageSize = (qrRadius - 5) * 2;
+          const qrImageSize = (qrRadius - 10) * 2;
           ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
           ctx.restore(); // Restore the context to remove the clipping path
 
