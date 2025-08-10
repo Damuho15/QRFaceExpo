@@ -25,27 +25,36 @@ interface IdCardGeneratorDialogProps {
   children: React.ReactNode;
 }
 
-// Helper to wrap text
-const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+// Helper to wrap text and calculate its height
+const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
     const words = text.split(' ');
     let line = '';
     let testLine;
     let metrics;
     let testWidth;
+    let totalLines = 1;
+    let lines = [];
 
     for (let n = 0; n < words.length; n++) {
         testLine = line + words[n] + ' ';
         metrics = context.measureText(testLine);
         testWidth = metrics.width;
         if (testWidth > maxWidth && n > 0) {
-            context.fillText(line, x, y);
+            lines.push(line.trim());
             line = words[n] + ' ';
-            y += lineHeight;
+            totalLines++;
         } else {
             line = testLine;
         }
     }
-    context.fillText(line.trim(), x, y);
+    lines.push(line.trim());
+    
+    // Draw the text
+    lines.forEach((line, index) => {
+        context.fillText(line, x, y + index * lineHeight);
+    });
+
+    return totalLines * lineHeight;
 }
 
 
@@ -91,15 +100,37 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     ctx.fillStyle = 'white';
     ctx.fill();
 
+    // -- Dynamic Name Box --
+    const nameText = member.nickname || member.fullName;
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    
+    // Measure text to determine the height of the background box
+    const words = nameText.split(' ');
+    let line = '';
+    let numLines = 1;
+    for(let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > cardWidth - 40 && n > 0) {
+            line = words[n] + ' ';
+            numLines++;
+        } else {
+            line = testLine;
+        }
+    }
+
+    const nameBoxHeight = numLines * 35 + 20; // 35px line height + 10px padding top/bottom
+    const nameBoxY = 60;
+    
     // Name background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(15, 60, cardWidth - 30, 60);
+    ctx.fillRect(15, nameBoxY, cardWidth - 30, nameBoxHeight);
 
     // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    wrapText(ctx, member.nickname || member.fullName, cardWidth / 2, 90, cardWidth - 40, 35);
+    const nameY = nameBoxY + (nameBoxHeight / 2) + 10 - ((numLines - 1) * 17.5);
+    measureAndWrapText(ctx, nameText, cardWidth / 2, nameY, cardWidth - 50, 35);
 
 
     // Generate QR Code
@@ -110,8 +141,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
         qrImg.onload = () => {
           
           const qrX = cardWidth / 2;
-          const qrY = cardHeight / 2 + 30;
-          const qrRadius = 80; 
+          const qrY = cardHeight / 2 + 40;
+          const qrRadius = 75; 
 
           ctx.save();
           // Create a circular clipping path
@@ -125,7 +156,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
           // Draw QR code image into the circle, leaving a small margin
-          const qrImageSize = (qrRadius - 10) * 2; 
+          const qrImageSize = (qrRadius - 15) * 2; 
           ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
           ctx.restore(); 
 
@@ -196,13 +227,13 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      // Adjusted card size for better fitting
       const cardWidth = 60; 
       const cardHeight = 95;
       
       const horizontalMargin = 10;
-      const verticalMargin = 15; // Increased top margin
+      const verticalMargin = 15;
       const numColumns = 3;
+      const verticalSpacing = 10;
 
       const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * horizontalMargin)) / (numColumns - 1);
       
@@ -214,21 +245,20 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
         const columnIndex = index % numColumns;
         const rowIndex = Math.floor(index / numColumns);
         
+        const isNewRow = columnIndex === 0;
+
+        if (index > 0 && isNewRow) {
+            y += cardHeight + verticalSpacing;
+        }
+
         // Check if we need to add a new page
-        if (rowIndex > 0 && columnIndex === 0) { // If it's a new row (and not the first one)
-            const nextY = y + cardHeight + verticalMargin;
-            if (nextY > pageHeight) { // Check if the next row would be clipped
-                pdf.addPage();
-                y = verticalMargin; // Reset y for the new page
-            }
+        if (y + cardHeight > pageHeight) {
+            pdf.addPage();
+            y = verticalMargin; // Reset y for the new page
         }
         
         x = horizontalMargin + columnIndex * (cardWidth + spaceBetweenCards);
         
-        if (columnIndex === 0 && index > 0) {
-            y += cardHeight + 10; // Add vertical space between rows
-        }
-
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
         
       });
