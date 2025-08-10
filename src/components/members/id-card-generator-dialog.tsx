@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -68,29 +69,25 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // Name background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(15, 55, cardWidth - 30, 50);
+    ctx.fillRect(15, 60, cardWidth - 30, 60);
 
-    // Member's name
+    // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(member.fullName, 25, 80);
-    
-    // Member Title (Static for now)
-    ctx.font = '14px Arial';
-    ctx.fillText('Member', 25, 98);
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(member.nickname || member.fullName, cardWidth / 2, 100);
 
 
     // Generate QR Code
-    QRCode.toDataURL(member.qrCodePayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(member.qrCodePayload, { width: 160, margin: 1, errorCorrectionLevel: 'M' })
       .then(qrUrl => {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
         qrImg.onload = () => {
           
           const qrX = cardWidth / 2;
-          const qrY = cardHeight / 2;
-          const qrRadius = 75;
+          const qrY = cardHeight / 2 + 10;
+          const qrRadius = 85;
 
           ctx.save();
           // Create a circular clipping path
@@ -103,8 +100,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillStyle = 'white';
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
-          // Draw QR code image into the circle
-          ctx.drawImage(qrImg, qrX - qrRadius + 5, qrY - qrRadius + 5, (qrRadius-5) * 2, (qrRadius-5) * 2);
+          // Draw QR code image into the circle, leaving a small margin
+          const qrImageSize = (qrRadius - 5) * 2;
+          ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
           ctx.restore(); // Restore the context to remove the clipping path
 
 
