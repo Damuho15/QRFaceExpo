@@ -34,6 +34,7 @@ const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
   const [localizedTimestamp, setLocalizedTimestamp] = useState('');
 
   useEffect(() => {
+    // toLocaleString() shows both date and time, which helps debug timezone issues.
     setLocalizedTimestamp(new Date(timestamp).toLocaleString());
   }, [timestamp]);
 

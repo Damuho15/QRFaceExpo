@@ -43,18 +43,25 @@ import { useAuth } from '@/context/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
-    // Ensure all dates are treated as UTC from the start
+    // This function now assumes all incoming dates are already correct UTC dates.
     const scanDateTime = scanDate.getTime();
 
+    // The eventDate and preRegStartDate from the DB are already UTC dates.
+    // We just need to define the specific time windows in UTC.
+    
+    // Pre-registration starts at the beginning of the preRegStartDate (00:00:00 UTC)
     const preRegStart = new Date(preRegStartDate);
     preRegStart.setUTCHours(0, 0, 0, 0);
 
+    // Event day starts at 9:00 AM UTC
     const eventStartTime = new Date(eventDate);
-    eventStartTime.setUTCHours(9, 0, 0, 0); // 9:00 AM UTC
+    eventStartTime.setUTCHours(9, 0, 0, 0);
 
+    // Event day ends late, allowing for late check-ins
     const eventEndTime = new Date(eventDate);
-    eventEndTime.setUTCHours(23, 30, 0, 0); // 11:30 PM UTC
+    eventEndTime.setUTCHours(23, 30, 0, 0);
     
+    // Pre-registration ends 1 millisecond before the event day starts
     const preRegEndTime = new Date(eventStartTime);
     preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
 
@@ -62,14 +69,20 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
         return 'Pre-registration';
     }
     
-    // Check if it's within the event day window
     if (scanDateTime >= eventStartTime.getTime() && scanDateTime <= eventEndTime.getTime()) {
         return 'Actual';
     }
 
-    // Allow check-ins after the event day to be counted as 'Actual' for simplicity
+    // This handles check-ins after the official end time on the event day, counting them as 'Actual'.
     if (scanDateTime > eventEndTime.getTime()) {
-        return 'Actual'
+        const scanDay = new Date(scanDate);
+        scanDay.setUTCHours(0,0,0,0);
+        const eventDay = new Date(eventDate);
+        eventDay.setUTCHours(0,0,0,0);
+
+        if (scanDay.getTime() === eventDay.getTime()) {
+            return 'Actual';
+        }
     }
 
     return null;
@@ -112,9 +125,9 @@ const MemberScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }
             description: 'Processing...',
         });
         
-        // Use current UTC time for comparison
-        const now = new Date();
-        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        // IMPORTANT: Use the current UTC time for comparison
+        const now = new Date(); // This is the only place we use the local time
+        const currentScanTime = new Date(now.toISOString()); // Immediately convert to a proper UTC date object
 
         const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
@@ -339,7 +352,7 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
     
     const handleCheckIn = async (qrData: string) => {
         const now = new Date();
-        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const currentScanTime = new Date(now.toISOString());
         const registrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
 
         if (!registrationType) {
@@ -544,7 +557,7 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
         }
         
         const now = new Date();
-        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const currentScanTime = new Date(now.toISOString());
 
         const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
@@ -792,7 +805,7 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
         });
         
         const now = new Date();
-        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const currentScanTime = new Date(now.toISOString());
 
         const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
@@ -995,7 +1008,7 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
     
     const handleCheckIn = async (qrData: string) => {
         const now = new Date();
-        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const currentScanTime = new Date(now.toISOString());
         const registrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
 
         if (!registrationType) {
