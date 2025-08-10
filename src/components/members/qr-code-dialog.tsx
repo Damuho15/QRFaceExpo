@@ -41,25 +41,27 @@ export default function QrCodeDialog({ member, children }: QrCodeDialogProps) {
      setOpen(isOpen);
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!member?.qrCodePayload) return;
-    
-    // Construct the URL to our new server-side API route.
-    const downloadUrl = `/api/qr-code?data=${encodeURIComponent(member.qrCodePayload)}&filename=${encodeURIComponent(member.fullName)}-QR.png`;
-    
-    // Create a temporary link element and click it to trigger the download.
-    // This is the simplest and most reliable way to initiate a download from a GET endpoint.
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = `${member.fullName}-QR.png`; // The filename is also set on the server, this is a fallback.
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    toast({
-        title: "Download Started",
-        description: `Your QR code for ${member.fullName} is downloading.`
-    });
+    try {
+        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(member.qrCodePayload)}`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${member.fullName}-QR.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Failed to download QR code", error);
+        toast({
+            variant: "destructive",
+            title: "Download failed",
+            description: "Could not download the QR code image."
+        });
+    }
   }
 
   return (

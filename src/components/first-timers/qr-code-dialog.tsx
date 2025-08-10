@@ -41,24 +41,27 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
      setOpen(isOpen);
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!firstTimer.qrCodePayload) return;
-    
-    // Construct the URL to our new server-side API route.
-    const downloadUrl = `/api/qr-code?data=${encodeURIComponent(firstTimer.qrCodePayload)}&filename=${encodeURIComponent(firstTimer.fullName)}-QR.png`;
-
-    // Create a temporary link element and click it to trigger the download.
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = `${firstTimer.fullName}-QR.png`; // The filename is also set on the server, this is a fallback.
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    toast({
-        title: "Download Started",
-        description: `Your QR code for ${firstTimer.fullName} is downloading.`
-    });
+    try {
+        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(firstTimer.qrCodePayload)}`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${firstTimer.fullName}-QR.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Failed to download QR code", error);
+        toast({
+            variant: "destructive",
+            title: "Download failed",
+            description: "Could not download the QR code image."
+        });
+    }
   }
 
   return (
