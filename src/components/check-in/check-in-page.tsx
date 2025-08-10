@@ -46,35 +46,32 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     const scanDateTime = scanDate.getTime();
 
     // --- Pre-registration Window ---
-    // Starts at the very beginning (00:00:00 UTC) of the pre-registration start date.
     const preRegStart = new Date(preRegStartDate);
     preRegStart.setUTCHours(0, 0, 0, 0);
 
     // --- Event Day Window ---
-    // The event day itself, starting at 00:00:00 UTC for simple date comparison.
-    const eventDay = new Date(eventDate);
-    eventDay.setUTCHours(0, 0, 0, 0);
-
-    // The precise start time of the "Actual" registration period (9:00:00 AM UTC).
     const actualRegStartTime = new Date(eventDate);
     actualRegStartTime.setUTCHours(9, 0, 0, 0);
 
     // Pre-registration ends 1 millisecond before "Actual" registration begins.
-    const preRegEndTime = new Date(actualRegStartTime);
-    preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
+    const preRegEndTime = new Date(actualRegStartTime.getTime() - 1);
     
     // Check for Pre-registration
     if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEndTime.getTime()) {
         return 'Pre-registration';
     }
 
-    // Check for Actual-day Registration
-    // The check is for any time from 9 AM UTC onwards on the event day.
-    const scanDay = new Date(scanDate);
-    scanDay.setUTCHours(0,0,0,0);
-
-    if (scanDay.getTime() === eventDay.getTime() && scanDateTime >= actualRegStartTime.getTime()) {
-        return 'Actual';
+    // Check for Actual-day Registration (anytime from 9am on event day)
+    const eventDayStartTime = new Date(eventDate);
+    eventDayStartTime.setUTCHours(0,0,0,0);
+    
+    if (scanDateTime >= actualRegStartTime.getTime()) {
+        const scanDay = new Date(scanDate);
+        scanDay.setUTCHours(0,0,0,0);
+        // Ensure it's on the same day as the event
+        if (scanDay.getTime() === eventDayStartTime.getTime()){
+             return 'Actual';
+        }
     }
 
     // If it falls outside of both windows, it's not a valid time for check-in.
