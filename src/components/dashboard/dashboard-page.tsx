@@ -234,7 +234,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
             const timestamp = new Date(log.timestamp);
             const monthKey = format(timestamp, 'yyyy-MM');
             const dayKey = format(timestamp, 'yyyy-MM-dd');
-            const name = 'member_name' in log ? log.member_name : log.first_timer_name;
+            const name = 'member_name' in log ? log.member_name : l.first_timer_name;
             
             if (!attendeesByMonthDay[monthKey]) {
                 attendeesByMonthDay[monthKey] = {};
@@ -274,7 +274,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
         <Card>
             <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className='space-y-1.5'>
+                    <div class='space-y-1.5'>
                         <CardTitle>Average Monthly Attendance</CardTitle>
                         <CardDescription>
                             Average unique "Actual" attendance per event for each month in {selectedYear}.
@@ -839,8 +839,7 @@ export default function DashboardPage() {
         });
 
         const noShows = Array.from(allPreRegistered.values())
-            .filter(item => !allActual.has(item.name))
-            .map(item => item.name);
+            .filter(item => !allActual.has(item.name));
 
         return {
             totalPreRegistrations: allPreRegistered.size,
