@@ -408,34 +408,24 @@ const NamesListDialog = ({
     isOpen: boolean;
     onClose: () => void;
     title: string;
-    names: (string | DetailedName)[];
+    names: DetailedName[];
 }) => {
     const { toast } = useToast();
 
-    const { memberCount, newComerCount, isDetailedView } = useMemo(() => {
+    const { memberCount, newComerCount } = useMemo(() => {
         let members = 0;
         let newComers = 0;
-        let detailed = false;
         
-        if (names.length > 0 && typeof names[0] !== 'string') {
-            detailed = true;
-            names.forEach(item => {
-                if (typeof item !== 'string') {
-                    if (item.type === 'Member') members++;
-                    if (item.type === 'New Comer') newComers++;
-                }
-            });
-        }
-        return { memberCount: members, newComerCount: newComers, isDetailedView: detailed };
+        names.forEach(item => {
+            if (item.type === 'Member') members++;
+            if (item.type === 'New Comer') newComers++;
+        });
+        
+        return { memberCount: members, newComerCount: newComers };
     }, [names]);
 
     const handleCopy = () => {
-        const textToCopy = names.map(item => {
-            if (typeof item === 'string') {
-                return item;
-            }
-            return item.name;
-        }).join('\n');
+        const textToCopy = names.map(item => item.name).join('\n');
         
         navigator.clipboard.writeText(textToCopy).then(() => {
             toast({
@@ -460,38 +450,30 @@ const NamesListDialog = ({
                     <DialogDescription>
                         A list of {names.length} attendees for this category.
                     </DialogDescription>
-                    {isDetailedView && (
-                        <div className="pt-2 text-sm text-muted-foreground">
-                            <div className="flex justify-between border-t pt-2 mt-2">
-                                <span>Members:</span>
-                                <span>{memberCount}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>New Comers:</span>
-                                <span>{newComerCount}</span>
-                            </div>
-                             <div className="flex justify-between font-bold border-t mt-1 pt-1">
-                                <span>Total:</span>
-                                <span>{names.length}</span>
-                            </div>
+                    <div className="pt-2 text-sm text-muted-foreground">
+                        <div className="flex justify-between border-t pt-2 mt-2">
+                            <span>Members:</span>
+                            <span>{memberCount}</span>
                         </div>
-                    )}
+                        <div className="flex justify-between">
+                            <span>New Comers:</span>
+                            <span>{newComerCount}</span>
+                        </div>
+                         <div className="flex justify-between font-bold border-t mt-1 pt-1">
+                            <span>Total:</span>
+                            <span>{names.length}</span>
+                        </div>
+                    </div>
                 </DialogHeader>
                 <ScrollArea className="h-72 mt-2">
                     <div className="space-y-2 pr-4">
                         {names.length > 0 ? (
-                            names.map((item, index) => {
-                                const isDetailed = typeof item !== 'string';
-                                const name = isDetailed ? item.name : item;
-                                const type = isDetailed ? item.type : null;
-
-                                return (
+                            names.map((item, index) => (
                                 <div key={index} className="text-sm p-2 rounded-md bg-muted/50 flex justify-between items-center">
-                                    <span>{name}</span>
-                                    {type && <Badge variant={type === 'Member' ? 'secondary' : 'default'}>{type}</Badge>}
+                                    <span>{item.name}</span>
+                                    <Badge variant={item.type === 'Member' ? 'secondary' : 'default'}>{item.type}</Badge>
                                 </div>
-                                )
-                            })
+                            ))
                         ) : (
                             <p className="text-sm text-muted-foreground text-center pt-8">
                                 No attendees in this category.
@@ -725,7 +707,7 @@ export default function DashboardPage() {
     // Dialog states
     const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
-    const [dialogNames, setDialogNames] = useState<(string | DetailedName)[]>([]);
+    const [dialogNames, setDialogNames] = useState<DetailedName[]>([]);
     const [isInactiveDialogOpen, setIsInactiveDialogOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -875,41 +857,41 @@ export default function DashboardPage() {
   }, [eventConfig]);
   
   const { membersActualOnly, firstTimersActualOnly } = useMemo(() => {
-        const memberAttendance = new Map<string, Set<string>>();
-        currentEventLogs.forEach(log => {
-            if ('member_id' in log) {
-                if (!memberAttendance.has(log.member_name)) {
-                    memberAttendance.set(log.member_name, new Set());
-                }
-                memberAttendance.get(log.member_name)!.add(log.type);
+    const memberAttendance = new Map<string, Set<string>>();
+    currentEventLogs.forEach(log => {
+        if ('member_id' in log) {
+            if (!memberAttendance.has(log.member_name)) {
+                memberAttendance.set(log.member_name, new Set());
             }
-        });
+            memberAttendance.get(log.member_name)!.add(log.type);
+        }
+    });
 
-        const firstTimerAttendance = new Map<string, Set<string>>();
-        currentEventLogs.forEach(log => {
-            if ('first_timer_id' in log) {
-                if (!firstTimerAttendance.has(log.first_timer_name)) {
-                    firstTimerAttendance.set(log.first_timer_name, new Set());
-                }
-                firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
+    const firstTimerAttendance = new Map<string, Set<string>>();
+    currentEventLogs.forEach(log => {
+        if ('first_timer_id' in log) {
+            if (!firstTimerAttendance.has(log.first_timer_name)) {
+                firstTimerAttendance.set(log.first_timer_name, new Set());
             }
-        });
+            firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
+        }
+    });
 
-        const membersActualOnlyList = Array.from(memberAttendance.entries())
-            .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
-            .map(([name]) => name);
+    const membersActualOnlyList = Array.from(memberAttendance.entries())
+        .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
+        .map(([name]) => ({ name, type: 'Member' as const }));
 
-        const firstTimersActualOnlyList = Array.from(firstTimerAttendance.entries())
-            .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
-            .map(([name]) => name);
+    const firstTimersActualOnlyList = Array.from(firstTimerAttendance.entries())
+        .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
+        .map(([name]) => ({ name, type: 'New Comer' as const }));
 
-        return {
-            membersActualOnly: membersActualOnlyList,
-            firstTimersActualOnly: firstTimersActualOnlyList,
-        };
-    }, [currentEventLogs]);
+    return {
+        membersActualOnly: membersActualOnlyList,
+        firstTimersActualOnly: firstTimersActualOnlyList,
+    };
+  }, [currentEventLogs]);
 
-    const handleStatCardClick = (title: string, names: (string | DetailedName)[]) => {
+    const handleStatCardClick = (title: string, names: DetailedName[]) => {
         setDialogTitle(title);
         setDialogNames(names);
         setIsNamesDialogOpen(true);
