@@ -43,6 +43,9 @@ import { useAuth } from '@/context/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
+    // Ensure all dates are treated as UTC from the start
+    const scanDateTime = scanDate.getTime();
+
     const preRegStart = new Date(preRegStartDate);
     preRegStart.setUTCHours(0, 0, 0, 0);
 
@@ -55,18 +58,17 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     const preRegEndTime = new Date(eventStartTime);
     preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
 
-    if (scanDate >= preRegStart && scanDate <= preRegEndTime) {
+    if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEndTime.getTime()) {
         return 'Pre-registration';
     }
     
-    // Check if it's within the event day window (9:00 AM to 11:30 PM UTC)
-    if (scanDate >= eventStartTime && scanDate <= eventEndTime) {
+    // Check if it's within the event day window
+    if (scanDateTime >= eventStartTime.getTime() && scanDateTime <= eventEndTime.getTime()) {
         return 'Actual';
     }
 
-    // Allow check-ins after the event day to be counted as 'Actual' for simplicity,
-    // though the date rollover logic should typically handle this.
-    if (scanDate > eventEndTime) {
+    // Allow check-ins after the event day to be counted as 'Actual' for simplicity
+    if (scanDateTime > eventEndTime.getTime()) {
         return 'Actual'
     }
 
@@ -109,8 +111,12 @@ const MemberScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }
             title: 'QR Code Detected',
             description: 'Processing...',
         });
+        
+        // Use current UTC time for comparison
+        const now = new Date();
+        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
 
-        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
             toast({
                 title: 'Check-in Not Allowed',
@@ -332,7 +338,9 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
     }
     
     const handleCheckIn = async (qrData: string) => {
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        const now = new Date();
+        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const registrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
 
         if (!registrationType) {
             toast({
@@ -534,8 +542,11 @@ const FaceCheckinTab = ({ members, eventDate, preRegStartDate, onCheckInSuccess 
             });
             return;
         }
+        
+        const now = new Date();
+        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
 
-        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
             toast({
                 title: 'Check-in Not Allowed',
@@ -779,8 +790,11 @@ const NewComerScanTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegStart
             title: 'QR Code Detected',
             description: 'Processing new comer...',
         });
+        
+        const now = new Date();
+        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
 
-        const currentRegistrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
             toast({
                 title: 'Check-in Not Allowed',
@@ -980,7 +994,9 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
     }
     
     const handleCheckIn = async (qrData: string) => {
-        const registrationType = getRegistrationType(new Date(), eventDate, preRegStartDate);
+        const now = new Date();
+        const currentScanTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()));
+        const registrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
 
         if (!registrationType) {
             toast({ title: 'Check-in Not Allowed', description: 'Check-in is not open at this time.', variant: 'destructive' });
