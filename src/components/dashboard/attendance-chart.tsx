@@ -75,9 +75,11 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
     }
 
     const chartData = processData(data, startDate, endDate);
+    const minWidth = chartData.length > 7 ? `${chartData.length * 80}px` : '100%';
+
 
   return (
-    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+    <ChartContainer config={chartConfig} className="h-[300px] w-full" style={{ minWidth }}>
         <ResponsiveContainer>
             <BarChart data={chartData}>
                 <defs>

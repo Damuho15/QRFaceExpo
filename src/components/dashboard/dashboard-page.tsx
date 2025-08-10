@@ -299,12 +299,13 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
                 </div>
             </CardHeader>
             <CardContent>
+                <div className="overflow-x-auto">
                  {isLoading ? (
                     <div className="flex justify-center items-center min-h-[250px]">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                  ) : monthlyAverageData.length > 0 ? (
-                    <ChartContainer config={monthlyChartConfig} className="min-h-[250px] w-full">
+                    <ChartContainer config={monthlyChartConfig} className="h-[250px] w-full" style={{minWidth: '600px'}}>
                         <BarChart accessibilityLayer data={monthlyAverageData}>
                              <defs>
                                 <linearGradient id="colorAverageAttendance" x1="0" y1="0" x2="0" y2="1">
@@ -335,6 +336,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
                         No "Actual" attendance data found for the selected year.
                     </div>
                  )}
+                </div>
             </CardContent>
         </Card>
     )
@@ -980,11 +982,13 @@ export default function DashboardPage() {
                 <CardDescription>A summary of unique pre-registrations throughout the event week.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                <AttendanceChart 
-                    data={currentEventLogs} 
-                    startDate={chartDateRange.startDate} 
-                    endDate={chartDateRange.endDate} 
-                />
+                <div className="overflow-x-auto">
+                    <AttendanceChart 
+                        data={currentEventLogs} 
+                        startDate={chartDateRange.startDate} 
+                        endDate={chartDateRange.endDate} 
+                    />
+                </div>
             </CardContent>
         </Card>
       </div>
