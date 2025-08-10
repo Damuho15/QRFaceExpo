@@ -234,7 +234,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
             const timestamp = new Date(log.timestamp);
             const monthKey = format(timestamp, 'yyyy-MM');
             const dayKey = format(timestamp, 'yyyy-MM-dd');
-            const name = 'member_name' in log ? log.member_name : l.first_timer_name;
+            const name = 'member_name' in log ? log.member_name : log.first_timer_name;
             
             if (!attendeesByMonthDay[monthKey]) {
                 attendeesByMonthDay[monthKey] = {};
