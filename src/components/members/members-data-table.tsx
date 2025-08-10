@@ -9,6 +9,7 @@ import {
   useReactTable,
   type SortingState,
   type PaginationState,
+  type Row,
 } from '@tanstack/react-table';
 
 import {
@@ -24,7 +25,9 @@ import { Input } from '@/components/ui/input';
 import MemberDialog from './member-dialog';
 import BatchAddDialog from './batch-add-dialog';
 import { Skeleton } from '../ui/skeleton';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Printer } from 'lucide-react';
+import IdCardGeneratorDialog from './id-card-generator-dialog';
+import type { Member } from '@/lib/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -56,7 +59,8 @@ export default function MembersDataTable<TData, TValue>({
   setNicknameFilter,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  
+  const [rowSelection, setRowSelection] = React.useState({});
+
   const table = useReactTable({
     data,
     columns,
@@ -65,15 +69,20 @@ export default function MembersDataTable<TData, TValue>({
     pageCount: pageCount,
     onPaginationChange: setPagination,
     manualPagination: true,
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       pagination,
+      rowSelection,
     },
     meta: {
       onAction: onAction,
       canEdit: canEdit
     }
   });
+
+  const selectedMembers = table.getSelectedRowModel().flatRows.map((row: Row<TData>) => row.original as Member);
+
 
   return (
     <div>
@@ -94,6 +103,12 @@ export default function MembersDataTable<TData, TValue>({
         </div>
         {canEdit && (
         <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+            <IdCardGeneratorDialog members={selectedMembers}>
+              <Button variant="outline" disabled={selectedMembers.length === 0}>
+                <Printer className="mr-2 h-4 w-4" />
+                Generate ID Cards
+              </Button>
+            </IdCardGeneratorDialog>
             <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
                 mode="add"
@@ -167,23 +182,29 @@ export default function MembersDataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+       <div className="flex items-center justify-between space-x-2 py-4">
+        <div className="text-sm text-muted-foreground">
+            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+        <div className="flex items-center space-x-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+            >
+                Previous
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+            >
+                Next
+            </Button>
+        </div>
       </div>
     </div>
   );
