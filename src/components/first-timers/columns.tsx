@@ -16,7 +16,6 @@ import {
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import FirstTimerDialog from './first-timer-dialog';
-import Image from 'next/image';
 import QrCodeDialog from './qr-code-dialog';
 import {
   AlertDialog,
@@ -31,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteFirstTimer } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import QrCodeDisplay from '../common/qr-code-display';
 
 const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const rowValue = row.getValue(columnId) as string;
@@ -89,16 +89,9 @@ export const columns: ColumnDef<FirstTimer>[] = [
       if (!firstTimer.qrCodePayload) return null;
       return (
         <QrCodeDialog firstTimer={firstTimer}>
-            <Image
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(
-                firstTimer.qrCodePayload
-            )}`}
-            alt={`QR Code for ${firstTimer.fullName}`}
-            width={80}
-            height={80}
-            data-ai-hint="qr code"
-            className="cursor-pointer"
-            />
+           <div className="cursor-pointer">
+              <QrCodeDisplay payload={firstTimer.qrCodePayload} size={80} />
+           </div>
         </QrCodeDialog>
       );
     },

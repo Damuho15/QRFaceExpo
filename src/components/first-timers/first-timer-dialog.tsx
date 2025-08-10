@@ -27,9 +27,10 @@ import {
 import { PlusCircle, Loader2, Download } from 'lucide-react';
 import type { FirstTimer } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
 import { addFirstTimer, updateFirstTimer } from '@/lib/supabaseClient';
 import { ScrollArea } from '../ui/scroll-area';
+import QRCode from 'qrcode';
+import QrCodeDisplay from '../common/qr-code-display';
 
 const firstTimerSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -120,23 +121,23 @@ export default function FirstTimerDialog({
   const handleDownload = async () => {
     if (!newFirstTimer?.qrCodePayload) return;
     try {
-        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(newFirstTimer.qrCodePayload)}`);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${newFirstTimer.fullName}-QR.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      const dataUrl = await QRCode.toDataURL(newFirstTimer.qrCodePayload, {
+        width: 300,
+        margin: 2,
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${newFirstTimer.fullName}-QR.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
-        console.error("Failed to download QR code", error);
-        toast({
-            variant: "destructive",
-            title: "Download failed",
-            description: "Could not download the QR code image."
-        });
+      console.error("Failed to download QR code", error);
+      toast({
+          variant: "destructive",
+          title: "Download failed",
+          description: "Could not download the QR code image."
+      });
     }
   }
 
@@ -229,14 +230,11 @@ export default function FirstTimerDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center space-y-4 py-4">
-              <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(newFirstTimer?.qrCodePayload || '')}`}
-                alt={`QR Code for ${newFirstTimer?.fullName}`}
-                width={200}
-                height={200}
-                className="rounded-lg border p-1"
-                data-ai-hint="qr code"
-              />
+               {newFirstTimer?.qrCodePayload && (
+                <div className="rounded-lg border p-1">
+                  <QrCodeDisplay payload={newFirstTimer.qrCodePayload} size={200} />
+                </div>
+              )}
               <p className="text-lg font-medium">{newFirstTimer?.fullName}</p>
             </div>
             <DialogFooter>

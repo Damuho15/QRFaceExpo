@@ -13,9 +13,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { FirstTimer } from '@/lib/types';
-import Image from 'next/image';
 import { Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import QRCode from 'qrcode';
+import QrCodeDisplay from '../common/qr-code-display';
 
 interface QrCodeDialogProps {
   firstTimer: FirstTimer;
@@ -44,16 +45,16 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
   const handleDownload = async () => {
     if (!firstTimer.qrCodePayload) return;
     try {
-        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(firstTimer.qrCodePayload)}`);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${firstTimer.fullName}-QR.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      const dataUrl = await QRCode.toDataURL(firstTimer.qrCodePayload, {
+        width: 300,
+        margin: 2,
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${firstTimer.fullName}-QR.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
         console.error("Failed to download QR code", error);
         toast({
@@ -75,16 +76,9 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center space-y-4 py-4">
-          <Image
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-              firstTimer.qrCodePayload
-            )}`}
-            alt={`QR Code for ${firstTimer.fullName}`}
-            width={250}
-            height={250}
-            className="rounded-lg border p-1"
-            data-ai-hint="qr code"
-          />
+          <div className="rounded-lg border p-1">
+            <QrCodeDisplay payload={firstTimer.qrCodePayload} size={250} />
+          </div>
           <p className="text-lg font-medium">{firstTimer.fullName}</p>
         </div>
         <DialogFooter>

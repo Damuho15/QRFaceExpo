@@ -30,6 +30,8 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { addMember, updateMember, uploadMemberPicture } from '@/lib/supabaseClient';
 import { ScrollArea } from '../ui/scroll-area';
+import QRCode from 'qrcode';
+import QrCodeDisplay from '../common/qr-code-display';
 
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.'),
@@ -161,16 +163,16 @@ export default function MemberDialog({
   const handleDownload = async () => {
     if (!newMember?.qrCodePayload) return;
     try {
-        const response = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(newMember.qrCodePayload)}`);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${newMember.fullName}-QR.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+      const dataUrl = await QRCode.toDataURL(newMember.qrCodePayload, {
+        width: 300,
+        margin: 2,
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${newMember.fullName}-QR.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
         console.error("Failed to download QR code", error);
         toast({
@@ -363,14 +365,11 @@ export default function MemberDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center space-y-4 py-4">
-              <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(newMember?.qrCodePayload || '')}`}
-                alt={`QR Code for ${newMember?.fullName}`}
-                width={200}
-                height={200}
-                className="rounded-lg border p-1"
-                data-ai-hint="qr code"
-              />
+              {newMember?.qrCodePayload && (
+                <div className="rounded-lg border p-1">
+                  <QrCodeDisplay payload={newMember.qrCodePayload} size={200} />
+                </div>
+              )}
               <p className="text-lg font-medium">{newMember?.fullName}</p>
             </div>
             <DialogFooter>

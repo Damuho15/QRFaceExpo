@@ -16,7 +16,6 @@ import {
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import MemberDialog from './member-dialog';
-import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import QrCodeDialog from './qr-code-dialog';
 import PictureDialog from './picture-dialog';
@@ -34,6 +33,7 @@ import {
 import { deleteMember } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import QrCodeDisplay from '../common/qr-code-display';
 
 const caseInsensitiveFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const rowValue = row.getValue(columnId) as string;
@@ -108,16 +108,9 @@ export const columns: ColumnDef<Member>[] = [
       if (!member.qrCodePayload) return null;
       return (
         <QrCodeDialog member={member}>
-            <Image
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(
-                member.qrCodePayload
-            )}`}
-            alt={`QR Code for ${member.fullName}`}
-            width={80}
-            height={80}
-            data-ai-hint="qr code"
-            className="cursor-pointer"
-            />
+            <div className="cursor-pointer">
+              <QrCodeDisplay payload={member.qrCodePayload} size={80} />
+            </div>
         </QrCodeDialog>
       );
     },
