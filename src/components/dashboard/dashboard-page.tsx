@@ -817,10 +817,11 @@ export default function DashboardPage() {
         totalPreRegistrations,
         allPreRegisteredNames,
         actualRegistrations,
+        allActualNames,
         preRegisteredNoShows
     } = useMemo(() => {
         const allPreRegistered = new Map<string, DetailedName>();
-        const allActual = new Set<string>();
+        const allActual = new Map<string, DetailedName>();
 
         currentEventLogs.forEach(log => {
             const name = 'member_name' in log ? log.member_name : log.first_timer_name;
@@ -831,7 +832,9 @@ export default function DashboardPage() {
                     allPreRegistered.set(name, { name, type: attendeeType });
                 }
             } else if (log.type === 'Actual') {
-                allActual.add(name);
+                if (!allActual.has(name)) {
+                    allActual.set(name, { name, type: attendeeType });
+                }
             }
         });
 
@@ -843,6 +846,7 @@ export default function DashboardPage() {
             totalPreRegistrations: allPreRegistered.size,
             allPreRegisteredNames: Array.from(allPreRegistered.values()),
             actualRegistrations: allActual.size,
+            allActualNames: Array.from(allActual.values()),
             preRegisteredNoShows: noShows,
         };
     }, [currentEventLogs]);
@@ -969,7 +973,12 @@ export default function DashboardPage() {
                 icon={ClipboardCheck}
                 onClick={() => handleStatCardClick("Total Pre-registered", allPreRegisteredNames)}
             />
-            <StatCard title="Actual-day Registrations" value={actualRegistrations} icon={CalendarClock} />
+            <StatCard 
+                title="Actual-day Registrations" 
+                value={actualRegistrations} 
+                icon={CalendarClock}
+                onClick={() => handleStatCardClick("Actual-day Registrations", allActualNames)}
+            />
             <StatCard 
                 title="Members (Actual Only)" 
                 value={membersActualOnly.length} 
