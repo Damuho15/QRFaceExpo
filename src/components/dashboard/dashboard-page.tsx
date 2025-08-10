@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import StatCard from './stat-card';
-import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck, Cake, PartyPopper } from 'lucide-react';
+import { Users, UserCheck, CalendarClock, QrCode, Fingerprint, Calendar as CalendarIcon, TrendingUp, Loader2, Award, UserPlus, UserRoundCheck, UserMinus, Copy, UserX, Download,ClipboardCheck, Cake, PartyPopper, Walking, UserRoundCog } from 'lucide-react';
 import { getMembers, getAttendanceLogs, getFirstTimerAttendanceLogs, getEventConfig, parseDateAsUTC, getMemberCount, getMemberAttendanceForPeriod } from '@/lib/supabaseClient';
 import AttendanceChart from './attendance-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
@@ -399,38 +399,63 @@ const PromotionHistory = ({ allMembers, isLoading }: { allMembers: Member[], isL
 
 type DetailedName = { name: string, type: 'Member' | 'New Comer' };
 
+type NamesListDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  names: DetailedName[];
+  groupedNames?: {
+      checkedIn: DetailedName[];
+      walkIns: DetailedName[];
+  };
+};
+
 const NamesListDialog = ({
     isOpen,
     onClose,
     title,
-    names
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    names: DetailedName[];
-}) => {
+    names,
+    groupedNames,
+}: NamesListDialogProps) => {
     const { toast } = useToast();
 
-    const { memberCount, newComerCount } = useMemo(() => {
-        let members = 0;
-        let newComers = 0;
-        
-        names.forEach(item => {
-            if (item.type === 'Member') members++;
-            if (item.type === 'New Comer') newComers++;
-        });
-        
-        return { memberCount: members, newComerCount: newComers };
-    }, [names]);
+    const renderList = (list: DetailedName[], listTitle: string) => (
+        <div>
+            <h4 className="text-md font-semibold mb-2">{listTitle} ({list.length})</h4>
+            {list.length > 0 ? (
+                list.map((item, index) => (
+                    <div key={`${listTitle}-${index}`} className="text-sm p-2 mb-2 rounded-md bg-muted/50 flex justify-between items-center">
+                        <span>{item.name}</span>
+                        <Badge variant={item.type === 'Member' ? 'secondary' : 'default'}>{item.type}</Badge>
+                    </div>
+                ))
+            ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                    No attendees in this category.
+                </p>
+            )}
+        </div>
+    );
 
     const handleCopy = () => {
-        const textToCopy = names.map(item => item.name).join('\n');
+        let textToCopy = '';
+        let totalNames = 0;
+
+        if (groupedNames) {
+            textToCopy += 'Checked-in (Pre-registered):\n';
+            textToCopy += groupedNames.checkedIn.map(item => item.name).join('\n') + '\n\n';
+            textToCopy += 'Walk-ins:\n';
+            textToCopy += groupedNames.walkIns.map(item => item.name).join('\n');
+            totalNames = groupedNames.checkedIn.length + groupedNames.walkIns.length;
+        } else {
+            textToCopy = names.map(item => item.name).join('\n');
+            totalNames = names.length;
+        }
         
         navigator.clipboard.writeText(textToCopy).then(() => {
             toast({
                 title: 'Copied to Clipboard',
-                description: `${names.length} names have been copied.`
+                description: `${totalNames} names have been copied.`
             });
         }, (err) => {
             console.error('Could not copy text: ', err);
@@ -447,48 +472,36 @@ const NamesListDialog = ({
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
-                    <DialogDescription>
-                        A list of {names.length} attendees for this category.
-                    </DialogDescription>
-                    <div className="pt-2 text-sm text-muted-foreground">
-                        <div className="flex justify-between border-t pt-2 mt-2">
-                            <span>Members:</span>
-                            <span>{memberCount}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>New Comers:</span>
-                            <span>{newComerCount}</span>
-                        </div>
-                         <div className="flex justify-between font-bold border-t mt-1 pt-1">
-                            <span>Total:</span>
-                            <span>{names.length}</span>
-                        </div>
-                    </div>
+                     {groupedNames ? (
+                        <DialogDescription>
+                            A breakdown of attendees for this category.
+                        </DialogDescription>
+                    ) : (
+                        <DialogDescription>
+                            A list of {names.length} attendees for this category.
+                        </DialogDescription>
+                    )}
                 </DialogHeader>
                 <ScrollArea className="h-72 mt-2">
-                    <div className="space-y-2 pr-4">
-                        {names.length > 0 ? (
-                            names.map((item, index) => (
-                                <div key={index} className="text-sm p-2 rounded-md bg-muted/50 flex justify-between items-center">
-                                    <span>{item.name}</span>
-                                    <Badge variant={item.type === 'Member' ? 'secondary' : 'default'}>{item.type}</Badge>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-sm text-muted-foreground text-center pt-8">
-                                No attendees in this category.
-                            </p>
-                        )}
+                    <div className="space-y-4 pr-4">
+                       {groupedNames ? (
+                           <>
+                                {renderList(groupedNames.checkedIn, 'Checked-in (Pre-registered)')}
+                                {renderList(groupedNames.walkIns, 'Walk-ins')}
+                           </>
+                       ) : (
+                           renderList(names, 'Attendees')
+                       )}
                     </div>
                 </ScrollArea>
                 <DialogFooter className="pt-4 sm:justify-between">
-                    {names.length > 0 && (
+                    {(names.length > 0 || (groupedNames && (groupedNames.checkedIn.length > 0 || groupedNames.walkIns.length > 0))) && (
                         <Button variant="secondary" onClick={handleCopy}>
                             <Copy className="mr-2 h-4 w-4" />
                             Copy All
                         </Button>
                     )}
-                    <Button variant="outline" onClick={onClose} className={cn(names.length === 0 && 'w-full')}>Close</Button>
+                    <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -708,6 +721,7 @@ export default function DashboardPage() {
     const [isNamesDialogOpen, setIsNamesDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState('');
     const [dialogNames, setDialogNames] = useState<DetailedName[]>([]);
+    const [dialogGroupedNames, setDialogGroupedNames] = useState<{ checkedIn: DetailedName[]; walkIns: DetailedName[]; } | undefined>(undefined);
     const [isInactiveDialogOpen, setIsInactiveDialogOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -780,7 +794,7 @@ export default function DashboardPage() {
         fetchData();
     }, [fetchData]);
   
-  const latestLogs = useMemo(() => {
+    const latestLogs = useMemo(() => {
       const latestCheckins = new Map<string, (typeof currentEventLogs)[number]>();
       
       currentEventLogs.forEach(log => {
@@ -793,42 +807,53 @@ export default function DashboardPage() {
       
       return Array.from(latestCheckins.values())
         .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [currentEventLogs]);
+    }, [currentEventLogs]);
 
   const {
         totalPreRegistrations,
         allPreRegisteredNames,
-        actualRegistrations,
-        allActualNames,
-        preRegisteredNoShows
+        preRegisteredNoShows,
+        actualDayStats,
     } = useMemo(() => {
-        const allPreRegistered = new Map<string, DetailedName>();
-        const allActual = new Map<string, DetailedName>();
+        const attendeeTypes = new Map<string, { types: Set<'Pre-registration' | 'Actual'>, attendee: DetailedName }>();
 
         currentEventLogs.forEach(log => {
             const name = 'member_name' in log ? log.member_name : log.first_timer_name;
             const attendeeType = 'member_id' in log ? 'Member' : 'New Comer';
             
-            if (log.type === 'Pre-registration') {
-                if (!allPreRegistered.has(name)) {
-                    allPreRegistered.set(name, { name, type: attendeeType });
-                }
-            } else if (log.type === 'Actual') {
-                if (!allActual.has(name)) {
-                    allActual.set(name, { name, type: attendeeType });
-                }
+            if (!attendeeTypes.has(name)) {
+                attendeeTypes.set(name, { types: new Set(), attendee: { name, type: attendeeType } });
             }
+            attendeeTypes.get(name)!.types.add(log.type);
         });
 
-        const noShows = Array.from(allPreRegistered.values())
-            .filter(item => !allActual.has(item.name));
+        const allPreRegistered = Array.from(attendeeTypes.values())
+            .filter(({ types }) => types.has('Pre-registration'))
+            .map(({ attendee }) => attendee);
+
+        const noShows = allPreRegistered
+            .filter(attendee => !attendeeTypes.get(attendee.name)?.types.has('Actual'));
+
+        const actualAttendees = Array.from(attendeeTypes.values())
+            .filter(({ types }) => types.has('Actual'));
+            
+        const checkedIn = actualAttendees
+            .filter(({ types }) => types.has('Pre-registration'))
+            .map(({ attendee }) => attendee);
+
+        const walkIns = actualAttendees
+            .filter(({ types }) => !types.has('Pre-registration'))
+            .map(({ attendee }) => attendee);
 
         return {
-            totalPreRegistrations: allPreRegistered.size,
-            allPreRegisteredNames: Array.from(allPreRegistered.values()),
-            actualRegistrations: allActual.size,
-            allActualNames: Array.from(allActual.values()),
+            totalPreRegistrations: allPreRegistered.length,
+            allPreRegisteredNames: allPreRegistered,
             preRegisteredNoShows: noShows,
+            actualDayStats: {
+                total: actualAttendees.length,
+                checkedIn,
+                walkIns,
+            }
         };
     }, [currentEventLogs]);
   
@@ -856,44 +881,10 @@ export default function DashboardPage() {
     return { defaultStartDate, defaultEndDate };
   }, [eventConfig]);
   
-  const { membersActualOnly, firstTimersActualOnly } = useMemo(() => {
-    const memberAttendance = new Map<string, Set<string>>();
-    currentEventLogs.forEach(log => {
-        if ('member_id' in log) {
-            if (!memberAttendance.has(log.member_name)) {
-                memberAttendance.set(log.member_name, new Set());
-            }
-            memberAttendance.get(log.member_name)!.add(log.type);
-        }
-    });
-
-    const firstTimerAttendance = new Map<string, Set<string>>();
-    currentEventLogs.forEach(log => {
-        if ('first_timer_id' in log) {
-            if (!firstTimerAttendance.has(log.first_timer_name)) {
-                firstTimerAttendance.set(log.first_timer_name, new Set());
-            }
-            firstTimerAttendance.get(log.first_timer_name)!.add(log.type);
-        }
-    });
-
-    const membersActualOnlyList = Array.from(memberAttendance.entries())
-        .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
-        .map(([name]) => ({ name, type: 'Member' as const }));
-
-    const firstTimersActualOnlyList = Array.from(firstTimerAttendance.entries())
-        .filter(([, types]) => types.has('Actual') && !types.has('Pre-registration'))
-        .map(([name]) => ({ name, type: 'New Comer' as const }));
-
-    return {
-        membersActualOnly: membersActualOnlyList,
-        firstTimersActualOnly: firstTimersActualOnlyList,
-    };
-  }, [currentEventLogs]);
-
-    const handleStatCardClick = (title: string, names: DetailedName[]) => {
+    const handleStatCardClick = (title: string, names: DetailedName[], groupedNames?: { checkedIn: DetailedName[], walkIns: DetailedName[] }) => {
         setDialogTitle(title);
         setDialogNames(names);
+        setDialogGroupedNames(groupedNames);
         setIsNamesDialogOpen(true);
     };
 
@@ -956,28 +947,16 @@ export default function DashboardPage() {
             />
             <StatCard 
                 title="Actual-day Registrations" 
-                value={actualRegistrations} 
+                value={actualDayStats.total} 
                 icon={CalendarClock}
-                onClick={() => handleStatCardClick("Actual-day Registrations", allActualNames)}
+                description={`${actualDayStats.checkedIn.length} Checked-in, ${actualDayStats.walkIns.length} Walk-ins`}
+                onClick={() => handleStatCardClick("Actual-day Registrations", [], { checkedIn: actualDayStats.checkedIn, walkIns: actualDayStats.walkIns })}
             />
             <StatCard 
-                title="Members (Actual Only)" 
-                value={membersActualOnly.length} 
-                icon={UserRoundCheck} 
-                onClick={() => handleStatCardClick("Members (Actual Only)", membersActualOnly)}
-            />
-            <StatCard 
-                title="New Comers (Actual Only)" 
-                value={firstTimersActualOnly.length} 
-                icon={UserPlus} 
-                onClick={() => handleStatCardClick("New Comers (Actual Only)", firstTimersActualOnly)}
-            />
-             <StatCard 
                 title="Pre-registered (No-Show)" 
                 value={preRegisteredNoShows.length} 
-                icon={UserCheck}
+                icon={UserMinus}
                 onClick={() => handleStatCardClick("Pre-registered (No-Show)", preRegisteredNoShows)}
-                subIcon={UserMinus}
             />
             <StatCard 
                 title="Check-in Methods" 
@@ -1024,6 +1003,7 @@ export default function DashboardPage() {
         onClose={() => setIsNamesDialogOpen(false)}
         title={dialogTitle}
         names={dialogNames}
+        groupedNames={dialogGroupedNames}
     />
      <InactiveMembersDialog 
         isOpen={isInactiveDialogOpen}

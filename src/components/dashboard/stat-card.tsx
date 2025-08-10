@@ -8,9 +8,10 @@ interface StatCardProps {
   icon: LucideIcon;
   subIcon?: LucideIcon;
   onClick?: () => void;
+  description?: string;
 }
 
-export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon, onClick }: StatCardProps) {
+export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon, onClick, description }: StatCardProps) {
   return (
     <Card 
         className={cn("flex flex-col", onClick && "cursor-pointer hover:bg-muted/50 transition-colors")}
@@ -25,6 +26,7 @@ export default function StatCard({ title, value, icon: Icon, subIcon: SubIcon, o
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </CardContent>
     </Card>
   );
