@@ -70,11 +70,10 @@ export default function QrCodeDialog({ member, children }: QrCodeDialogProps) {
       newTab.document.write(`
         <html>
           <body style="background-color: #111; color: #fff; text-align: center; padding-top: 2rem; font-family: sans-serif;">
-            <p>Starting download...</p>
+            <p>Download started. You can now close this tab.</p>
             <a id="dl" href="${url}" download="qr_${member.fullName.replace(/\s+/g, '_')}.png"></a>
             <script>
               document.getElementById('dl').click();
-              setTimeout(() => window.close(), 500);
             </script>
           </body>
         </html>
