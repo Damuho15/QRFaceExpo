@@ -274,7 +274,7 @@ const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog |
         <Card>
             <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div class='space-y-1.5'>
+                    <div className="space-y-1.5">
                         <CardTitle>Average Monthly Attendance</CardTitle>
                         <CardDescription>
                             Average unique "Actual" attendance per event for each month in {selectedYear}.
