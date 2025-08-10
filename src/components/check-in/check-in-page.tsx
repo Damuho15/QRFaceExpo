@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -43,31 +44,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
     const scanDateTime = scanDate.getTime();
-    
-    // --- Event Day Window ---
-    const actualRegStartTime = new Date(eventDate);
-    actualRegStartTime.setUTCHours(9, 0, 0, 0);
 
     // --- Pre-registration Window ---
     const preRegStart = new Date(preRegStartDate);
     preRegStart.setUTCHours(0, 0, 0, 0);
+
+    // --- Event Day Window ---
+    const actualRegStart = new Date(eventDate);
+    actualRegStart.setUTCHours(9, 0, 0, 0);
     
     // Pre-registration ends 1 millisecond before "Actual" registration begins.
-    const preRegEndTime = new Date(actualRegStartTime.getTime() - 1);
+    const preRegEnd = new Date(actualRegStart.getTime() - 1);
     
     // Check for Pre-registration
-    if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEndTime.getTime()) {
+    if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEnd.getTime()) {
         return 'Pre-registration';
     }
 
-    // Check for Actual-day Registration (anytime from 9am on event day)
-    // By only comparing the date part, we avoid timezone issues with the time of day.
-    if (
-        scanDate.getUTCFullYear() === eventDate.getUTCFullYear() &&
-        scanDate.getUTCMonth() === eventDate.getUTCMonth() &&
-        scanDate.getUTCDate() === eventDate.getUTCDate() &&
-        scanDateTime >= actualRegStartTime.getTime()
-    ) {
+    // Check for Actual-day Registration. The scan time must be on or after the 9am start time.
+    if (scanDateTime >= actualRegStart.getTime()) {
         return 'Actual';
     }
 
@@ -113,8 +108,7 @@ const MemberScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }
             description: 'Processing...',
         });
         
-        // IMPORTANT: Use the current UTC time for comparison
-        const currentScanTime = new Date(); // This is the only place we use the local time, getRegistrationType handles UTC logic.
+        const currentScanTime = new Date(); 
 
         const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
         if (!currentRegistrationType) {
@@ -1235,5 +1229,3 @@ export default function CheckInPage() {
     </div>
   );
 }
-
-    
