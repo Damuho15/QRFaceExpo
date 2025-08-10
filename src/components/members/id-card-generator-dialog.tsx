@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { Member } from '@/lib/types';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
@@ -27,7 +27,7 @@ interface IdCardGeneratorDialogProps {
 
 // Helper to create a card canvas for a member
 const createCardCanvas = (member: Member, logoImage: string | null): Promise<string> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const scale = 3; // Render at a higher resolution
     canvas.width = 300 * scale;
@@ -35,7 +35,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-        return resolve('');
+        return reject(new Error('Could not get canvas context'));
     }
     
     ctx.scale(scale, scale);
@@ -68,9 +68,10 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     ctx.fillText(member.nickname || `ID: ${member.id.substring(0, 8)}`, 20, 65);
 
     // Generate QR Code
-    QRCode.toDataURL(member.qrCodePayload, { width: 80, margin: 1 })
+    QRCode.toDataURL(member.qrCodePayload, { width: 80, margin: 1, errorCorrectionLevel: 'M' })
       .then(qrUrl => {
         const qrImg = new Image();
+        qrImg.crossOrigin = "anonymous";
         qrImg.onload = () => {
           // Draw white background for QR code
           ctx.fillStyle = 'white';
@@ -87,20 +88,23 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           // Draw logo if it exists
           if (logoImage) {
             const logo = new Image();
+            logo.crossOrigin = "anonymous";
             logo.onload = () => {
               ctx.drawImage(logo, 20, 120, 60, 50); // Adjust position and size as needed
               resolve(canvas.toDataURL('image/png'));
             };
+            logo.onerror = () => reject(new Error('Logo image failed to load'));
             logo.src = logoImage;
           } else {
             resolve(canvas.toDataURL('image/png'));
           }
         };
+        qrImg.onerror = () => reject(new Error('QR code image failed to load'));
         qrImg.src = qrUrl;
       })
       .catch(err => {
         console.error('QR code generation failed:', err);
-        resolve(canvas.toDataURL('image/png')); // Resolve even if QR fails
+        reject(err);
       });
   });
 };
@@ -136,33 +140,39 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
     setIsLoading(true);
 
     try {
+      const cardDataUrlPromises = members.map(member => createCardCanvas(member, logoImage));
+      const cardDataUrls = await Promise.all(cardDataUrlPromises);
+
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const cardWidth = 85.6; // Standard ID-1 card width in mm
       const cardHeight = 53.98; // Standard ID-1 card height in mm
       const margin = 10;
+      const xMargin = 5;
+      
       let x = margin;
       let y = margin;
-      let cardsOnPage = 0;
 
-      for (const member of members) {
-        if (cardsOnPage > 0 && cardsOnPage % 8 === 0) { // 8 cards per A4 landscape page
-          pdf.addPage();
-          x = margin;
-          y = margin;
-        }
+      cardDataUrls.forEach((cardDataUrl, index) => {
+         const isNewPage = index > 0 && index % 8 === 0; // 8 cards per page (2 rows of 4)
+         if (isNewPage) {
+           pdf.addPage();
+           x = margin;
+           y = margin;
+         }
 
-        const cardDataUrl = await createCardCanvas(member, logoImage);
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
-
-        x += cardWidth;
-        if (x + cardWidth > pdf.internal.pageSize.getWidth() - margin) {
-          x = margin;
-          y += cardHeight;
+        
+        const isNewLine = (index + 1) % 4 === 0;
+        if(isNewLine) {
+            x = margin;
+            y += cardHeight + margin;
+        } else {
+            x += cardWidth + xMargin;
         }
-        cardsOnPage++;
-      }
+      });
       
-      pdf.output('dataurlnewwindow');
+      const pdfBlob = pdf.output('bloburl');
+      window.open(pdfBlob, '_blank');
       
       toast({
           title: "PDF Generation Successful",
@@ -210,7 +220,7 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleGeneratePdf} disabled={isLoading}>
+          <Button onClick={handleGeneratePdf} disabled={isLoading || members.length === 0}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
