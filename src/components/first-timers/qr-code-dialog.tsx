@@ -116,7 +116,7 @@ export default function QrCodeDialog({ firstTimer, children }: QrCodeDialogProps
           )}
           <p className="text-lg font-medium">{firstTimer.fullName}</p>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-col sm:space-y-2">
           <Button variant="secondary" onClick={downloadQR} disabled={!qrDataUrl}>
               <Download className="mr-2 h-4 w-4" />
               Download
