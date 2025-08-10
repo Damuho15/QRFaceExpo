@@ -43,50 +43,44 @@ import { useAuth } from '@/context/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: Date): 'Pre-registration' | 'Actual' | null => {
-    // This function now assumes all incoming dates are already correct UTC dates.
     const scanDateTime = scanDate.getTime();
 
-    // The eventDate and preRegStartDate from the DB are already UTC dates.
-    // We just need to define the specific time windows in UTC.
-    
-    // Pre-registration starts at the beginning of the preRegStartDate (00:00:00 UTC)
+    // --- Pre-registration Window ---
+    // Starts at the very beginning (00:00:00 UTC) of the pre-registration start date.
     const preRegStart = new Date(preRegStartDate);
     preRegStart.setUTCHours(0, 0, 0, 0);
 
-    // Event day starts at 9:00 AM UTC
-    const eventStartTime = new Date(eventDate);
-    eventStartTime.setUTCHours(9, 0, 0, 0);
+    // --- Event Day Window ---
+    // The event day itself, starting at 00:00:00 UTC for simple date comparison.
+    const eventDay = new Date(eventDate);
+    eventDay.setUTCHours(0, 0, 0, 0);
 
-    // Event day ends late, allowing for late check-ins
-    const eventEndTime = new Date(eventDate);
-    eventEndTime.setUTCHours(23, 30, 0, 0);
-    
-    // Pre-registration ends 1 millisecond before the event day starts
-    const preRegEndTime = new Date(eventStartTime);
+    // The precise start time of the "Actual" registration period (9:00:00 AM UTC).
+    const actualRegStartTime = new Date(eventDate);
+    actualRegStartTime.setUTCHours(9, 0, 0, 0);
+
+    // Pre-registration ends 1 millisecond before "Actual" registration begins.
+    const preRegEndTime = new Date(actualRegStartTime);
     preRegEndTime.setUTCMilliseconds(preRegEndTime.getUTCMilliseconds() - 1);
-
+    
+    // Check for Pre-registration
     if (scanDateTime >= preRegStart.getTime() && scanDateTime <= preRegEndTime.getTime()) {
         return 'Pre-registration';
     }
-    
-    if (scanDateTime >= eventStartTime.getTime() && scanDateTime <= eventEndTime.getTime()) {
+
+    // Check for Actual-day Registration
+    // The check is for any time from 9 AM UTC onwards on the event day.
+    const scanDay = new Date(scanDate);
+    scanDay.setUTCHours(0,0,0,0);
+
+    if (scanDay.getTime() === eventDay.getTime() && scanDateTime >= actualRegStartTime.getTime()) {
         return 'Actual';
     }
 
-    // This handles check-ins after the official end time on the event day, counting them as 'Actual'.
-    if (scanDateTime > eventEndTime.getTime()) {
-        const scanDay = new Date(scanDate);
-        scanDay.setUTCHours(0,0,0,0);
-        const eventDay = new Date(eventDate);
-        eventDay.setUTCHours(0,0,0,0);
-
-        if (scanDay.getTime() === eventDay.getTime()) {
-            return 'Actual';
-        }
-    }
-
+    // If it falls outside of both windows, it's not a valid time for check-in.
     return null;
 }
+
 
 const getNextSunday = (from: Date): Date => {
     const date = new Date(from);
