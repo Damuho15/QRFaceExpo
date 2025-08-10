@@ -25,6 +25,30 @@ interface IdCardGeneratorDialogProps {
   children: React.ReactNode;
 }
 
+// Helper to wrap text
+const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+    const words = text.split(' ');
+    let line = '';
+    let testLine;
+    let metrics;
+    let testWidth;
+
+    for (let n = 0; n < words.length; n++) {
+        testLine = line + words[n] + ' ';
+        metrics = context.measureText(testLine);
+        testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+        } else {
+            line = testLine;
+        }
+    }
+    context.fillText(line, x, y);
+}
+
+
 // Helper to create a card canvas for a member
 const createCardCanvas = (member: Member, logoImage: string | null): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -73,9 +97,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(member.nickname || member.fullName, cardWidth / 2, 100);
+    wrapText(ctx, member.nickname || member.fullName, cardWidth / 2, 90, cardWidth - 40, 35);
 
 
     // Generate QR Code
@@ -86,8 +110,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
         qrImg.onload = () => {
           
           const qrX = cardWidth / 2;
-          const qrY = cardHeight / 2 + 10;
-          const qrRadius = 85;
+          const qrY = cardHeight / 2 + 30; // Adjusted Y position
+          const qrRadius = 80; // Make circle smaller to ensure QR fits
 
           ctx.save();
           // Create a circular clipping path
@@ -101,7 +125,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
           // Draw QR code image into the circle, leaving a small margin
-          const qrImageSize = (qrRadius - 15) * 2;
+          const qrImageSize = (qrRadius - 10) * 2; // QR smaller than circle
           ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
           ctx.restore(); // Restore the context to remove the clipping path
 
@@ -173,21 +197,23 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const pageWidth = pdf.internal.pageSize.getWidth();
       const cardWidth = 63; 
       const cardHeight = 100;
-      const margin = 5;
+      const margin = 10;
       const numColumns = 3;
       const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * margin)) / (numColumns - 1);
       
       let x = margin;
       let y = margin;
-      let pageCount = 1;
 
 
       cardDataUrls.forEach((cardDataUrl, index) => {
         const columnIndex = index % numColumns;
 
+        if (columnIndex === 0 && index > 0) { // Start of a new row
+             y += cardHeight + margin;
+        }
+
         if (y + cardHeight > pageHeight) {
           pdf.addPage();
-          pageCount++;
           y = margin;
         }
 
@@ -195,10 +221,6 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
         
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
         
-        const isNewLine = (index + 1) % numColumns === 0;
-        if(isNewLine) {
-            y += cardHeight + margin;
-        } 
       });
       
       const pdfBlob = pdf.output('bloburl');
