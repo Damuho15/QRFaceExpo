@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -29,9 +28,12 @@ interface IdCardGeneratorDialogProps {
 const createCardCanvas = (member: Member, logoImage: string | null): Promise<string> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
-    const scale = 3; // Render at a higher resolution
-    canvas.width = 300 * scale;
-    canvas.height = 180 * scale;
+    const scale = 3; 
+    const cardWidth = 250;
+    const cardHeight = 400;
+    
+    canvas.width = cardWidth * scale;
+    canvas.height = cardHeight * scale;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
@@ -40,57 +42,82 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     
     ctx.scale(scale, scale);
 
-    // Background with gradient
-    const gradient = ctx.createLinearGradient(0, 0, 300, 180);
-    gradient.addColorStop(0, '#4A90E2');
-    gradient.addColorStop(1, '#50E3C2');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 300, 180);
-    
-    // Angled white overlay
+    // Red Background (Top-left triangle)
+    ctx.fillStyle = '#DC2626'; // Red
     ctx.beginPath();
-    ctx.moveTo(0, 180);
-    ctx.lineTo(300, 100);
-    ctx.lineTo(300, 180);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(cardWidth, 0);
+    ctx.lineTo(0, cardHeight);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fill();
+    
+    // Black Background (Bottom-right triangle)
+    ctx.fillStyle = '#000000'; // Black
+    ctx.beginPath();
+    ctx.moveTo(cardWidth, 0);
+    ctx.lineTo(cardWidth, cardHeight);
+    ctx.lineTo(0, cardHeight);
+    ctx.closePath();
     ctx.fill();
 
+    // Hole Punch
+    ctx.beginPath();
+    ctx.roundRect(cardWidth / 2 - 30, 20, 60, 12, 6);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+
+    // Name background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(15, 55, cardWidth - 30, 50);
 
     // Member's name
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(member.fullName, 20, 40);
+    ctx.fillText(member.fullName, 25, 80);
     
-    // Member's ID/Nickname
+    // Member Title (Static for now)
     ctx.font = '14px Arial';
-    ctx.fillText(member.nickname || `ID: ${member.id.substring(0, 8)}`, 20, 65);
+    ctx.fillText('Member', 25, 98);
+
 
     // Generate QR Code
-    QRCode.toDataURL(member.qrCodePayload, { width: 80, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(member.qrCodePayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' })
       .then(qrUrl => {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
         qrImg.onload = () => {
-          // Draw white background for QR code
-          ctx.fillStyle = 'white';
-          ctx.shadowColor = 'rgba(0,0,0,0.15)';
-          ctx.shadowBlur = 10;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 4;
-          ctx.fillRect(195, 20, 85, 85);
-          ctx.shadowColor = 'transparent'; // Reset shadow
+          
+          const qrX = cardWidth / 2;
+          const qrY = cardHeight / 2;
+          const qrRadius = 75;
 
-          // Draw QR code image
-          ctx.drawImage(qrImg, 200, 25, 75, 75);
+          ctx.save();
+          // Create a circular clipping path
+          ctx.beginPath();
+          ctx.arc(qrX, qrY, qrRadius, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+
+          // Draw a white background inside the circle
+          ctx.fillStyle = 'white';
+          ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
+
+          // Draw QR code image into the circle
+          ctx.drawImage(qrImg, qrX - qrRadius + 5, qrY - qrRadius + 5, (qrRadius-5) * 2, (qrRadius-5) * 2);
+          ctx.restore(); // Restore the context to remove the clipping path
+
 
           // Draw logo if it exists
           if (logoImage) {
             const logo = new Image();
             logo.crossOrigin = "anonymous";
             logo.onload = () => {
-              ctx.drawImage(logo, 20, 120, 60, 50); // Adjust position and size as needed
+              // Draw logo background
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+              ctx.fillRect(cardWidth - 95, cardHeight - 65, 80, 50);
+              // Draw logo image
+              ctx.drawImage(logo, cardWidth - 90, cardHeight - 60, 70, 40); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
@@ -143,17 +170,15 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const cardDataUrlPromises = members.map(member => createCardCanvas(member, logoImage));
       const cardDataUrls = await Promise.all(cardDataUrlPromises);
 
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const cardWidth = 85.6; // Standard ID-1 card width in mm
-      const cardHeight = 53.98; // Standard ID-1 card height in mm
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const cardWidth = 63; 
+      const cardHeight = 100;
       const margin = 10;
-      const xMargin = 5;
-      
       let x = margin;
       let y = margin;
 
       cardDataUrls.forEach((cardDataUrl, index) => {
-         const isNewPage = index > 0 && index % 8 === 0; // 8 cards per page (2 rows of 4)
+         const isNewPage = index > 0 && index % 6 === 0; // 6 cards per page
          if (isNewPage) {
            pdf.addPage();
            x = margin;
@@ -162,12 +187,12 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
 
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
         
-        const isNewLine = (index + 1) % 4 === 0;
+        const isNewLine = (index + 1) % 3 === 0;
         if(isNewLine) {
             x = margin;
             y += cardHeight + margin;
         } else {
-            x += cardWidth + xMargin;
+            x += cardWidth + margin;
         }
       });
       
