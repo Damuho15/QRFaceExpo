@@ -73,7 +73,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 32px Arial';
+    ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(member.nickname || member.fullName, cardWidth / 2, 100);
 
@@ -101,7 +101,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
           ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
 
           // Draw QR code image into the circle, leaving a small margin
-          const qrImageSize = (qrRadius - 10) * 2;
+          const qrImageSize = (qrRadius - 15) * 2;
           ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
           ctx.restore(); // Restore the context to remove the clipping path
 
@@ -169,29 +169,36 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const cardDataUrls = await Promise.all(cardDataUrlPromises);
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
       const cardWidth = 63; 
       const cardHeight = 100;
-      const margin = 10;
+      const margin = 5;
+      const numColumns = 3;
+      const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * margin)) / (numColumns - 1);
+      
       let x = margin;
       let y = margin;
+      let pageCount = 1;
+
 
       cardDataUrls.forEach((cardDataUrl, index) => {
-         const isNewPage = index > 0 && index % 6 === 0; // 6 cards per page
-         if (isNewPage) {
-           pdf.addPage();
-           x = margin;
-           y = margin;
-         }
+        const columnIndex = index % numColumns;
 
+        if (y + cardHeight > pageHeight) {
+          pdf.addPage();
+          pageCount++;
+          y = margin;
+        }
+
+        x = margin + columnIndex * (cardWidth + spaceBetweenCards);
+        
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
         
-        const isNewLine = (index + 1) % 3 === 0;
+        const isNewLine = (index + 1) % numColumns === 0;
         if(isNewLine) {
-            x = margin;
             y += cardHeight + margin;
-        } else {
-            x += cardWidth + margin;
-        }
+        } 
       });
       
       const pdfBlob = pdf.output('bloburl');
