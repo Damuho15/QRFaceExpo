@@ -5,7 +5,7 @@ import React from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, Cell } from 'recharts';
 import type { AttendanceLog, NewComerAttendanceLog } from '@/lib/types';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, eachDayOfInterval, isSameDay } from 'date-fns';
 
 interface AttendanceChartProps {
   data: (AttendanceLog | NewComerAttendanceLog)[];
@@ -35,39 +35,25 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
         if (!start || !end || end < start) {
             return [];
         }
-        
+
         const interval = eachDayOfInterval({ start, end });
-        const alreadyCounted = new Set<string>();
 
         const dailyData = interval.map(day => {
-            const dayKey = format(day, 'yyyy-MM-dd');
-            
-            const logsThisDay = logs.filter(log => {
-                const logDateKey = format(new Date(log.timestamp), 'yyyy-MM-dd');
-                return logDateKey === dayKey && log.type === 'Pre-registration';
+            const preRegistrationLogsForDay = logs.filter(log => {
+                const logDate = new Date(log.timestamp);
+                // Check if the log is for the current day in the interval and is a 'Pre-registration'
+                return isSameDay(logDate, day) && log.type === 'Pre-registration';
             });
             
-            let uniqueRegistrationsThisDay = 0;
             const uniqueAttendeesForDay = new Set<string>();
-
-            logsThisDay.forEach(log => {
-                const attendeeId = 'member_id' in log ? log.member_id : log.first_timer_id;
-                
-                // Only count if this person hasn't been counted on a previous day
-                // and hasn't already been counted for today.
-                if (!alreadyCounted.has(attendeeId) && !uniqueAttendeesForDay.has(attendeeId)) {
-                    uniqueRegistrationsThisDay++;
-                    uniqueAttendeesForDay.add(attendeeId);
-                }
+            preRegistrationLogsForDay.forEach(log => {
+                 const attendeeId = 'member_id' in log ? log.member_id : log.first_timer_id;
+                 uniqueAttendeesForDay.add(attendeeId);
             });
-
-            // After counting for the day, add these attendees to the master "alreadyCounted" set
-            // so they won't be counted on subsequent days.
-            uniqueAttendeesForDay.forEach(id => alreadyCounted.add(id));
 
             return {
                 name: format(day, 'EEE, MMM d'),
-                "Pre-registrations": uniqueRegistrationsThisDay,
+                "Pre-registrations": uniqueAttendeesForDay.size,
             };
         });
 
@@ -75,7 +61,10 @@ export default function AttendanceChart({ data, startDate, endDate }: Attendance
     }
 
     const chartData = processData(data, startDate, endDate);
-    const minWidth = chartData.length > 7 ? `${chartData.length * 80}px` : '100%';
+    
+    // Enforce a minimum width to ensure the scrollbar is functional
+    // 7 days * 80px per bar = 560px. Add some padding.
+    const minWidth = "600px";
 
 
   return (
