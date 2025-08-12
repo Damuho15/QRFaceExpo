@@ -28,10 +28,10 @@ interface IdCardGeneratorDialogProps {
 }
 
 // Helper to wrap text and calculate its height, but not draw it
-const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, maxWidth: number) => {
+const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
     const words = text.split(' ');
     let line = '';
-    let lines = [];
+    let lines: string[] = [];
 
     for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
@@ -98,21 +98,14 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'center';
     
-    // 1. Calculate wrapped lines
     const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
     const totalLines = nameLines.length;
     
-    const nameBoxHeight = totalLines * nameLineHeight + 20; // 35px line height + 10px padding top/bottom
     const nameBoxY = 60;
     
-    // 2. Draw name background with dynamic height
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(15, nameBoxY, cardWidth - 30, nameBoxHeight);
-
-    // 3. Draw the text lines
+    // Draw the text lines
     ctx.fillStyle = 'white';
-    const initialNameY = nameBoxY + 30 + ((totalLines - 1) * (nameLineHeight / 2));
-
+    
     nameLines.forEach((line, index) => {
        const yPos = nameBoxY + 30 + (index * nameLineHeight) - ((totalLines - 1) * (nameLineHeight / 2));
        ctx.fillText(line, cardWidth / 2, yPos + 5);
