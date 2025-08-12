@@ -70,6 +70,7 @@ export default function MembersDataTable<TData, TValue>({
     onPaginationChange: setPagination,
     manualPagination: true,
     onRowSelectionChange: setRowSelection,
+    getRowId: (row) => (row as Member).id,
     state: {
       sorting,
       pagination,

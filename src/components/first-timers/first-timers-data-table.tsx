@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import FirstTimerDialog from './first-timer-dialog';
 import { Skeleton } from '../ui/skeleton';
 import { PlusCircle } from 'lucide-react';
+import type { FirstTimer } from '@/lib/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -62,6 +63,7 @@ export default function FirstTimersDataTable<TData, TValue>({
     onPaginationChange: setPagination,
     manualPagination: true,
     onRowSelectionChange: setRowSelection,
+    getRowId: (row) => (row as FirstTimer).id,
     state: {
       sorting,
       pagination,
