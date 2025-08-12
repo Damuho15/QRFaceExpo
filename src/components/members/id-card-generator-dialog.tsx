@@ -27,36 +27,26 @@ interface IdCardGeneratorDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-// Helper to wrap text and calculate its height
-const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+// Helper to wrap text and calculate its height, but not draw it
+const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, maxWidth: number) => {
     const words = text.split(' ');
     let line = '';
-    let testLine;
-    let metrics;
-    let testWidth;
-    let totalLines = 1;
     let lines = [];
 
     for (let n = 0; n < words.length; n++) {
-        testLine = line + words[n] + ' ';
-        metrics = context.measureText(testLine);
-        testWidth = metrics.width;
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
         if (testWidth > maxWidth && n > 0) {
             lines.push(line.trim());
             line = words[n] + ' ';
-            totalLines++;
         } else {
             line = testLine;
         }
     }
     lines.push(line.trim());
     
-    // Draw the text
-    lines.forEach((line, index) => {
-        context.fillText(line, x, y + index * lineHeight);
-    });
-
-    return { totalLines, lines };
+    return lines;
 }
 
 
@@ -104,23 +94,29 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // -- Dynamic Name Box --
     const nameText = member.nickname || member.fullName;
+    const nameLineHeight = 35;
     ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'center';
     
-    // Measure text to determine the height of the background box
-    const { totalLines } = measureAndWrapText(ctx, nameText, 0, 0, cardWidth - 50, 35);
+    // 1. Calculate wrapped lines
+    const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
+    const totalLines = nameLines.length;
     
-    const nameBoxHeight = totalLines * 35 + 20; // 35px line height + 10px padding top/bottom
+    const nameBoxHeight = totalLines * nameLineHeight + 20; // 35px line height + 10px padding top/bottom
     const nameBoxY = 60;
     
-    // Name background
+    // 2. Draw name background with dynamic height
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fillRect(15, nameBoxY, cardWidth - 30, nameBoxHeight);
 
-    // Member's Nickname (or Full Name as fallback)
+    // 3. Draw the text lines
     ctx.fillStyle = 'white';
-    const nameY = nameBoxY + 25 + ((totalLines - 1) * 17.5);
-    measureAndWrapText(ctx, nameText, cardWidth / 2, nameY, cardWidth - 50, 35);
+    const initialNameY = nameBoxY + 30 + ((totalLines - 1) * (nameLineHeight / 2));
+
+    nameLines.forEach((line, index) => {
+       const yPos = nameBoxY + 30 + (index * nameLineHeight) - ((totalLines - 1) * (nameLineHeight / 2));
+       ctx.fillText(line, cardWidth / 2, yPos + 5);
+    });
 
 
     // Generate QR Code
@@ -239,7 +235,7 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
         }
         
         // Check if we need a new page
-        if (y + cardHeight > pageHeight) {
+        if (y + cardHeight + verticalMargin > pageHeight) {
             pdf.addPage();
             y = verticalMargin;
         }
