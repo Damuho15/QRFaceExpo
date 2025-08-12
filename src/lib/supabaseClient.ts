@@ -130,6 +130,25 @@ export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, f
     return { members, count: count || 0 };
 };
 
+
+export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
+    if (!ids || ids.length === 0) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('members')
+        .select('*')
+        .in('id', ids);
+
+    if (error) {
+        console.error('Error fetching members by IDs:', error);
+        throw error;
+    }
+
+    return (data || []) as Member[];
+};
+
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
     const safePayload = {
         id: uuidv4(),

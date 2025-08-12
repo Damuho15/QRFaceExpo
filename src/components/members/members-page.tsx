@@ -6,13 +6,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Member } from '@/lib/types';
 import MembersDataTable from './members-data-table';
 import { columns } from './columns';
-import { getMembers } from '@/lib/supabaseClient';
+import { getMembers, getMembersByIds } from '@/lib/supabaseClient';
 import StatCard from '../dashboard/stat-card';
-import { Users } from 'lucide-react';
+import { Users, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from 'use-debounce';
+import IdCardGeneratorDialog from './id-card-generator-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -27,6 +29,12 @@ export default function MembersPage() {
   const [nicknameFilter, setNicknameFilter] = useState('');
   const [debouncedFullNameFilter] = useDebounce(fullNameFilter, 500);
   const [debouncedNicknameFilter] = useDebounce(nicknameFilter, 500);
+  const { toast } = useToast();
+
+  const [isIdGenDialogOpen, setIsIdGenDialogOpen] = useState(false);
+  const [isGeneratingIds, setIsGeneratingIds] = useState(false);
+  const [selectedMembersForDialog, setSelectedMembersForDialog] = useState<Member[]>([]);
+
 
   const { user } = useAuth();
 
@@ -57,8 +65,36 @@ export default function MembersPage() {
   useEffect(() => {
     setPagination(p => ({ ...p, pageIndex: 0 }));
   }, [debouncedFullNameFilter, debouncedNicknameFilter]);
+  
+  const handleGenerateIds = async (selectedIds: string[]) => {
+      if (selectedIds.length === 0) {
+          toast({
+              variant: "destructive",
+              title: "No members selected",
+              description: "Please select at least one member to generate ID cards.",
+          });
+          return;
+      }
+      setIsGeneratingIds(true);
+      try {
+          const fetchedMembers = await getMembersByIds(selectedIds);
+          setSelectedMembersForDialog(fetchedMembers);
+          setIsIdGenDialogOpen(true);
+      } catch (error) {
+          console.error("Failed to fetch selected members for ID generation:", error);
+          toast({
+              variant: "destructive",
+              title: "Failed to fetch members",
+              description: "Could not retrieve the details for the selected members.",
+          });
+      } finally {
+          setIsGeneratingIds(false);
+      }
+  };
+
 
   return (
+    <>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-headline">Member Management</h1>
@@ -96,7 +132,19 @@ export default function MembersPage() {
         setFullNameFilter={setFullNameFilter}
         nicknameFilter={nicknameFilter}
         setNicknameFilter={setNicknameFilter}
+        onGenerateIds={handleGenerateIds}
+        isGeneratingIds={isGeneratingIds}
       />
     </div>
+    
+    <IdCardGeneratorDialog 
+        members={selectedMembersForDialog} 
+        open={isIdGenDialogOpen}
+        onOpenChange={setIsIdGenDialogOpen}
+    >
+      {/* This component is now controlled externally, so the trigger is just for structure. */}
+      <></>
+    </IdCardGeneratorDialog>
+    </>
   );
 }

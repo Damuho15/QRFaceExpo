@@ -42,6 +42,8 @@ interface DataTableProps<TData, TValue> {
   setFullNameFilter: (value: string) => void;
   nicknameFilter: string;
   setNicknameFilter: (value: string) => void;
+  onGenerateIds: (selectedIds: string[]) => void;
+  isGeneratingIds: boolean;
 }
 
 export default function MembersDataTable<TData, TValue>({
@@ -57,6 +59,8 @@ export default function MembersDataTable<TData, TValue>({
   setFullNameFilter,
   nicknameFilter,
   setNicknameFilter,
+  onGenerateIds,
+  isGeneratingIds,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
@@ -81,8 +85,8 @@ export default function MembersDataTable<TData, TValue>({
       canEdit: canEdit
     }
   });
-
-  const selectedMembers = table.getSelectedRowModel().flatRows.map((row: Row<TData>) => row.original as Member);
+  
+  const selectedRowIds = Object.keys(rowSelection);
 
 
   return (
@@ -104,12 +108,14 @@ export default function MembersDataTable<TData, TValue>({
         </div>
         {canEdit && (
         <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
-            <IdCardGeneratorDialog members={selectedMembers}>
-              <Button variant="outline" disabled={selectedMembers.length === 0}>
+            <Button 
+                variant="outline" 
+                onClick={() => onGenerateIds(selectedRowIds)}
+                disabled={selectedRowIds.length === 0 || isGeneratingIds}
+            >
                 <Printer className="mr-2 h-4 w-4" />
                 Generate ID Cards
-              </Button>
-            </IdCardGeneratorDialog>
+            </Button>
             <BatchAddDialog onSuccess={onAction} />
             <MemberDialog 
                 mode="add"
@@ -186,7 +192,7 @@ export default function MembersDataTable<TData, TValue>({
        <div className="flex items-center justify-between space-x-2 py-4">
         <div className="text-sm text-muted-foreground">
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredRowModel().rows.length} row(s) selected on this page. ({selectedRowIds.length} total)
         </div>
         <div className="flex items-center space-x-2">
             <Button

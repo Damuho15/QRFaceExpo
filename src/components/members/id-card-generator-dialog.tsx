@@ -23,6 +23,8 @@ import QRCode from 'qrcode';
 interface IdCardGeneratorDialogProps {
   members: Member[];
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Helper to wrap text and calculate its height
@@ -54,7 +56,7 @@ const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, x: 
         context.fillText(line, x, y + index * lineHeight);
     });
 
-    return totalLines * lineHeight;
+    return { totalLines, lines };
 }
 
 
@@ -106,21 +108,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     ctx.textAlign = 'center';
     
     // Measure text to determine the height of the background box
-    const words = nameText.split(' ');
-    let line = '';
-    let numLines = 1;
-    for(let n = 0; n < words.length; n++) {
-        let testLine = line + words[n] + ' ';
-        let metrics = ctx.measureText(testLine);
-        if (metrics.width > cardWidth - 40 && n > 0) {
-            line = words[n] + ' ';
-            numLines++;
-        } else {
-            line = testLine;
-        }
-    }
-
-    const nameBoxHeight = numLines * 35 + 20; // 35px line height + 10px padding top/bottom
+    const { totalLines } = measureAndWrapText(ctx, nameText, 0, 0, cardWidth - 50, 35);
+    
+    const nameBoxHeight = totalLines * 35 + 20; // 35px line height + 10px padding top/bottom
     const nameBoxY = 60;
     
     // Name background
@@ -129,7 +119,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // Member's Nickname (or Full Name as fallback)
     ctx.fillStyle = 'white';
-    const nameY = nameBoxY + (nameBoxHeight / 2) + 10 - ((numLines - 1) * 17.5);
+    const nameY = nameBoxY + 25 + ((totalLines - 1) * 17.5);
     measureAndWrapText(ctx, nameText, cardWidth / 2, nameY, cardWidth - 50, 35);
 
 
@@ -190,8 +180,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 };
 
 
-export default function IdCardGeneratorDialog({ members, children }: IdCardGeneratorDialogProps) {
-  const [open, setOpen] = useState(false);
+export default function IdCardGeneratorDialog({ members, children, open, onOpenChange }: IdCardGeneratorDialogProps) {
   const [logoImage, setLogoImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -227,10 +216,10 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const cardWidth = 60; 
-      const cardHeight = 95;
+      const cardWidth = 55;
+      const cardHeight = 88;
       
-      const horizontalMargin = 10;
+      const horizontalMargin = 15;
       const verticalMargin = 15;
       const numColumns = 3;
       const verticalSpacing = 10;
@@ -243,24 +232,21 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
 
       cardDataUrls.forEach((cardDataUrl, index) => {
         const columnIndex = index % numColumns;
-        const rowIndex = Math.floor(index / numColumns);
-        
-        const isNewRow = columnIndex === 0;
 
-        if (index > 0 && isNewRow) {
+        // Reset for a new row
+        if (index > 0 && columnIndex === 0) {
             y += cardHeight + verticalSpacing;
         }
-
-        // Check if we need to add a new page
+        
+        // Check if we need a new page
         if (y + cardHeight > pageHeight) {
             pdf.addPage();
-            y = verticalMargin; // Reset y for the new page
+            y = verticalMargin;
         }
-        
+
         x = horizontalMargin + columnIndex * (cardWidth + spaceBetweenCards);
         
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
-        
       });
       
       const pdfBlob = pdf.output('bloburl');
@@ -280,12 +266,12 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       });
     } finally {
       setIsLoading(false);
-      setOpen(false);
+      onOpenChange?.(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -309,7 +295,7 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
             )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleGeneratePdf} disabled={isLoading || members.length === 0}>
