@@ -143,7 +143,7 @@ export default function MembersPage() {
         onOpenChange={setIsIdGenDialogOpen}
     >
       {/* This component is now controlled externally, so the trigger is just for structure. */}
-      <></>
+      <div style={{ display: 'none' }} />
     </IdCardGeneratorDialog>
     </>
   );
