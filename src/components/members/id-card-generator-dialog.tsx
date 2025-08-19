@@ -143,7 +143,10 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
               const logoWidth = 72 * 0.8;
               const logoHeight = 44 * 0.8;
-              ctx.fillRect(cardWidth - 98, cardHeight - 74, logoWidth + 5, logoHeight + 5); // Background slightly larger
+              const logoBgWidth = logoWidth + 5;
+              const logoBgHeight = logoHeight + 5;
+
+              ctx.fillRect(cardWidth - 98, cardHeight - 74, logoBgWidth, logoBgHeight);
               // Draw logo image
               ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, logoWidth, logoHeight); 
               resolve(canvas.toDataURL('image/png'));
@@ -197,20 +200,19 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const cardDataUrlPromises = members.map(member => createCardCanvas(member, logoImage));
       const cardDataUrls = await Promise.all(cardDataUrlPromises);
 
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
       const cardWidth = 55;
       const cardHeight = 88;
       
-      const horizontalMargin = 15;
-      const verticalMargin = 15;
-      const numColumns = 3;
-      const verticalSpacing = 10;
+      const horizontalMargin = 10;
+      const verticalMargin = 10;
+      const horizontalSpacing = 5;
+      const verticalSpacing = 5;
+      const numColumns = 5;
 
-      const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * horizontalMargin)) / (numColumns - 1);
-      
       let x = horizontalMargin;
       let y = verticalMargin;
 
@@ -229,7 +231,7 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
             y = verticalMargin;
         }
 
-        x = horizontalMargin + columnIndex * (cardWidth + spaceBetweenCards);
+        x = horizontalMargin + columnIndex * (cardWidth + horizontalSpacing);
         
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
       });
