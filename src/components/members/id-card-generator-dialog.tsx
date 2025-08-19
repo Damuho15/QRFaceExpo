@@ -146,9 +146,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
               const logoBgWidth = logoWidth + 5;
               const logoBgHeight = logoHeight + 5;
 
-              ctx.fillRect(cardWidth - 98, cardHeight - 74, logoBgWidth, logoBgHeight);
+              ctx.fillRect(cardWidth - logoBgWidth - 10, cardHeight - logoBgHeight - 10, logoBgWidth, logoBgHeight);
               // Draw logo image
-              ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, logoWidth, logoHeight); 
+              ctx.drawImage(logo, cardWidth - logoWidth - 12.5, cardHeight - logoHeight - 12.5, logoWidth, logoHeight); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
@@ -204,7 +204,7 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const horizontalMargin = 25.4; // 1 inch
+      const horizontalMargin = 50.8; // 2 inches
       const verticalMargin = 12.7; // 0.5 inch
 
       const printableWidth = pageWidth - (2 * horizontalMargin);
