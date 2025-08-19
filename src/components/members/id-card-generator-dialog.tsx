@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, 'use a client';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -141,9 +141,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
             logo.onload = () => {
               // Draw logo background
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-              ctx.fillRect(cardWidth - 110, cardHeight - 80, 100, 65);
-              // Draw logo image
-              ctx.drawImage(logo, cardWidth - 105, cardHeight - 75, 90, 55); 
+              ctx.fillRect(cardWidth - 98, cardHeight - 74, 80, 52); // Background slightly larger
+              // Draw logo image (80% of previous size: 90*0.8=72, 55*0.8=44)
+              ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, 72, 44); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
