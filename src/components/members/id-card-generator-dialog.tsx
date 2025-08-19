@@ -86,16 +86,10 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     ctx.closePath();
     ctx.fill();
 
-    // Hole Punch
-    ctx.beginPath();
-    ctx.roundRect(cardWidth / 2 - 30, 20, 60, 12, 6);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-
     // -- Dynamic Name Box --
     const nameText = member.nickname || member.fullName;
-    const nameLineHeight = 42; 
-    ctx.font = 'bold 37px Arial';
+    const nameLineHeight = 47; 
+    ctx.font = 'bold 42px Arial';
     ctx.textAlign = 'center';
     
     const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
@@ -147,9 +141,9 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
             logo.onload = () => {
               // Draw logo background
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-              ctx.fillRect(cardWidth - 95, cardHeight - 65, 80, 50);
+              ctx.fillRect(cardWidth - 110, cardHeight - 80, 100, 65);
               // Draw logo image
-              ctx.drawImage(logo, cardWidth - 90, cardHeight - 60, 70, 40); 
+              ctx.drawImage(logo, cardWidth - 105, cardHeight - 75, 90, 55); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
