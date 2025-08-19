@@ -7,15 +7,25 @@ import type { FirstTimerFormValues } from '@/components/first-timers/first-timer
 import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
-// Initialize supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Conditionally set the Supabase URL based on the environment
+const supabaseUrl = process.env.NODE_ENV === 'production' 
+  ? '/expoattendance' 
+  : process.env.NEXT_PUBLIC_SUPABASE_URL;
+  
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and/or Anon Key are not defined in environment variables');
+  // In production, only the anon key is required from env vars.
+  if (process.env.NODE_ENV === 'production' && supabaseAnonKey) {
+     // This is fine, supabaseUrl is set to the relative path.
+  } else {
+    throw new Error('Supabase URL and/or Anon Key are not defined in environment variables');
+  }
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
 
 
 const BUCKET_NAME = 'member-pictures';
