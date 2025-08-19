@@ -1,8 +1,8 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   basePath: '/expoattendance',
-  trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,
   },
