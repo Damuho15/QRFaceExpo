@@ -213,9 +213,10 @@ const monthlyChartConfig = {
 
 const MonthlyAverageChart = ({ allLogs, isLoading }: { allLogs: (AttendanceLog | NewComerAttendanceLog)[], isLoading: boolean }) => {
     const availableYears = useMemo(() => {
+        if (isLoading || allLogs.length === 0) return [new Date().getFullYear()];
         const years = new Set(allLogs.map(log => new Date(log.timestamp).getFullYear()));
         return Array.from(years).sort((a,b) => b - a);
-    }, [allLogs]);
+    }, [allLogs, isLoading]);
 
     const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
 
@@ -743,8 +744,8 @@ export default function DashboardPage() {
                 attendedLastMonth,
             ] = await Promise.all([
                 getEventConfig(),
-                getAttendanceLogs(), // Fetch all member logs once
-                getFirstTimerAttendanceLogs(), // Fetch all 1st timer logs once
+                getAttendanceLogs({pageSize: 10000}), // Fetch recent logs, adjust as needed
+                getFirstTimerAttendanceLogs({pageSize: 10000}), // Fetch recent logs
                 getMembers(0, 0), // Fetching all members for now for other components
                 getMemberAttendanceForPeriod(startOfPrevMonth, endOfPrevMonth),
             ]);
@@ -766,7 +767,7 @@ export default function DashboardPage() {
                 });
                 setCurrentEventLogs(currentLogs);
             } else {
-                 setCurrentEventLogs(combinedLogs);
+                 setCurrentEventLogs([]); // No config, no current event
             }
 
             // --- Inactive Member Calculation (Optimized) ---
@@ -1008,5 +1009,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

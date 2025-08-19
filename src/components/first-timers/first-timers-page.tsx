@@ -31,10 +31,17 @@ const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote
 
     useEffect(() => {
         const fetchLogs = async () => {
+            if (firstTimers.length === 0) {
+                setIsLoading(false);
+                setAttendanceLogs([]);
+                return;
+            }
             setIsLoading(true);
             try {
-                // Fetch all logs for accurate attendance counting
-                const { logs } = await getFirstTimerAttendanceLogs();
+                // Fetch logs only for the currently displayed new comers
+                const { logs } = await getFirstTimerAttendanceLogs({
+                    firstTimerIds: firstTimers.map(ft => ft.id)
+                });
                 setAttendanceLogs(logs);
             } catch (error) {
                 console.error("Failed to fetch new comer attendance logs", error);
@@ -43,7 +50,7 @@ const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote
             }
         };
         fetchLogs();
-    }, [onPromoteSuccess]); // Re-fetch logs when a promotion happens
+    }, [firstTimers]); // Re-fetch logs when the list of visible first-timers changes
 
     const handlePromote = async (firstTimer: FirstTimer) => {
         setIsPromoting(firstTimer.id);
@@ -103,7 +110,7 @@ const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote
             <CardHeader>
                 <CardTitle>New Comer Attendance</CardTitle>
                 <CardDescription>
-                    Track how many "Actual" events new comers have attended. They can be promoted to members after 4 attendances.
+                    Track how many "Actual" events new comers have attended. They can be promoted to members after 4 attendances. Attendance count is based on the current view.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -145,7 +152,7 @@ const NewComerAttendanceDashboard = ({ firstTimers, onPromoteSuccess, canPromote
                             ))
                         ) : (
                              <div className="flex h-full items-center justify-center pt-24">
-                                <p className="text-muted-foreground">No "Actual" attendance records found for new comers.</p>
+                                <p className="text-muted-foreground">No "Actual" attendance records found for new comers in the current view.</p>
                             </div>
                         )}
                     </div>

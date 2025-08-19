@@ -28,7 +28,7 @@ export default function UserManagementPage() {
             usernameFilter: debouncedUsernameFilter
         });
         setUsers(fetchedUsers);
-        setPageCount(Math.ceil(count / pagination.pageSize));
+        setPageCount(Math.ceil((count ?? 0) / pagination.pageSize));
     } catch (error) {
         console.error("Failed to fetch users:", error);
     } finally {

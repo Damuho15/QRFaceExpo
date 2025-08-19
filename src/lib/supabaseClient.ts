@@ -565,10 +565,11 @@ type GetFirstTimerAttendanceLogsOptions = {
     nameFilter?: string;
     startDate?: Date;
     endDate?: Date;
+    firstTimerIds?: string[];
 }
 
 export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendanceLogsOptions = {}): Promise<{ logs: NewComerAttendanceLog[], count: number }> => {
-    const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate } = options;
+    const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate, firstTimerIds } = options;
 
     let query = supabase
         .from('attendance_log_1sttimer')
@@ -582,6 +583,9 @@ export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendan
     }
     if (nameFilter) {
         query = query.ilike('first_timer_name', `%${nameFilter}%`);
+    }
+    if (firstTimerIds && firstTimerIds.length > 0) {
+        query = query.in('first_timer_id', firstTimerIds);
     }
 
     if (pageSize > 0) {
@@ -818,5 +822,3 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
     return true;
 };
-
-    
