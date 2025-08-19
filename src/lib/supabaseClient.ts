@@ -19,7 +19,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 const supabase = createClient(
-    supabaseUrl || 'http://localhost:3000', // Fallback to prevent build crash
+    supabaseUrl || 'http://localhost:5432', // Fallback to prevent build crash
     supabaseAnonKey || 'dummy-key' // Fallback to prevent build crash
 );
 
