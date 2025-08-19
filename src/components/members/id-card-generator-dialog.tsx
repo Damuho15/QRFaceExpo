@@ -203,8 +203,8 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const horizontalMargin = 38.1; // 1.5 inches
-      const verticalMargin = 12.7; // 0.5 inch
+      const horizontalMargin = 38.1; 
+      const verticalMargin = 12.7; 
 
       const printableWidth = pageWidth - (2 * horizontalMargin);
       const printableHeight = pageHeight - (2 * verticalMargin);
@@ -212,9 +212,8 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const numColumns = 3;
       const numRows = 2;
       
-      // Calculate card dimensions to fit the printable area
-      const spaceBetweenCardsHorizontal = 12.7; // 0.5 inch in mm
-      const spaceBetweenCardsVertical = 4; // mm
+      const spaceBetweenCardsHorizontal = 12.7; 
+      const spaceBetweenCardsVertical = 4; 
 
       const cardWidth = (printableWidth - ((numColumns - 1) * spaceBetweenCardsHorizontal)) / numColumns;
       const cardHeight = (printableHeight - ((numRows - 1) * spaceBetweenCardsVertical)) / numRows;
