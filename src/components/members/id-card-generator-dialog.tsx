@@ -197,14 +197,13 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
     setIsLoading(true);
 
     try {
-      const cardDataUrlPromises = members.map(member => createCardCanvas(member, logoImage));
-      const cardDataUrls = await Promise.all(cardDataUrlPromises);
+      const cardDataUrls = await Promise.all(members.map(member => createCardCanvas(member, logoImage)));
 
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const horizontalMargin = 50.8; // 2 inches
+      const horizontalMargin = 38.1; // 1.5 inches
       const verticalMargin = 12.7; // 0.5 inch
 
       const printableWidth = pageWidth - (2 * horizontalMargin);
