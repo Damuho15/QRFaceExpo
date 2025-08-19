@@ -8,20 +8,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 // Use the environment variables to configure the Supabase client.
-// This works for both local development and production deployment.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Fallback for build time errors when env vars might not be perfectly available.
-// The actual correct URL from your .env.local will be used at runtime.
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL or Anon Key is missing. This may be expected during build.');
-}
-
-const supabase = createClient(
-    supabaseUrl || 'http://localhost:5432', // Fallback to prevent build crash
-    supabaseAnonKey || 'dummy-key' // Fallback to prevent build crash
-);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 
 const BUCKET_NAME = 'member-pictures';
