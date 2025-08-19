@@ -214,7 +214,7 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const numRows = 2;
       
       // Calculate card dimensions to fit the printable area
-      const spaceBetweenCardsHorizontal = 4; // mm
+      const spaceBetweenCardsHorizontal = 12.7; // 0.5 inch in mm
       const spaceBetweenCardsVertical = 4; // mm
 
       const cardWidth = (printableWidth - ((numColumns - 1) * spaceBetweenCardsHorizontal)) / numColumns;
