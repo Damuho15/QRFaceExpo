@@ -23,15 +23,43 @@ import QRCode from 'qrcode';
 interface IdCardGeneratorDialogProps {
   members: Member[];
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
+
+// Helper to wrap text and calculate its height, but not draw it
+const measureAndWrapText = (context: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
+    const words = text.split(' ');
+    let line = '';
+    let lines: string[] = [];
+
+    for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            lines.push(line.trim());
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line.trim());
+    
+    return lines;
+}
+
 
 // Helper to create a card canvas for a member
 const createCardCanvas = (member: Member, logoImage: string | null): Promise<string> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
-    const scale = 3; // Render at a higher resolution
-    canvas.width = 300 * scale;
-    canvas.height = 180 * scale;
+    const scale = 3; 
+    const cardWidth = 250;
+    const cardHeight = 400;
+    
+    canvas.width = cardWidth * scale;
+    canvas.height = cardHeight * scale;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
@@ -40,57 +68,82 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     
     ctx.scale(scale, scale);
 
-    // Background with gradient
-    const gradient = ctx.createLinearGradient(0, 0, 300, 180);
-    gradient.addColorStop(0, '#4A90E2');
-    gradient.addColorStop(1, '#50E3C2');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 300, 180);
-    
-    // Angled white overlay
+    // Red Background (Top-left triangle)
+    ctx.fillStyle = '#DC2626'; // Red
     ctx.beginPath();
-    ctx.moveTo(0, 180);
-    ctx.lineTo(300, 100);
-    ctx.lineTo(300, 180);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(cardWidth, 0);
+    ctx.lineTo(0, cardHeight);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fill();
+    
+    // Black Background (Bottom-right triangle)
+    ctx.fillStyle = '#000000'; // Black
+    ctx.beginPath();
+    ctx.moveTo(cardWidth, 0);
+    ctx.lineTo(cardWidth, cardHeight);
+    ctx.lineTo(0, cardHeight);
+    ctx.closePath();
     ctx.fill();
 
-
-    // Member's name
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(member.fullName, 20, 40);
+    // -- Dynamic Name Box --
+    const nameText = member.nickname || member.fullName;
+    const nameLineHeight = 47; 
+    ctx.font = 'bold 42px Arial';
+    ctx.textAlign = 'center';
     
-    // Member's ID/Nickname
-    ctx.font = '14px Arial';
-    ctx.fillText(member.nickname || `ID: ${member.id.substring(0, 8)}`, 20, 65);
+    const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
+    const totalLines = nameLines.length;
+    
+    const nameBoxY = 60;
+    
+    // Draw the text lines
+    ctx.fillStyle = 'white';
+    
+    nameLines.forEach((line, index) => {
+       const yPos = nameBoxY + 30 + (index * nameLineHeight) - ((totalLines - 1) * (nameLineHeight / 2));
+       ctx.fillText(line, cardWidth / 2, yPos + 5);
+    });
+
 
     // Generate QR Code
-    QRCode.toDataURL(member.qrCodePayload, { width: 80, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(member.qrCodePayload, { width: 150, margin: 1, errorCorrectionLevel: 'M' })
       .then(qrUrl => {
         const qrImg = new Image();
         qrImg.crossOrigin = "anonymous";
         qrImg.onload = () => {
-          // Draw white background for QR code
-          ctx.fillStyle = 'white';
-          ctx.shadowColor = 'rgba(0,0,0,0.15)';
-          ctx.shadowBlur = 10;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 4;
-          ctx.fillRect(195, 20, 85, 85);
-          ctx.shadowColor = 'transparent'; // Reset shadow
+          
+          const qrX = cardWidth / 2;
+          const qrY = cardHeight / 2 + 40;
+          const qrRadius = 75; 
 
-          // Draw QR code image
-          ctx.drawImage(qrImg, 200, 25, 75, 75);
+          ctx.save();
+          // Create a circular clipping path
+          ctx.beginPath();
+          ctx.arc(qrX, qrY, qrRadius, 0, Math.PI * 2, true);
+          ctx.closePath();
+          ctx.clip();
+
+          // Draw a white background inside the circle
+          ctx.fillStyle = 'white';
+          ctx.fillRect(qrX - qrRadius, qrY - qrRadius, qrRadius * 2, qrRadius * 2);
+
+          // Draw QR code image into the circle, leaving a small margin
+          const qrImageSize = (qrRadius - 15) * 2; 
+          ctx.drawImage(qrImg, qrX - (qrImageSize / 2), qrY - (qrImageSize / 2), qrImageSize, qrImageSize);
+          ctx.restore(); 
+
 
           // Draw logo if it exists
           if (logoImage) {
             const logo = new Image();
             logo.crossOrigin = "anonymous";
             logo.onload = () => {
-              ctx.drawImage(logo, 20, 120, 60, 50); // Adjust position and size as needed
+              // Draw logo background
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+              ctx.fillRect(cardWidth - 98, cardHeight - 74, 80, 52); // Background slightly larger
+              // Draw logo image (80% of previous size: 90*0.8=72, 55*0.8=44)
+              ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, 72, 44); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
@@ -110,8 +163,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 };
 
 
-export default function IdCardGeneratorDialog({ members, children }: IdCardGeneratorDialogProps) {
-  const [open, setOpen] = useState(false);
+export default function IdCardGeneratorDialog({ members, children, open, onOpenChange }: IdCardGeneratorDialogProps) {
   const [logoImage, setLogoImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -144,31 +196,40 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       const cardDataUrls = await Promise.all(cardDataUrlPromises);
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const cardWidth = 85.6; // Standard ID-1 card width in mm
-      const cardHeight = 53.98; // Standard ID-1 card height in mm
-      const margin = 10;
-      const xMargin = (pdf.internal.pageSize.getWidth() - (2 * cardWidth) - (2 * margin)) / 1;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
       
-      let x = margin;
-      let y = margin;
+      const cardWidth = 55;
+      const cardHeight = 88;
+      
+      const horizontalMargin = 15;
+      const verticalMargin = 15;
+      const numColumns = 3;
+      const verticalSpacing = 10;
+
+      const spaceBetweenCards = (pageWidth - (numColumns * cardWidth) - (2 * horizontalMargin)) / (numColumns - 1);
+      
+      let x = horizontalMargin;
+      let y = verticalMargin;
+
 
       cardDataUrls.forEach((cardDataUrl, index) => {
-         const isNewPage = index > 0 && index % 10 === 0; // 10 cards per page (5 rows of 2)
-         if (isNewPage) {
-           pdf.addPage();
-           x = margin;
-           y = margin;
-         }
+        const columnIndex = index % numColumns;
 
-        pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
-        
-        const isNewLine = (index + 1) % 2 === 0;
-        if(isNewLine) {
-            x = margin;
-            y += cardHeight + margin;
-        } else {
-            x += cardWidth + xMargin;
+        // Reset for a new row
+        if (index > 0 && columnIndex === 0) {
+            y += cardHeight + verticalSpacing;
         }
+        
+        // Check if we need a new page
+        if (y + cardHeight + verticalMargin > pageHeight) {
+            pdf.addPage();
+            y = verticalMargin;
+        }
+
+        x = horizontalMargin + columnIndex * (cardWidth + spaceBetweenCards);
+        
+        pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
       });
       
       const pdfBlob = pdf.output('bloburl');
@@ -188,12 +249,12 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
       });
     } finally {
       setIsLoading(false);
-      setOpen(false);
+      onOpenChange?.(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -217,7 +278,7 @@ export default function IdCardGeneratorDialog({ members, children }: IdCardGener
             )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleGeneratePdf} disabled={isLoading || members.length === 0}>
