@@ -141,8 +141,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
             logo.onload = () => {
               // Draw logo background
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-              const logoWidth = 72 * 0.8;
-              const logoHeight = 44 * 0.8;
+              const logoWidth = 72;
+              const logoHeight = 44;
               const logoBgWidth = logoWidth + 5;
               const logoBgHeight = logoHeight + 5;
 
@@ -204,37 +204,30 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const cardWidth = 55;
-      const cardHeight = 88;
+      const cardWidth = 63.5;
+      const cardHeight = 88.9;
       
-      const horizontalMargin = 10;
-      const verticalMargin = 10;
-      const horizontalSpacing = 5;
-      const verticalSpacing = 5;
-      const numColumns = 5;
+      const horizontalMargin = (pageWidth - (3 * cardWidth)) / 4;
+      const verticalMargin = (pageHeight - (2 * cardHeight)) / 3;
+      
+      const numColumns = 3;
+      const numRows = 2;
 
-      let x = horizontalMargin;
-      let y = verticalMargin;
+      let cardIndex = 0;
+      for (let i = 0; i < cardDataUrls.length; i++) {
+        const row = Math.floor(i / numColumns) % numRows;
+        const col = i % numColumns;
 
-
-      cardDataUrls.forEach((cardDataUrl, index) => {
-        const columnIndex = index % numColumns;
-
-        // Reset for a new row
-        if (index > 0 && columnIndex === 0) {
-            y += cardHeight + verticalSpacing;
-        }
-        
-        // Check if we need a new page
-        if (y + cardHeight + verticalMargin > pageHeight) {
-            pdf.addPage();
-            y = verticalMargin;
+        if (i > 0 && i % (numColumns * numRows) === 0) {
+          pdf.addPage();
+          cardIndex = 0;
         }
 
-        x = horizontalMargin + columnIndex * (cardWidth + horizontalSpacing);
+        const x = horizontalMargin * (col + 1) + col * cardWidth;
+        const y = verticalMargin * (row + 1) + row * cardHeight;
         
         pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
-      });
+      }
       
       const pdfBlob = pdf.output('bloburl');
       window.open(pdfBlob, '_blank');
