@@ -94,8 +94,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
 
     // -- Dynamic Name Box --
     const nameText = member.nickname || member.fullName;
-    const nameLineHeight = 37; // Increased line height slightly for the larger font
-    ctx.font = 'bold 32px Arial'; // Increased font size from 30px to 32px
+    const nameLineHeight = 42; 
+    ctx.font = 'bold 37px Arial';
     ctx.textAlign = 'center';
     
     const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
