@@ -8,44 +8,14 @@ import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 // Initialize supabase client
-let supabase: ReturnType<typeof createClient>;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
-  // Production: Use a direct connection string if available.
-  // This assumes the DATABASE_URL is pointing to a Supabase-compatible endpoint (e.g., via Supavisor or a self-hosted stack).
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:8000'; // URL is a placeholder, but required
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key'; // Key is a placeholder, but required
-  
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    db: {
-      schema: 'public',
-    },
-    global: {
-      fetch: (input, init) => {
-        // This is a simplified fetch override to direct requests.
-        // A more robust solution might be needed depending on the self-hosted setup.
-        const url = new URL(input as string);
-        const dbUrl = new URL(process.env.DATABASE_URL!);
-        url.protocol = dbUrl.protocol;
-        url.host = dbUrl.host;
-        url.port = dbUrl.port;
-        url.pathname = dbUrl.pathname + url.pathname;
-        
-        return fetch(url.toString(), init);
-      }
-    }
-  });
-
-} else {
-  // Development: Use the public Supabase URL and Anon Key from .env files.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase URL and/or Anon Key are not defined for development in .env.local');
-  }
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase URL and/or Anon Key are not defined in environment variables');
 }
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 
 const BUCKET_NAME = 'member-pictures';
