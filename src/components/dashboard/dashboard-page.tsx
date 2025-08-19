@@ -729,17 +729,24 @@ export default function DashboardPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            const today = new Date();
+            const prevMonthDate = subMonths(today, 1);
+            const startOfPrevMonth = startOfMonth(prevMonthDate);
+            const endOfPrevMonth = endOfMonth(prevMonthDate);
+
             // Fetch critical data in parallel
             const [
                 fetchedEventConfig, 
                 { logs: memberLogs },
                 { logs: firstTimerLogs },
-                { members: allMembersData },
+                { members: allMembersData }, // This still fetches all members, but it's needed for celebrants/promotions.
+                attendedLastMonth,
             ] = await Promise.all([
                 getEventConfig(),
                 getAttendanceLogs(), // Fetch all member logs once
                 getFirstTimerAttendanceLogs(), // Fetch all 1st timer logs once
-                getMembers(0, 0), // Fetch all members once
+                getMembers(0, 0), // Fetching all members for now for other components
+                getMemberAttendanceForPeriod(startOfPrevMonth, endOfPrevMonth),
             ]);
 
             setEventConfig(fetchedEventConfig);
@@ -759,28 +766,11 @@ export default function DashboardPage() {
                 });
                 setCurrentEventLogs(currentLogs);
             } else {
-                // If no config, maybe show all logs as "current"? Or an empty array?
-                // For now, let's keep it consistent with the original logic
                  setCurrentEventLogs(combinedLogs);
             }
 
-            // --- Inactive Member Calculation ---
-            const today = new Date();
-            const prevMonthDate = subMonths(today, 1);
-            const startOfPrevMonth = startOfMonth(prevMonthDate);
-            const endOfPrevMonth = endOfMonth(prevMonthDate);
-
-            // Filter logs for the previous month (already in memory)
-            const prevMonthMemberLogs = memberLogs.filter(log => {
-                const logDate = new Date(log.timestamp);
-                return logDate >= startOfPrevMonth && logDate <= endOfPrevMonth;
-            });
-            
-            const attendedMemberIds = new Set(prevMonthMemberLogs
-                .filter(log => log.type === 'Actual')
-                .map(log => log.member_id)
-            );
-            
+            // --- Inactive Member Calculation (Optimized) ---
+            const attendedMemberIds = new Set(attendedLastMonth.map(m => m.id));
             const inactive = allMembersData.filter(member => !attendedMemberIds.has(member.id));
             setInactiveMembers(inactive);
 
@@ -1018,3 +1008,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

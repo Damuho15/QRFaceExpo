@@ -130,6 +130,45 @@ export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, f
     return { members, count: count || 0 };
 };
 
+export const getMemberCount = async (): Promise<number> => {
+    const { count, error } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+
+    if (error) {
+        console.error('Error getting member count:', error);
+        throw error;
+    }
+    return count || 0;
+};
+
+export const getMemberAttendanceForPeriod = async (startDate: Date, endDate: Date): Promise<Member[]> => {
+    const { data, error } = await supabase
+        .from('attendance_logs')
+        .select(`
+            members (*)
+        `)
+        .gte('timestamp', startDate.toISOString())
+        .lte('timestamp', endDate.toISOString())
+        .eq('type', 'Actual');
+
+    if (error) {
+        console.error('Error fetching member attendance for period:', error);
+        throw error;
+    }
+
+    // Deduplicate members, as one member might have multiple logs in the period
+    const memberMap = new Map<string, Member>();
+    data.forEach(log => {
+        const member = log.members as Member;
+        if (member && member.id) {
+            memberMap.set(member.id, member);
+        }
+    });
+
+    return Array.from(memberMap.values());
+}
+
 
 export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
     if (!ids || ids.length === 0) {
@@ -779,3 +818,5 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
     return true;
 };
+
+    
