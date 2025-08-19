@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -61,22 +60,53 @@ export default function LoginPage() {
     }
   };
   
-  const MonkeyIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        width="24" 
-        height="24" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-        {...props}
+  const FeastLogoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 200 200"
+      width="100"
+      height="100"
+      {...props}
     >
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-6h4v-2h-4v2zm0-4h4V8h-4v2z"/>
+      <g>
+        <circle cx="100" cy="100" r="70" fill="hsl(var(--primary))" />
+        <path
+          d="M100 20 A80 80 0 1 1 20 100"
+          fill="none"
+          stroke="hsl(var(--primary))"
+          strokeWidth="8"
+        />
+        <path
+          d="M100 10 A90 90 0 1 1 10 100"
+          fill="none"
+          stroke="hsl(var(--primary))"
+          strokeWidth="8"
+        />
+        <text
+          x="100"
+          y="85"
+          fontFamily="sans-serif"
+          fontSize="24"
+          fill="white"
+          textAnchor="middle"
+          fontWeight="bold"
+        >
+          the
+        </text>
+        <text
+          x="100"
+          y="125"
+          fontFamily="sans-serif"
+          fontSize="40"
+          fill="white"
+          textAnchor="middle"
+          fontWeight="bold"
+        >
+          FEAST
+        </text>
+      </g>
     </svg>
-)
+  );
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -84,7 +114,7 @@ export default function LoginPage() {
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center items-center gap-2 mb-4">
-                <MonkeyIcon className="h-12 w-12 text-primary" />
+                <FeastLogoIcon className="h-20 w-20" />
             </div>
             <CardTitle className="text-2xl">ExpAttendance Login</CardTitle>
             <CardDescription>
