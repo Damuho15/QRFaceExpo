@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, 'use a client';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -89,7 +89,7 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
     // -- Dynamic Name Box --
     const nameText = member.nickname || member.fullName;
     const nameLineHeight = 47; 
-    ctx.font = 'bold 42px Arial';
+    ctx.font = 'bold 47px Arial';
     ctx.textAlign = 'center';
     
     const nameLines = measureAndWrapText(ctx, nameText, cardWidth - 50);
@@ -141,9 +141,11 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
             logo.onload = () => {
               // Draw logo background
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-              ctx.fillRect(cardWidth - 98, cardHeight - 74, 80, 52); // Background slightly larger
-              // Draw logo image (80% of previous size: 90*0.8=72, 55*0.8=44)
-              ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, 72, 44); 
+              const logoWidth = 72 * 0.8;
+              const logoHeight = 44 * 0.8;
+              ctx.fillRect(cardWidth - 98, cardHeight - 74, logoWidth + 5, logoHeight + 5); // Background slightly larger
+              // Draw logo image
+              ctx.drawImage(logo, cardWidth - 95, cardHeight - 70, logoWidth, logoHeight); 
               resolve(canvas.toDataURL('image/png'));
             };
             logo.onerror = () => reject(new Error('Logo image failed to load'));
