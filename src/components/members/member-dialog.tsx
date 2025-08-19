@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -205,6 +204,7 @@ export default function MemberDialog({
               <form onSubmit={form.handleSubmit(onSubmit)}>
                  <ScrollArea className="h-96 w-full">
                     <div className="space-y-4 py-4 pr-6">
+                        {/* 
                         <FormField
                         control={form.control}
                         name="picture"
@@ -233,6 +233,7 @@ export default function MemberDialog({
                             </FormItem>
                         )}
                         />
+                        */}
                         <FormField
                         control={form.control}
                         name="fullName"
