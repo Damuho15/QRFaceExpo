@@ -11,7 +11,24 @@ import type { UserFormValues } from '@/components/user-management/user-dialog';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: false
+    },
+    db: {
+        schema: 'public',
+    },
+    global: {
+        fetch: (input, init) => {
+            // Prepend the basePath to the fetch URL if it's a relative path for API calls
+            if (typeof input === 'string' && input.startsWith('/rest/v1')) {
+                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+                input = `${basePath}${input}`;
+            }
+            return fetch(input, init);
+        }
+    }
+});
 
 
 const BUCKET_NAME = 'member-pictures';
