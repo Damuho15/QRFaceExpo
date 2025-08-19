@@ -69,17 +69,17 @@ export default function LoginPage() {
       {...props}
     >
       <g>
-        <circle cx="100" cy="100" r="70" fill="hsl(var(--primary))" />
+        <circle cx="100" cy="100" r="70" fill="black" />
         <path
           d="M100 20 A80 80 0 1 1 20 100"
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke="black"
           strokeWidth="8"
         />
         <path
           d="M100 10 A90 90 0 1 1 10 100"
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke="black"
           strokeWidth="8"
         />
         <text
@@ -116,7 +116,7 @@ export default function LoginPage() {
             <div className="flex justify-center items-center gap-2 mb-4">
                 <FeastLogoIcon className="h-20 w-20" />
             </div>
-            <CardTitle className="text-2xl">ExpAttendance Login</CardTitle>
+            <CardTitle className="text-2xl">Feast Expo Attendance</CardTitle>
             <CardDescription>
               Enter your username and password to login.
             </CardDescription>

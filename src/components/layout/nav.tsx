@@ -43,17 +43,17 @@ const FeastLogoIcon = (props: React.SVGProps<SVGSVGElement>) => (
       {...props}
     >
       <g>
-        <circle cx="100" cy="100" r="70" fill="hsl(var(--primary))" />
+        <circle cx="100" cy="100" r="70" fill="black" />
         <path
           d="M100 20 A80 80 0 1 1 20 100"
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke="black"
           strokeWidth="8"
         />
         <path
           d="M100 10 A90 90 0 1 1 10 100"
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke="black"
           strokeWidth="8"
         />
         <text
@@ -107,7 +107,7 @@ export default function Nav() {
       <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center gap-2">
             <FeastLogoIcon className="h-8 w-8" />
-            <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">ExpAttendance</h1>
+            <h1 className="text-lg font-bold font-headline group-data-[collapsible=icon]:hidden">Feast Expo</h1>
         </div>
       </div>
       <SidebarMenu className="flex-1 p-4 space-y-2">
