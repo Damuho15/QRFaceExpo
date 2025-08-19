@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -140,8 +141,8 @@ const createCardCanvas = (member: Member, logoImage: string | null): Promise<str
             logo.onload = () => {
               // Draw logo background
               ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-              const logoWidth = 72;
-              const logoHeight = 44;
+              const logoWidth = 72 * 0.8;
+              const logoHeight = 44 * 0.8;
               const logoBgWidth = logoWidth + 5;
               const logoBgHeight = logoHeight + 5;
 
@@ -203,14 +204,21 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const cardWidth = 88.9;
-      const cardHeight = 63.5;
-      
-      const horizontalMargin = (pageWidth - (3 * cardWidth)) / 4;
-      const verticalMargin = (pageHeight - (2 * cardHeight)) / 3;
-      
+      const horizontalMargin = 25.4; // 1 inch
+      const verticalMargin = 12.7; // 0.5 inch
+
+      const printableWidth = pageWidth - (2 * horizontalMargin);
+      const printableHeight = pageHeight - (2 * verticalMargin);
+
       const numColumns = 3;
       const numRows = 2;
+      
+      // Calculate card dimensions to fit the printable area
+      const spaceBetweenCardsHorizontal = 4; // mm
+      const spaceBetweenCardsVertical = 4; // mm
+
+      const cardWidth = (printableWidth - ((numColumns - 1) * spaceBetweenCardsHorizontal)) / numColumns;
+      const cardHeight = (printableHeight - ((numRows - 1) * spaceBetweenCardsVertical)) / numRows;
 
       for (let i = 0; i < cardDataUrls.length; i++) {
         const pageIndex = Math.floor(i / (numColumns * numRows));
@@ -223,8 +231,8 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
         const row = Math.floor(cardIndexOnPage / numColumns);
         const col = cardIndexOnPage % numColumns;
 
-        const x = horizontalMargin * (col + 1) + col * cardWidth;
-        const y = verticalMargin * (row + 1) + row * cardHeight;
+        const x = horizontalMargin + col * (cardWidth + spaceBetweenCardsHorizontal);
+        const y = verticalMargin + row * (cardHeight + spaceBetweenCardsVertical);
         
         pdf.addImage(cardDataUrls[i], 'PNG', x, y, cardWidth, cardHeight);
       }
