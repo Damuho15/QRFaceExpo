@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -204,8 +203,8 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const pageHeight = pdf.internal.pageSize.getHeight();
       const pageWidth = pdf.internal.pageSize.getWidth();
       
-      const cardWidth = 63.5;
-      const cardHeight = 88.9;
+      const cardWidth = 88.9;
+      const cardHeight = 63.5;
       
       const horizontalMargin = (pageWidth - (3 * cardWidth)) / 4;
       const verticalMargin = (pageHeight - (2 * cardHeight)) / 3;
@@ -213,20 +212,21 @@ export default function IdCardGeneratorDialog({ members, children, open, onOpenC
       const numColumns = 3;
       const numRows = 2;
 
-      let cardIndex = 0;
       for (let i = 0; i < cardDataUrls.length; i++) {
-        const row = Math.floor(i / numColumns) % numRows;
-        const col = i % numColumns;
+        const pageIndex = Math.floor(i / (numColumns * numRows));
+        const cardIndexOnPage = i % (numColumns * numRows);
 
-        if (i > 0 && i % (numColumns * numRows) === 0) {
+        if (i > 0 && cardIndexOnPage === 0) {
           pdf.addPage();
-          cardIndex = 0;
         }
+
+        const row = Math.floor(cardIndexOnPage / numColumns);
+        const col = cardIndexOnPage % numColumns;
 
         const x = horizontalMargin * (col + 1) + col * cardWidth;
         const y = verticalMargin * (row + 1) + row * cardHeight;
         
-        pdf.addImage(cardDataUrl, 'PNG', x, y, cardWidth, cardHeight);
+        pdf.addImage(cardDataUrls[i], 'PNG', x, y, cardWidth, cardHeight);
       }
       
       const pdfBlob = pdf.output('bloburl');
