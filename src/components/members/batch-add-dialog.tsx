@@ -100,7 +100,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
     setIsSubmitting(true);
 
     try {
-      const existingMembers = await getMembers();
+      const { members: existingMembers } = await getMembers();
       const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
       
       const newMembersPayload: any[] = [];
