@@ -25,18 +25,22 @@ export default function AttendanceLogsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
+            // Fetch roughly half from each to combine to the total page size
+            const memberPageSize = Math.ceil(pagination.pageSize / 2);
+            const firstTimerPageSize = Math.floor(pagination.pageSize / 2);
+
             const [
                 { logs: memberLogs, count: memberLogsCount }, 
                 { logs: ftLogs, count: ftLogsCount }
             ] = await Promise.all([
                 getAttendanceLogs({ 
                     pageIndex: pagination.pageIndex, 
-                    pageSize: pagination.pageSize,
+                    pageSize: memberPageSize,
                     memberNameFilter: debouncedNameFilter 
                 }),
                 getFirstTimerAttendanceLogs({
                     pageIndex: pagination.pageIndex,
-                    pageSize: pagination.pageSize,
+                    pageSize: firstTimerPageSize,
                     nameFilter: debouncedNameFilter
                 })
             ]);
@@ -44,7 +48,6 @@ export default function AttendanceLogsPage() {
             setAttendanceLogs(memberLogs);
             setFirstTimerLogs(ftLogs);
             
-            // This is an approximation for pagination. A more robust solution might require a single query.
             const totalCount = memberLogsCount + ftLogsCount;
             setPageCount(Math.ceil(totalCount / pagination.pageSize));
 
