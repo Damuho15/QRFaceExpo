@@ -213,6 +213,9 @@ export default function FirstTimerDialog({
                     </div>
                 </ScrollArea>
                 <DialogFooter className="pt-4">
+                   <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={isSubmitting}>
+                    Cancel
+                  </Button>
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isEditMode ? 'Save Changes' : 'Create New Comer'}
