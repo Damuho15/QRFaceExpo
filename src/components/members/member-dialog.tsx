@@ -347,7 +347,7 @@ export default function MemberDialog({
                     </div>
                 </ScrollArea>
                 <DialogFooter className="pt-4">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
+                  <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={isSubmitting}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
