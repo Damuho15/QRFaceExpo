@@ -25,32 +25,43 @@ export default function AttendanceLogsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch roughly half from each to combine to the total page size
-            const memberPageSize = Math.ceil(pagination.pageSize / 2);
-            const firstTimerPageSize = Math.floor(pagination.pageSize / 2);
+            // When a filter is applied, search both members and new comers.
+            if (debouncedNameFilter) {
+                const memberPageSize = Math.ceil(pagination.pageSize / 2);
+                const firstTimerPageSize = Math.floor(pagination.pageSize / 2);
 
-            const [
-                { logs: memberLogs, count: memberLogsCount }, 
-                { logs: ftLogs, count: ftLogsCount }
-            ] = await Promise.all([
-                getAttendanceLogs({ 
-                    pageIndex: pagination.pageIndex, 
-                    pageSize: memberPageSize,
-                    memberNameFilter: debouncedNameFilter 
-                }),
-                getFirstTimerAttendanceLogs({
+                const [
+                    { logs: memberLogs, count: memberLogsCount }, 
+                    { logs: ftLogs, count: ftLogsCount }
+                ] = await Promise.all([
+                    getAttendanceLogs({ 
+                        pageIndex: pagination.pageIndex, 
+                        pageSize: memberPageSize,
+                        memberNameFilter: debouncedNameFilter 
+                    }),
+                    getFirstTimerAttendanceLogs({
+                        pageIndex: pagination.pageIndex,
+                        pageSize: firstTimerPageSize,
+                        nameFilter: debouncedNameFilter
+                    })
+                ]);
+                
+                setAttendanceLogs(memberLogs);
+                setFirstTimerLogs(ftLogs);
+                const totalCount = memberLogsCount + ftLogsCount;
+                setPageCount(Math.ceil(totalCount / pagination.pageSize));
+            } else {
+                // When no filter is applied, only paginate through the main member attendance logs.
+                // This avoids the error and provides a stable, paginated view of the primary logs.
+                const { logs, count } = await getAttendanceLogs({
                     pageIndex: pagination.pageIndex,
-                    pageSize: firstTimerPageSize,
-                    nameFilter: debouncedNameFilter
-                })
-            ]);
+                    pageSize: pagination.pageSize
+                });
 
-            setAttendanceLogs(memberLogs);
-            setFirstTimerLogs(ftLogs);
-            
-            const totalCount = memberLogsCount + ftLogsCount;
-            setPageCount(Math.ceil(totalCount / pagination.pageSize));
-
+                setAttendanceLogs(logs);
+                setFirstTimerLogs([]); // Clear new comer logs when not filtering
+                setPageCount(Math.ceil(count / pagination.pageSize));
+            }
         } catch (error) {
             console.error("Failed to fetch attendance data:", error);
         } finally {
@@ -77,7 +88,6 @@ export default function AttendanceLogsPage() {
             attendeeType: 'New Comer' as const 
         }));
         
-        // Note: Sorting only affects the current page. The overall order is handled by the database query.
         return [...memberLogsMapped, ...firstTimerLogsMapped]
             .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             
@@ -88,7 +98,7 @@ export default function AttendanceLogsPage() {
             <div>
                 <h1 className="text-2xl font-bold font-headline">Attendance Logs</h1>
                 <p className="text-muted-foreground">
-                    View and manage all attendance records for all event periods.
+                    View and manage all attendance records. Use the filter to search for new comers.
                 </p>
             </div>
             <AttendanceDataTable 
