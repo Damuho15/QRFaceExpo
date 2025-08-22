@@ -17,7 +17,7 @@ export default function AttendanceLogsPage() {
     const [pageCount, setPageCount] = useState(0);
     const [pagination, setPagination] = useState({
       pageIndex: 0,
-      pageSize: 10,
+      pageSize: 15,
     });
     const [nameFilter, setNameFilter] = useState('');
     const [debouncedNameFilter] = useDebounce(nameFilter, 500);
