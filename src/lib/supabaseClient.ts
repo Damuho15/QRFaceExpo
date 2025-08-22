@@ -585,6 +585,12 @@ type GetFirstTimerAttendanceLogsOptions = {
 export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendanceLogsOptions = {}): Promise<{ logs: NewComerAttendanceLog[], count: number }> => {
     const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate, firstTimerIds } = options;
 
+    // If a list of IDs is provided and it's empty, we can short-circuit and return nothing.
+    // This prevents Supabase from throwing an error on `in(..., [])`
+    if (firstTimerIds && firstTimerIds.length === 0) {
+        return { logs: [], count: 0 };
+    }
+
     let query = supabase
         .from('attendance_log_1sttimer')
         .select('*', { count: 'exact' });
@@ -598,7 +604,7 @@ export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendan
     if (nameFilter) {
         query = query.ilike('first_timer_name', `%${nameFilter}%`);
     }
-    if (firstTimerIds && firstTimerIds.length > 0) {
+    if (firstTimerIds) { // No need to check length here due to the short-circuit above
         query = query.in('first_timer_id', firstTimerIds);
     }
 
