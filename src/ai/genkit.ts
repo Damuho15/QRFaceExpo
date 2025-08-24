@@ -4,7 +4,7 @@ import {dotdev} from 'genkit';
 
 // dotdev(); // Do not call in production
 
-const googleAI = googleAIPlugin({
+export const googleAI = googleAIPlugin({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
