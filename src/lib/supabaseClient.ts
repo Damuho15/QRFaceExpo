@@ -1,5 +1,4 @@
 
-
 import { createClient } from '@supabase/supabase-js';
 import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog, User } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
@@ -9,7 +8,7 @@ import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 // Use the environment variables to configure the Supabase client.
 const supabaseUrl = "https://qisldnceqvfcqvkzsvrd.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpc2xkbmNlcXZmY3F2a3pzdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4NzA2ODEsImV4cCI6MjAzMjQ0NjY4MX0.0qD4L3CFS-S_S82j2nNMMQBC0xT5CBs4V7v3S5y_9uE";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -832,5 +831,5 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 // Export the initialized client
 export { supabase };
-
+    
     
