@@ -62,7 +62,7 @@ Instructions for Face Recognition and Confidence Scoring:
 1. Call the 'getRegisteredMembers' tool to get the list of members and their profile pictures.
 2. If the tool returns an empty list or indicates an error, you MUST set 'matchFound' to false, confidence to 0, and the reason to "Could not load member pictures for comparison." Do not proceed.
 3. If the tool returns members, scrutinize the biometric details in the live image and compare it against the profile photo of each registered member. Pay close attention to facial structure, eye spacing, nose shape, and jawline.
-4. If you find a potential match, you must determine a confidence score between 0.0 and 1.0. This is a semantic confidence, not a mathematical one.
+4. If you find a match, you must determine a confidence score between 0.0 and 1.0. This is a semantic confidence, not a mathematical one.
 
 Confidence Score Tiers:
 - High Confidence (>= 0.9): ONLY use this score if you are absolutely certain the person is a biometric match to a registered member. The match should be undeniable.
