@@ -18,16 +18,6 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     db: {
         schema: 'public',
     },
-    global: {
-        fetch: (input, init) => {
-            // Prepend the basePath to the fetch URL if it's a relative path for API calls
-            if (typeof input === 'string' && input.startsWith('/rest/v1')) {
-                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-                input = `${basePath}${input}`;
-            }
-            return fetch(input, init);
-        }
-    }
 });
 
 
