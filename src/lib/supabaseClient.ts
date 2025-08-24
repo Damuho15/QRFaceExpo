@@ -826,22 +826,14 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
-  if (!supabaseServiceKey) {
-    console.error('Supabase service role key is not configured. Cannot fetch image.');
-    return null;
-  }
   try {
-    const response = await fetch(url, {
-      headers: {
-        // Use the more secure service role key for server-to-server requests
-        Authorization: `Bearer ${supabaseServiceKey}`,
-        apiKey: supabaseServiceKey,
-      },
-    });
+    const response = await fetch(url);
+
     if (!response.ok) {
-      console.log(`TROUBLESHOOTING: Failed to fetch image from ${url}. Server responded with status: ${response.status}`);
+      console.error(`TROUBLESHOOTING: Failed to fetch image from ${url}. Server responded with status: ${response.status}`);
       return null;
     }
+    
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const mimeType = response.headers.get('Content-Type') || 'image/jpeg';
@@ -849,9 +841,10 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
     return `data:${mimeType};base64,${buffer.toString('base64')}`;
 
   } catch (error) {
-    console.log('TROUBLESHOOTING: An error occurred in convertImageUrlToDataUri:', error);
+    console.error('TROUBLESHOOTING: An error occurred in convertImageUrlToDataUri:', error);
     return null;
   }
 };
     
+
 
