@@ -38,10 +38,12 @@ export const getRegisteredMembers = ai.defineTool(
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-        console.error("Tool Error: Supabase environment variables (URL or Service Key) are not configured.");
-        // Return an empty array to prevent the flow from crashing.
-        // The AI prompt is designed to handle this empty state gracefully.
+    if (!supabaseUrl) {
+        console.error("Tool Error: NEXT_PUBLIC_SUPABASE_URL is not configured in the environment.");
+        return { members: [] };
+    }
+    if (!supabaseServiceKey) {
+        console.error("Tool Error: SUPABASE_SERVICE_ROLE_KEY is not configured in the environment.");
         return { members: [] };
     }
 
