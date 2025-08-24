@@ -827,7 +827,7 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
   if (!supabaseServiceKey) {
-    console.error('Supabase service role key is not configured.');
+    console.error('Supabase service role key is not configured. Cannot fetch image.');
     return null;
   }
   try {
@@ -839,20 +839,19 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
       },
     });
     if (!response.ok) {
-      console.error(`Failed to fetch image from ${url}. Status: ${response.status}`);
+      console.log(`TROUBLESHOOTING: Failed to fetch image from ${url}. Server responded with status: ${response.status}`);
       return null;
     }
-    const blob = await response.blob();
-    const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const mimeType = response.headers.get('Content-Type') || 'image/jpeg';
+    
+    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+
   } catch (error) {
-    console.error('Error converting image URL to data URI:', error);
+    console.log('TROUBLESHOOTING: An error occurred in convertImageUrlToDataUri:', error);
     return null;
   }
 };
-
     
+
