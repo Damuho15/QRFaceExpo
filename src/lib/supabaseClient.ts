@@ -290,7 +290,9 @@ export const deleteMember = async (id: string, pictureUrl?: string | null) => {
             const url = new URL(pictureUrl);
             const pathParts = url.pathname.split('/');
             // The path in the bucket is the part after 'public/member-pictures/'
-            const bucketPath = pathParts.slice(pathParts.indexOf(BUCKET_NAME)).join('/');
+            const bucketPathWithBucketName = pathParts.slice(pathParts.indexOf(BUCKET_NAME)).join('/');
+            const bucketPath = bucketPathWithBucketName.substring(BUCKET_NAME.length + 1);
+
 
             const { error: storageError } = await supabase.storage
                 .from(BUCKET_NAME)
@@ -886,36 +888,33 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
+  const supabaseAdmin = getSupabaseAdminClient();
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) {
-        console.error('Supabase URL is not defined. Cannot construct full URL for image.');
+    const urlObject = new URL(url);
+    const bucketPath = urlObject.pathname.split(`/${BUCKET_NAME}/`)[1];
+    
+    if (!bucketPath) {
+        console.error('Could not extract bucket path from URL:', url);
         return null;
     }
-    // Construct the full URL if a relative path is provided
-    const fullUrl = url.startsWith('http') ? url : `${supabaseUrl}${url}`;
-    
-    const response = await fetch(fullUrl);
 
-    if (!response.ok) {
-      // Log detailed error information without crashing the server.
-      console.error(`Failed to fetch image. URL: ${fullUrl}, Status: ${response.status} ${response.statusText}`);
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .download(bucketPath);
+
+    if (error) {
+      console.error(`Failed to download image from storage. Path: ${bucketPath}`, error);
       return null;
     }
     
-    // Convert the image response to a Buffer, which is the correct way to handle binary data in Node.js.
-    const arrayBuffer = await response.arrayBuffer();
+    const arrayBuffer = await data.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const mimeType = data.type || 'image/jpeg';
     
-    // Determine the MIME type from the response headers, defaulting to jpeg if not present.
-    const mimeType = response.headers.get('Content-Type') || 'image/jpeg';
-    
-    // Return the correctly formatted Base64 data URI.
     return `data:${mimeType};base64,${buffer.toString('base64')}`;
 
   } catch (error) {
-    // Log any other exceptions that occur during the fetch process.
-    console.error(`An exception occurred while trying to fetch image from URL: ${url}`, error);
+    console.error(`An exception occurred while trying to process image from URL: ${url}`, error);
     return null;
   }
 };
