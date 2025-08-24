@@ -1170,27 +1170,6 @@ export default function CheckInPage() {
         </p>
       </div>
 
-      {/* Temporary Test Image for troubleshooting */}
-      <div className="border-2 border-dashed border-red-500 p-4">
-        <h3 className="font-bold text-red-500">Troubleshooting Image Load</h3>
-        <p className="text-sm text-muted-foreground mb-2">If you can see an image of a member below, it means the app can correctly access Supabase Storage. If not, there is still a configuration issue in `next.config.ts`.</p>
-        <Image 
-            src="/storage/v1/object/public/member-pictures/1722880534279-ernie-espinosa.jpg"
-            alt="Test Image"
-            width={100}
-            height={100}
-            className="rounded-md object-cover"
-            onError={(e) => {
-                console.error("Test image failed to load", e);
-                toast({
-                    variant: "destructive",
-                    title: "Test Image Failed",
-                    description: "Could not load test image from Supabase. Check remotePatterns in next.config.ts and the file path.",
-                });
-            }}
-        />
-      </div>
-
       <Tabs defaultValue="member-qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="member-qr">Member QR</TabsTrigger>

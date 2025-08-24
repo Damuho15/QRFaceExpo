@@ -8,10 +8,6 @@ const nextConfig: NextConfig = {
         source: '/rest/v1/:path*',
         destination: 'https://qisldnceqvfcqvkzsvrd.supabase.co/rest/v1/:path*',
       },
-      {
-        source: '/storage/v1/:path*',
-        destination: 'https://qisldnceqvfcqvkzsvrd.supabase.co/storage/v1/:path*',
-      }
     ];
   },
   typescript: {

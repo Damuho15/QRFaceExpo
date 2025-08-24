@@ -102,9 +102,17 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
         console.error('Error uploading picture:', error);
         throw error;
     }
+    
+    // Return the full public URL from Supabase
+    const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(data.path);
 
-    // Return the relative path to be used with the Next.js rewrite rule
-    return `/storage/v1/object/public/${BUCKET_NAME}/${data.path}`;
+    if (!publicUrlData) {
+        throw new Error('Could not get public URL for uploaded picture.');
+    }
+
+    return publicUrlData.publicUrl;
 };
 
 export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
@@ -277,9 +285,13 @@ export const deleteMember = async (id: string, pictureUrl?: string | null) => {
     // 1. Delete picture from storage if it exists
     if (pictureUrl) {
         try {
-            // The pictureUrl is now a relative path like /storage/v1/object/public/member-pictures/169....png
+            // The pictureUrl is the full URL, e.g. https://<project>.supabase.co/storage/v1/object/public/member-pictures/....
             // We need to extract the path inside the bucket.
-            const bucketPath = pictureUrl.substring(`/storage/v1/object/public/${BUCKET_NAME}/`.length);
+            const url = new URL(pictureUrl);
+            const pathParts = url.pathname.split('/');
+            // The path in the bucket is the part after 'public/member-pictures/'
+            const bucketPath = pathParts.slice(pathParts.indexOf(BUCKET_NAME)).join('/');
+
             const { error: storageError } = await supabase.storage
                 .from(BUCKET_NAME)
                 .remove([bucketPath]);
