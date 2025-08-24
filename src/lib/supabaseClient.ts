@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Member, EventConfig, AttendanceLog, FirstTimer, NewComerAttendanceLog, User } from '@/lib/types';
 import type { MemberFormValues } from '@/components/members/member-dialog';
 import type { FirstTimerFormValues } from '@/components/first-timers/first-timer-dialog';
@@ -8,6 +8,7 @@ import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 const BUCKET_NAME = 'member-pictures';
 
+// --- Standard Client (for client-side/browser use) ---
 // Wrapper function to initialize Supabase client on demand
 const getSupabaseClient = () => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,20 +28,31 @@ const getSupabaseClient = () => {
     });
 };
 
+// --- Admin Client (for server-side/tool use) ---
+// Use a singleton pattern to avoid multiple client instances
+let supabaseAdminClient: SupabaseClient | null = null;
+
 const getSupabaseAdminClient = () => {
+    if (supabaseAdminClient) {
+        return supabaseAdminClient;
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !serviceKey) {
+        console.error("CRITICAL: Supabase URL or service role key is not defined for admin operations.");
         throw new Error('Supabase URL or service role key is not defined for admin operations.');
     }
 
-    return createClient(supabaseUrl, serviceKey, {
+    supabaseAdminClient = createClient(supabaseUrl, serviceKey, {
         auth: {
             autoRefreshToken: false,
             persistSession: false
         }
     });
+    
+    return supabaseAdminClient;
 };
 
 

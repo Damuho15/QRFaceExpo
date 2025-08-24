@@ -6,9 +6,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { createClient } from '@supabase/supabase-js';
 import type { Member } from '@/lib/types';
 import { convertImageUrlToDataUri } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
 // Define the output schema for the tool
 const GetRegisteredMembersOutputSchema = z.object({
@@ -45,7 +45,8 @@ export const getRegisteredMembers = ai.defineTool(
         console.error("Tool Error: SUPABASE_SERVICE_ROLE_KEY is not configured in the environment.");
         return { members: [] };
     }
-
+    
+    console.log("Tool: Initializing Supabase admin client...");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // 1. Fetch all members with a pictureUrl
