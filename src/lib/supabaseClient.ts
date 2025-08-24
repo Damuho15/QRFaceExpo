@@ -6,20 +6,43 @@ import type { FirstTimerFormValues } from '@/components/first-timers/first-timer
 import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// This client is safe for browser and server-side logic that does NOT require admin privileges.
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: false
-    },
-    db: {
-        schema: 'public',
-    },
-});
-
 const BUCKET_NAME = 'member-pictures';
+
+// Wrapper function to initialize Supabase client on demand
+const getSupabaseClient = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase URL or anonymous key is not defined in environment variables.');
+    }
+
+    return createClient(supabaseUrl, supabaseKey, {
+        auth: {
+            persistSession: false
+        },
+        db: {
+            schema: 'public',
+        },
+    });
+};
+
+const getSupabaseAdminClient = () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+        throw new Error('Supabase URL or service role key is not defined for admin operations.');
+    }
+
+    return createClient(supabaseUrl, serviceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+};
+
 
 // This function now correctly handles Excel numeric dates and string dates,
 // ensuring they are parsed into a valid Date object without timezone issues.
@@ -68,6 +91,7 @@ export const parseDateAsUTC = (dateString: string) => {
 
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
+    const supabase = getSupabaseClient();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
     const fileName = `${Date.now()}-${sanitizedFileName}`;
     const { data, error } = await supabase.storage
@@ -84,6 +108,7 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
 };
 
 export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
+    const supabase = getSupabaseClient();
     let query = supabase
         .from('members')
         .select('*', { count: 'exact' });
@@ -130,6 +155,7 @@ export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, f
 };
 
 export const getMemberCount = async (): Promise<number> => {
+    const supabase = getSupabaseClient();
     const { count, error } = await supabase
         .from('members')
         .select('*', { count: 'exact', head: true });
@@ -142,6 +168,7 @@ export const getMemberCount = async (): Promise<number> => {
 };
 
 export const getMemberAttendanceForPeriod = async (startDate: Date, endDate: Date): Promise<Member[]> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_logs')
         .select('members (*)')
@@ -168,6 +195,7 @@ export const getMemberAttendanceForPeriod = async (startDate: Date, endDate: Dat
 
 
 export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
+    const supabase = getSupabaseClient();
     if (!ids || ids.length === 0) {
         return [];
     }
@@ -186,6 +214,7 @@ export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
 };
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
+    const supabase = getSupabaseClient();
     const safePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -214,6 +243,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
 }
 
 export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
+    const supabase = getSupabaseClient();
     const updatePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -243,6 +273,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
 };
 
 export const deleteMember = async (id: string, pictureUrl?: string | null) => {
+    const supabase = getSupabaseClient();
     // 1. Delete picture from storage if it exists
     if (pictureUrl) {
         try {
@@ -274,6 +305,7 @@ export const deleteMember = async (id: string, pictureUrl?: string | null) => {
 };
 
 export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<Member[] | null> => {
+    const supabase = getSupabaseClient();
     if (!rawMembers || rawMembers.length === 0) {
         return [];
     }
@@ -336,6 +368,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
 
 export const getEventConfig = async (): Promise<EventConfig | null> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('event_config')
         .select('*')
@@ -355,6 +388,7 @@ export const getEventConfig = async (): Promise<EventConfig | null> => {
 };
 
 export const updateEventConfig = async (dates: { pre_reg_start_date: string, event_date: string }): Promise<EventConfig> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('event_config')
         .update({
@@ -381,6 +415,7 @@ export const addAttendanceLog = async (log: {
     method: 'QR' | 'Face';
     timestamp: Date;
 }) => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_logs')
         .insert({
@@ -410,6 +445,7 @@ type GetAttendanceLogsOptions = {
 }
 
 export const getAttendanceLogs = async (options: GetAttendanceLogsOptions = {}): Promise<{ logs: AttendanceLog[], count: number }> => {
+    const supabase = getSupabaseClient();
     const { pageIndex = 0, pageSize = 0, memberNameFilter, startDate, endDate } = options;
 
     let query = supabase
@@ -444,6 +480,7 @@ export const getAttendanceLogs = async (options: GetAttendanceLogsOptions = {}):
 };
 
 export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.from('attendance_logs').delete().eq('id', id);
     if (error) {
         console.error('Error deleting attendance log:', error);
@@ -454,6 +491,7 @@ export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
 
 // New Comer Functions
 export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = ''): Promise<{ firstTimers: FirstTimer[], count: number }> => {
+    const supabase = getSupabaseClient();
     let query = supabase
         .from('first_timers')
         .select('*', { count: 'exact' });
@@ -479,6 +517,7 @@ export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 1
 };
 
 export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('first_timers')
         .insert({
@@ -497,6 +536,7 @@ export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<Fir
 };
 
 export const updateFirstTimer = async (id: string, formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('first_timers')
         .update({
@@ -517,6 +557,7 @@ export const updateFirstTimer = async (id: string, formData: FirstTimerFormValue
 };
 
 export const deleteFirstTimer = async (id: string) => {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.from('first_timers').delete().eq('id', id);
 
     if (error) {
@@ -534,6 +575,7 @@ export const addFirstTimerAttendanceLog = async (log: {
     method: 'QR';
     timestamp: Date;
 }) => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_log_1sttimer')
         .insert({
@@ -564,6 +606,7 @@ type GetFirstTimerAttendanceLogsOptions = {
 }
 
 export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendanceLogsOptions = {}): Promise<{ logs: NewComerAttendanceLog[], count: number }> => {
+    const supabase = getSupabaseClient();
     const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate, firstTimerIds } = options;
 
     if (firstTimerIds && firstTimerIds.length === 0) {
@@ -605,6 +648,7 @@ export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendan
 };
 
 export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean> => {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.from('attendance_log_1sttimer').delete().eq('id', id);
     if (error) {
         console.error('Error deleting new comer attendance log:', error);
@@ -615,6 +659,7 @@ export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean
 
 
 export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise<Member> => {
+    const supabase = getSupabaseClient();
     // 1. Check if a member with the same fullName already exists to prevent duplicates.
     const { data: existingMembers, error: fetchError } = await supabase
         .from('members')
@@ -688,6 +733,7 @@ type GetUsersOptions = {
 }
 
 export const getUsers = async (options: GetUsersOptions = {}): Promise<{ users: User[], count: number }> => {
+    const supabase = getSupabaseClient();
     const { pageIndex = 0, pageSize = 0, usernameFilter } = options;
     
     let query = supabase
@@ -714,6 +760,7 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<{ users: 
 };
 
 export const loginUser = async (username: string, password?: string): Promise<User | null> => {
+    const supabase = getSupabaseClient();
     if (!password) return null;
     
     const { data, error } = await supabase
@@ -741,6 +788,7 @@ export const loginUser = async (username: string, password?: string): Promise<Us
 };
 
 export const getUserByUsername = async (username: string): Promise<User | null> => {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
@@ -758,6 +806,7 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 };
 
 export const addUser = async (formData: UserFormValues): Promise<User> => {
+    const supabase = getSupabaseClient();
     const newUserId = uuidv4();
 
     const { data, error } = await supabase
@@ -783,6 +832,7 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
 };
 
 export const updateUser = async (id: string, formData: UserFormValues): Promise<User> => {
+    const supabase = getSupabaseClient();
     const updateData: Partial<UserFormValues> = {
         full_name: formData.full_name,
         username: formData.username,
@@ -812,6 +862,7 @@ export const updateUser = async (id: string, formData: UserFormValues): Promise<
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.from('user_qrface').delete().eq('id', id);
 
     if (error) {
@@ -824,6 +875,11 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+        console.error('Supabase URL is not defined. Cannot construct full URL for image.');
+        return null;
+    }
     // Construct the full URL if a relative path is provided
     const fullUrl = url.startsWith('http') ? url : `${supabaseUrl}${url}`;
     
