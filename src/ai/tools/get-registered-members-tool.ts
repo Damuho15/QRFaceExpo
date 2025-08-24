@@ -34,11 +34,14 @@ export const getRegisteredMembers = ai.defineTool(
   async () => {
     console.log('--- Running getRegisteredMembers Tool ---');
     
+    // IMPORTANT: Access server-side environment variables using process.env
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
         console.error("Tool Error: Supabase environment variables (URL or Service Key) are not configured.");
+        // Return an empty array to prevent the flow from crashing.
+        // The AI prompt is designed to handle this empty state gracefully.
         return { members: [] };
     }
 
@@ -67,13 +70,18 @@ export const getRegisteredMembers = ai.defineTool(
     // 2. Process members and convert images
     for (const member of members as Member[]) {
       if (member.pictureUrl) {
-        const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
-        if (dataUri) {
-          validMembersForPrompt.push({
-            id: member.id,
-            fullName: member.fullName,
-            pictureDataUri: dataUri,
-          });
+        try {
+            const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
+            if (dataUri) {
+              validMembersForPrompt.push({
+                id: member.id,
+                fullName: member.fullName,
+                pictureDataUri: dataUri,
+              });
+            }
+        } catch(convertError) {
+            console.error(`Tool Error: Failed to convert image for member ${member.fullName} (ID: ${member.id}). URL: ${member.pictureUrl}`, convertError);
+            // Continue to the next member without crashing.
         }
       }
     }
