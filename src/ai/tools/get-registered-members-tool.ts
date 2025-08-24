@@ -32,41 +32,46 @@ export const getRegisteredMembers = ai.defineTool(
     outputSchema: GetRegisteredMembersOutputSchema,
   },
   async () => {
-    console.log('--- Running getRegisteredMembers Tool ---');
+    console.log('[PROD-DEBUG] --- Running getRegisteredMembers Tool ---');
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl) {
-        console.error("Tool Error: NEXT_PUBLIC_SUPABASE_URL is not configured in the environment.");
+        console.error("[PROD-DEBUG] Tool Error: NEXT_PUBLIC_SUPABASE_URL is not configured in the production environment.");
         return { members: [] };
-    }
-    if (!supabaseServiceKey) {
-        console.error("Tool Error: SUPABASE_SERVICE_ROLE_KEY is not configured in the environment.");
-        return { members: [] };
+    } else {
+        console.log("[PROD-DEBUG] NEXT_PUBLIC_SUPABASE_URL is present.");
     }
     
-    console.log("Tool: Initializing Supabase admin client...");
+    if (!supabaseServiceKey) {
+        console.error("[PROD-DEBUG] Tool Error: SUPABASE_SERVICE_ROLE_KEY is not configured in the production environment. This is a secret key and is required for this tool to work.");
+        return { members: [] };
+    } else {
+        console.log("[PROD-DEBUG] SUPABASE_SERVICE_ROLE_KEY is present.");
+    }
+    
+    console.log("[PROD-DEBUG] Tool: Initializing Supabase admin client...");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // 1. Fetch all members with a pictureUrl
-    console.log('Tool: Fetching members from Supabase...');
+    console.log('[PROD-DEBUG] Tool: Fetching members from Supabase...');
     const { data: members, error, count } = await supabase
       .from('members')
       .select('*', { count: 'exact' })
       .not('pictureUrl', 'is', null);
 
     if (error) {
-      console.error('Tool Error: Failed to fetch members from Supabase.', error);
+      console.error('[PROD-DEBUG] Tool Error: Failed to fetch members from Supabase.', error);
       return { members: [] };
     }
 
     if (!members || members.length === 0) {
-      console.log(`Tool: No members with pictures found. Query returned ${count} total members, but 0 with a pictureUrl.`);
+      console.log(`[PROD-DEBUG] Tool: No members with pictures found. Query returned ${count} total members, but 0 with a pictureUrl.`);
       return { members: [] };
     }
     
-    console.log(`Tool: Found ${members.length} members with a pictureUrl. Now converting images to data URIs...`);
+    console.log(`[PROD-DEBUG] Tool: Found ${members.length} members with a pictureUrl. Now converting images to data URIs...`);
     const validMembersForPrompt = [];
     
     // 2. Process members and convert images
@@ -82,13 +87,13 @@ export const getRegisteredMembers = ai.defineTool(
               });
             }
         } catch(convertError) {
-            console.error(`Tool Error: Failed to convert image for member ${member.fullName} (ID: ${member.id}). URL: ${member.pictureUrl}`, convertError);
+            console.error(`[PROD-DEBUG] Tool Error: Failed to convert image for member ${member.fullName} (ID: ${member.id}). URL: ${member.pictureUrl}`, convertError);
             // Continue to the next member without crashing.
         }
       }
     }
     
-    console.log(`Tool: Successfully processed and converted images for ${validMembersForPrompt.length} members.`);
+    console.log(`[PROD-DEBUG] Tool: Successfully processed and converted images for ${validMembersForPrompt.length} members.`);
     return { members: validMembersForPrompt };
   }
 );
