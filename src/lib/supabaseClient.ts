@@ -190,7 +190,6 @@ export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
     const safePayload = {
-        id: uuidv4(),
         fullName: formData.fullName,
         nickname: formData.nickname || null,
         email: formData.email || null,
