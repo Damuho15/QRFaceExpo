@@ -824,3 +824,23 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
     return true;
 };
+
+export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Failed to fetch image from ${url}. Status: ${response.status}`);
+      return null;
+    }
+    const blob = await response.blob();
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error converting image URL to data URI:', error);
+    return null;
+  }
+};

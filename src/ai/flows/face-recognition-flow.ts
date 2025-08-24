@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { getMembers } from '@/lib/supabaseClient';
+import { getMembers, convertImageUrlToDataUri } from '@/lib/supabaseClient';
 import { z } from 'genkit';
 
 const RecognizeFaceInputSchema = z.object({
@@ -51,7 +51,7 @@ const prompt = ai.definePrompt({
             members: z.array(z.object({
                 id: z.string(),
                 fullName: z.string(),
-                pictureUrl: z.string(),
+                pictureDataUri: z.string(),
             })),
         }),
     },
@@ -67,7 +67,7 @@ Registered Member Photos:
 {{#each members}}
 - Member ID: {{this.id}}
   Name: {{this.fullName}}
-  Photo: {{media url=this.pictureUrl}}
+  Photo: {{media url=this.pictureDataUri}}
 {{/each}}
 
 Instructions for Face Recognition and Confidence Scoring:
@@ -101,10 +101,28 @@ const recognizeFaceFlow = ai.defineFlow(
     if (membersWithPictures.length === 0) {
       return { matchFound: false, confidence: 0, reason: "No members with pictures are available in the database for comparison." };
     }
+    
+    // Convert all picture URLs to data URIs
+    const membersWithDataUris = await Promise.all(
+        membersWithPictures.map(async (member) => {
+            const dataUri = await convertImageUrlToDataUri(member.pictureUrl!);
+            return {
+                id: member.id,
+                fullName: member.fullName,
+                pictureDataUri: dataUri,
+            };
+        })
+    );
+    
+    const validMembers = membersWithDataUris.filter(m => m.pictureDataUri);
+    
+    if (validMembers.length === 0) {
+        return { matchFound: false, confidence: 0, reason: "Could not load member pictures for comparison." };
+    }
 
     const { output } = await prompt({
         imageDataUri: input.imageDataUri,
-        members: membersWithPictures.map(m => ({ id: m.id, fullName: m.fullName, pictureUrl: m.pictureUrl! })),
+        members: validMembers,
     });
     
     return output!;
