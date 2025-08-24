@@ -6,8 +6,8 @@ import type { FirstTimerFormValues } from '@/components/first-timers/first-timer
 import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = 'https://qisldnceqvfcqvkzsvrd.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpc2xkbmNlcXZmY3F2a3pzdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4NzA2NzUsImV4cCI6MjAzMjQ0NjY3NX0.ytr0g2B0rPA4a_3a9eZ32G-pJt-q_Lsl5xTsoQ4H454';
 
 // Initialize the Supabase client once and export it for use in other functions.
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
