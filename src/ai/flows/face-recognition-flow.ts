@@ -69,6 +69,9 @@ Registered Member Photos:
   Name: {{this.fullName}}
   Photo: {{media url=this.pictureDataUri}}
 {{/each}}
+{{#if (eq members.length 0)}}
+No member photos were provided for comparison.
+{{/if}}
 
 Instructions for Face Recognition and Confidence Scoring:
 1. Scrutinize the biometric details in the live image and compare it against the profile photo of each registered member. Pay close attention to facial structure, eye spacing, nose shape, and jawline.
@@ -94,45 +97,42 @@ const recognizeFaceFlow = ai.defineFlow(
     outputSchema: RecognizeFaceOutputSchema,
   },
   async (input) => {
-    // Fetch all members for face recognition; we need to check against everyone.
-    const { members: allMembers } = await getMembers(0, 10000); 
-    const membersWithPictures = allMembers.filter(m => m.pictureUrl);
+    // Fetch all members that have a picture URL.
+    const { members: allMembersWithPictures } = await getMembers(0, 10000); 
+    const membersWithPictures = allMembersWithPictures.filter(m => m.pictureUrl);
     
     if (membersWithPictures.length === 0) {
       return { matchFound: false, confidence: 0, reason: "No members with pictures are available in the database for comparison." };
     }
     
-    // Process members in batches to avoid overwhelming the server with image fetches.
-    const BATCH_SIZE = 10;
-    const allValidMembers = [];
+    const validMembersForPrompt = [];
     
-    for (let i = 0; i < membersWithPictures.length; i += BATCH_SIZE) {
-        const batch = membersWithPictures.slice(i, i + BATCH_SIZE);
-        const dataUriPromises = batch.map(async (member) => {
-            const dataUri = await convertImageUrlToDataUri(member.pictureUrl!);
+    // Process members sequentially to avoid overwhelming the server.
+    for (const member of membersWithPictures) {
+        if (member.pictureUrl) {
+            // Await the conversion for each member individually.
+            const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
+            
             if (dataUri) {
-                return {
+                validMembersForPrompt.push({
                     id: member.id,
                     fullName: member.fullName,
                     pictureDataUri: dataUri,
-                };
+                });
             }
-            return null;
-        });
-
-        const batchResults = await Promise.all(dataUriPromises);
-        allValidMembers.push(...batchResults.filter(m => m !== null));
+            // If dataUri is null, the error is already logged by convertImageUrlToDataUri.
+            // We simply skip adding this member to the prompt.
+        }
     }
     
-    const validMembers = allValidMembers.filter(Boolean) as { id: string; fullName: string; pictureDataUri: string; }[];
-    
-    if (validMembers.length === 0) {
+    if (validMembersForPrompt.length === 0) {
         return { matchFound: false, confidence: 0, reason: "Could not load member pictures for comparison." };
     }
 
+    // Call the prompt with the members that have successfully loaded pictures.
     const { output } = await prompt({
         imageDataUri: input.imageDataUri,
-        members: validMembers,
+        members: validMembersForPrompt,
     });
     
     return output!;

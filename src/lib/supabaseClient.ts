@@ -8,9 +8,8 @@ import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Initialize the Supabase client once and export it for use in other functions.
+// This client is safe for browser and server-side logic that does NOT require admin privileges.
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: false
@@ -830,21 +829,24 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error(`TROUBLESHOOTING: Failed to fetch image from ${url}. Server responded with status: ${response.status}`);
+      // Log detailed error information without crashing the server.
+      console.error(`Failed to fetch image. URL: ${url}, Status: ${response.status} ${response.statusText}`);
       return null;
     }
     
+    // Convert the image response to a Buffer, which is the correct way to handle binary data in Node.js.
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    
+    // Determine the MIME type from the response headers, defaulting to jpeg if not present.
     const mimeType = response.headers.get('Content-Type') || 'image/jpeg';
     
+    // Return the correctly formatted Base64 data URI.
     return `data:${mimeType};base64,${buffer.toString('base64')}`;
 
   } catch (error) {
-    console.error('TROUBLESHOOTING: An error occurred in convertImageUrlToDataUri:', error);
+    // Log any other exceptions that occur during the fetch process.
+    console.error(`An exception occurred while trying to fetch image from URL: ${url}`, error);
     return null;
   }
 };
-    
-
-
