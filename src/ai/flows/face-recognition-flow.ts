@@ -71,7 +71,7 @@ Confidence Score Tiers:
 
 Output Rules:
 - If you find a match (confidence >= 0.8), set 'matchFound' to true, provide the 'fullName' of the matched member, and set the 'confidence' score.
-- If you do not find a clear match (confidence < 0.8), you MUST set 'matchFound' to false, 'fullName' to null, and set the 'confidence' score.
+- If you do not find a clear match (confidence < 0.8), you MUST set 'matchFound' to false and set the 'confidence' score. Do not provide a 'fullName'.
 - If confidence is low (< 0.8), you MUST provide a brief, user-friendly 'reason' (e.g., "Low biometric similarity," "Poor lighting," "Face partially obscured").
 - Accuracy and avoiding false positives is your top priority. Do not guess.`,
 });
