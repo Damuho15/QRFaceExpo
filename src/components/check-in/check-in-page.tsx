@@ -1170,23 +1170,6 @@ export default function CheckInPage() {
         </p>
       </div>
 
-       <div className="border p-4 rounded-md">
-            <h3 className="font-semibold mb-2">Image Loading Test</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-                This image is loaded directly from a hardcoded Supabase Storage URL. If this image appears, the Next.js image configuration is correct.
-            </p>
-            <Image
-                src="https://qisldnceqvfcqvkzsvrd.supabase.co/storage/v1/object/public/member-pictures/1721865180491_john-doe.png"
-                alt="Test Image from Supabase"
-                width={150}
-                height={150}
-                className="rounded-md object-cover"
-                onError={(e) => {
-                    console.error("Test image failed to load", e);
-                }}
-            />
-        </div>
-
       <Tabs defaultValue="member-qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="member-qr">Member QR</TabsTrigger>

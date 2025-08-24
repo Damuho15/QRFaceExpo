@@ -8,6 +8,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { createClient } from '@supabase/supabase-js';
 import type { Member } from '@/lib/types';
+import { convertImageUrlToDataUri } from '@/lib/supabaseClient';
 
 // Define the output schema for the tool
 const GetRegisteredMembersOutputSchema = z.object({
@@ -21,37 +22,6 @@ const GetRegisteredMembersOutputSchema = z.object({
     })
   ),
 });
-
-// Helper function to convert image URL to data URI
-const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) {
-      console.error('Supabase URL is not defined. Cannot construct full URL for image.');
-      return null;
-    }
-    // Construct the full URL if a relative path is provided
-    const fullUrl = url.startsWith('http') ? url : `${supabaseUrl}${url}`;
-    
-    const response = await fetch(fullUrl);
-
-    if (!response.ok) {
-      console.error(`Failed to fetch image. URL: ${fullUrl}, Status: ${response.status} ${response.statusText}`);
-      return null;
-    }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const mimeType = response.headers.get('Content-Type') || 'image/jpeg';
-    
-    return `data:${mimeType};base64,${buffer.toString('base64')}`;
-
-  } catch (error) {
-    console.error(`An exception occurred while trying to fetch image from URL: ${url}`, error);
-    return null;
-  }
-};
-
 
 // This is the exported tool that the AI flow will use.
 export const getRegisteredMembers = ai.defineTool(
