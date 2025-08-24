@@ -1183,11 +1183,6 @@ export default function CheckInPage() {
                 className="rounded-md object-cover"
                 onError={(e) => {
                     console.error("Test image failed to load", e);
-                    toast({
-                        variant: "destructive",
-                        title: "Test Image Failed",
-                        description: "Could not load the test image from Supabase Storage. Check remotePatterns in next.config.ts and bucket permissions."
-                    })
                 }}
             />
         </div>
