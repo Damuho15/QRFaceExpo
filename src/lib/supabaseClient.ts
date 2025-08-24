@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 // Use the environment variables to configure the Supabase client.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseUrl = "https://qisldnceqvfcqvkzsvrd.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -832,3 +832,5 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 // Export the initialized client
 export { supabase };
+
+    
