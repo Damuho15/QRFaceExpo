@@ -7,7 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Initialize the Supabase client once and export it for use in other functions.
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -825,11 +826,15 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 };
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
+  if (!supabaseServiceKey) {
+    console.error('Supabase service role key is not configured.');
+    return null;
+  }
   try {
     const response = await fetch(url, {
       headers: {
-        // Add the required authorization header for Supabase Storage
-        Authorization: `Bearer ${supabaseAnonKey}`,
+        // Use the more secure service role key for server-to-server requests
+        Authorization: `Bearer ${supabaseServiceKey}`,
       },
     });
     if (!response.ok) {
