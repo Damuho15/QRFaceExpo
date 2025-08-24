@@ -37,17 +37,23 @@ export const getRegisteredMembers = ai.defineTool(
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-        console.error("Tool Error: Supabase URL or Service Role Key is not configured.");
+    if (!supabaseUrl) {
+      console.error("Tool Error: NEXT_PUBLIC_SUPABASE_URL is not configured.");
+      return { members: [] };
+    }
+    if (!supabaseServiceKey) {
+        console.error("Tool Error: SUPABASE_SERVICE_ROLE_KEY is not configured.");
         return { members: [] };
     }
 
+    console.log('Tool: Supabase environment variables found. Initializing client...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Fetch all members with a pictureUrl
-    const { data: members, error } = await supabase
+    console.log('Tool: Fetching members from Supabase...');
+    const { data: members, error, count } = await supabase
       .from('members')
-      .select('*')
+      .select('*', { count: 'exact' })
       .not('pictureUrl', 'is', null);
 
     if (error) {
@@ -56,10 +62,11 @@ export const getRegisteredMembers = ai.defineTool(
     }
 
     if (!members || members.length === 0) {
-      console.log('Tool: No members with pictures found.');
+      console.log(`Tool: No members with pictures found. Query returned ${count} total members, but 0 with a pictureUrl.`);
       return { members: [] };
     }
     
+    console.log(`Tool: Found ${members.length} members with a pictureUrl. Now converting images to data URIs...`);
     const validMembersForPrompt = [];
     
     // 2. Process members and convert images
