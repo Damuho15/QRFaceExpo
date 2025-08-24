@@ -835,6 +835,7 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
       headers: {
         // Use the more secure service role key for server-to-server requests
         Authorization: `Bearer ${supabaseServiceKey}`,
+        apiKey: supabaseServiceKey,
       },
     });
     if (!response.ok) {
@@ -853,7 +854,5 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
     return null;
   }
 };
-
-    
 
     
