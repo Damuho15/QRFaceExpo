@@ -79,11 +79,8 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
         throw error;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(data.path);
-
-    return publicUrl;
+    // Return the relative path to be used with the Next.js rewrite rule
+    return `/storage/v1/object/public/${BUCKET_NAME}/${data.path}`;
 };
 
 export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
@@ -249,11 +246,12 @@ export const deleteMember = async (id: string, pictureUrl?: string | null) => {
     // 1. Delete picture from storage if it exists
     if (pictureUrl) {
         try {
-            const urlParts = pictureUrl.split('/');
-            const fileName = urlParts[urlParts.length - 1];
+            // The pictureUrl is now a relative path like /storage/v1/object/public/member-pictures/169....png
+            // We need to extract the path inside the bucket.
+            const bucketPath = pictureUrl.substring(`/storage/v1/object/public/${BUCKET_NAME}/`.length);
             const { error: storageError } = await supabase.storage
                 .from(BUCKET_NAME)
-                .remove([fileName]);
+                .remove([bucketPath]);
             
             if (storageError) {
                 console.error('Error deleting picture from storage:', storageError.message);
@@ -826,11 +824,14 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
   try {
-    const response = await fetch(url);
+    // Construct the full URL if a relative path is provided
+    const fullUrl = url.startsWith('http') ? url : `${supabaseUrl}${url}`;
+    
+    const response = await fetch(fullUrl);
 
     if (!response.ok) {
       // Log detailed error information without crashing the server.
-      console.error(`Failed to fetch image. URL: ${url}, Status: ${response.status} ${response.statusText}`);
+      console.error(`Failed to fetch image. URL: ${fullUrl}, Status: ${response.status} ${response.statusText}`);
       return null;
     }
     

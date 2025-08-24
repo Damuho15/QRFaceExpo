@@ -34,12 +34,6 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/v1/create-qr-code/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'qisldnceqvfcqvkzsvrd.supabase.co',
-        port: '',
-        pathname: '/**',
-      }
     ],
   },
 };
