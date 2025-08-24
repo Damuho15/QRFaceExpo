@@ -43,38 +43,71 @@ export async function recognizeFace(input: RecognizeFaceInput): Promise<Recogniz
   return recognizeFaceFlow(input);
 }
 
-const prompt = ai.definePrompt({
-    name: 'recognizeFacePrompt',
-    input: {
-        schema: z.object({
-            imageDataUri: z.string(),
-            members: z.array(z.object({
+// Define the Tool for the AI to fetch member data on its own.
+const getRegisteredMembers = ai.defineTool(
+    {
+        name: 'getRegisteredMembers',
+        description: 'Retrieves a list of all registered members, including their full name and profile picture as a data URI, for face recognition comparison.',
+        inputSchema: z.object({}),
+        outputSchema: z.object({
+             members: z.array(z.object({
                 id: z.string(),
                 fullName: z.string(),
                 pictureDataUri: z.string(),
             })),
-        }),
+        })
     },
+    async () => {
+        console.log('Tool: getRegisteredMembers starting...');
+        const { members: allMembersWithPictures } = await getMembers(0, 10000); 
+        const membersWithPictures = allMembersWithPictures.filter(m => m.pictureUrl);
+        
+        if (membersWithPictures.length === 0) {
+            console.log('Tool: No members with pictures found.');
+            return { members: [] };
+        }
+
+        const validMembersForPrompt = [];
+        
+        for (const member of membersWithPictures) {
+            if (member.pictureUrl) {
+                try {
+                    const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
+                    if (dataUri) {
+                        validMembersForPrompt.push({
+                            id: member.id,
+                            fullName: member.fullName,
+                            pictureDataUri: dataUri,
+                        });
+                    }
+                } catch (toolError) {
+                    console.error(`Tool: Error converting image for member ${member.id}`, toolError);
+                }
+            }
+        }
+        
+        console.log(`Tool: Successfully processed ${validMembersForPrompt.length} members.`);
+        return { members: validMembersForPrompt };
+    }
+);
+
+
+const prompt = ai.definePrompt({
+    name: 'recognizeFacePrompt',
+    input: { schema: RecognizeFaceInputSchema },
     output: { schema: RecognizeFaceOutputSchema },
+    tools: [getRegisteredMembers],
     prompt: `You are a highly precise AI security agent specializing in face recognition for a secure check-in system. Your most important duty is to PREVENT a false positive (incorrectly matching two different people). It is better to reject a correct match than to accept an incorrect one.
 
 Your task is to determine if the person in the provided live image is a biometric match to any of the registered members' profile photos. You must be extremely critical and look for subtle differences. Do not be fooled by similar hair, glasses, or general appearance.
 
+To get the list of registered members to compare against, you MUST use the 'getRegisteredMembers' tool.
+
 Live Image to check:
 {{media url=imageDataUri}}
 
-Registered Member Photos:
-{{#each members}}
-- Member ID: {{this.id}}
-  Name: {{this.fullName}}
-  Photo: {{media url=this.pictureDataUri}}
-{{/each}}
-{{#if (eq members.length 0)}}
-No member photos were provided for comparison.
-{{/if}}
-
 Instructions for Face Recognition and Confidence Scoring:
-1. Scrutinize the biometric details in the live image and compare it against the profile photo of each registered member. Pay close attention to facial structure, eye spacing, nose shape, and jawline.
+1. Scrutinize the biometric details in the live image and compare it against the profile photo of each registered member returned by the tool. Pay close attention to facial structure, eye spacing, nose shape, and jawline.
 2. If you find a potential match, you must determine a confidence score between 0.0 and 1.0. This is a semantic confidence, not a mathematical one.
 
 Confidence Score Tiers:
@@ -86,6 +119,7 @@ Output Rules:
 - If you find a match (confidence >= 0.8), set 'matchFound' to true, provide the 'fullName' of the matched member, and set the 'confidence' score.
 - If you do not find a clear match (confidence < 0.8), you MUST set 'matchFound' to false, 'fullName' to null, and set the 'confidence' score.
 - If confidence is low (< 0.8), you MUST provide a brief, user-friendly 'reason' (e.g., "Low biometric similarity," "Poor lighting," "Face partially obscured").
+- If the 'getRegisteredMembers' tool returns an empty list of members, you MUST set 'matchFound' to false, confidence to 0, and the reason to "No registered member photos are available for comparison."
 - Accuracy and avoiding false positives is your top priority. Do not guess.`,
 });
 
@@ -97,44 +131,8 @@ const recognizeFaceFlow = ai.defineFlow(
     outputSchema: RecognizeFaceOutputSchema,
   },
   async (input) => {
-    // Fetch all members that have a picture URL.
-    const { members: allMembersWithPictures } = await getMembers(0, 10000); 
-    const membersWithPictures = allMembersWithPictures.filter(m => m.pictureUrl);
-    
-    if (membersWithPictures.length === 0) {
-      return { matchFound: false, confidence: 0, reason: "No members with pictures are available in the database for comparison." };
-    }
-    
-    const validMembersForPrompt = [];
-    
-    // Process members sequentially to avoid overwhelming the server.
-    for (const member of membersWithPictures) {
-        if (member.pictureUrl) {
-            // Await the conversion for each member individually.
-            const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
-            
-            if (dataUri) {
-                validMembersForPrompt.push({
-                    id: member.id,
-                    fullName: member.fullName,
-                    pictureDataUri: dataUri,
-                });
-            }
-            // If dataUri is null, the error is already logged by convertImageUrlToDataUri.
-            // We simply skip adding this member to the prompt.
-        }
-    }
-    
-    if (validMembersForPrompt.length === 0) {
-        return { matchFound: false, confidence: 0, reason: "Could not load member pictures for comparison." };
-    }
-
-    // Call the prompt with the members that have successfully loaded pictures.
-    const { output } = await prompt({
-        imageDataUri: input.imageDataUri,
-        members: validMembersForPrompt,
-    });
-    
+    // The flow is now much simpler. It just calls the prompt and lets the AI use the tool.
+    const { output } = await prompt(input);
     return output!;
   }
 );
