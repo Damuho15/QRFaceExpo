@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 
 // Initialize the Supabase client once and export it for use in other functions.
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -848,5 +848,7 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
     return null;
   }
 };
+
+    
 
     
