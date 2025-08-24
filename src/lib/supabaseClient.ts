@@ -6,18 +6,22 @@ import type { FirstTimerFormValues } from '@/components/first-timers/first-timer
 import { v4 as uuidv4 } from 'uuid';
 import type { UserFormValues } from '@/components/user-management/user-dialog';
 
-// Use the environment variables to configure the Supabase client.
-const supabaseUrl = "https://qisldnceqvfcqvkzsvrd.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpc2xkbmNlcXZmY3F2a3pzdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4NzA2ODEsImV4cCI6MjAzMjQ0NjY4MX0.0qD4L3CFS-S_S82j2nNMMQBC0xT5CBs4V7v3S5y_9uE";
+// This function creates a new Supabase client instance.
+// It's the recommended approach for Next.js to avoid sharing a client
+// across different server-side requests, which can lead to issues.
+const createSupabaseClient = () => {
+    const supabaseUrl = "https://qisldnceqvfcqvkzsvrd.supabase.co";
+    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpc2xkbmNlcXZmY3F2a3pzdnJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY4NzA2ODEsImV4cCI6MjAzMjQ0NjY4MX0.0qD4L3CFS-S_S82j2nNMMQBC0xT5CBs4V7v3S5y_9uE";
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: false
-    },
-    db: {
-        schema: 'public',
-    },
-});
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false
+        },
+        db: {
+            schema: 'public',
+        },
+    });
+};
 
 
 const BUCKET_NAME = 'member-pictures';
@@ -69,6 +73,7 @@ export const parseDateAsUTC = (dateString: string) => {
 
 
 export const uploadMemberPicture = async (file: File): Promise<string | null> => {
+    const supabase = createSupabaseClient();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
     const fileName = `${Date.now()}-${sanitizedFileName}`;
     const { data, error } = await supabase.storage
@@ -88,6 +93,7 @@ export const uploadMemberPicture = async (file: File): Promise<string | null> =>
 };
 
 export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = '', nicknameFilter: string = ''): Promise<{ members: Member[], count: number }> => {
+    const supabase = createSupabaseClient();
     let query = supabase
         .from('members')
         .select('*', { count: 'exact' });
@@ -134,6 +140,7 @@ export const getMembers = async (pageIndex: number = 0, pageSize: number = 10, f
 };
 
 export const getMemberCount = async (): Promise<number> => {
+    const supabase = createSupabaseClient();
     const { count, error } = await supabase
         .from('members')
         .select('*', { count: 'exact', head: true });
@@ -146,11 +153,10 @@ export const getMemberCount = async (): Promise<number> => {
 };
 
 export const getMemberAttendanceForPeriod = async (startDate: Date, endDate: Date): Promise<Member[]> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_logs')
-        .select(`
-            members (*)
-        `)
+        .select('members (*)')
         .gte('timestamp', startDate.toISOString())
         .lte('timestamp', endDate.toISOString())
         .eq('type', 'Actual');
@@ -174,6 +180,7 @@ export const getMemberAttendanceForPeriod = async (startDate: Date, endDate: Dat
 
 
 export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
+    const supabase = createSupabaseClient();
     if (!ids || ids.length === 0) {
         return [];
     }
@@ -192,6 +199,7 @@ export const getMembersByIds = async (ids: string[]): Promise<Member[]> => {
 };
 
 export const addMember = async (formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
+    const supabase = createSupabaseClient();
     const safePayload = {
         id: uuidv4(),
         fullName: formData.fullName,
@@ -221,6 +229,7 @@ export const addMember = async (formData: MemberFormValues, pictureUrl: string |
 }
 
 export const updateMember = async (id: string, formData: MemberFormValues, pictureUrl: string | null): Promise<Member> => {
+    const supabase = createSupabaseClient();
     const updatePayload = {
         fullName: formData.fullName,
         nickname: formData.nickname || null,
@@ -250,6 +259,7 @@ export const updateMember = async (id: string, formData: MemberFormValues, pictu
 };
 
 export const deleteMember = async (id: string, pictureUrl?: string | null) => {
+    const supabase = createSupabaseClient();
     // 1. Delete picture from storage if it exists
     if (pictureUrl) {
         try {
@@ -280,6 +290,7 @@ export const deleteMember = async (id: string, pictureUrl?: string | null) => {
 };
 
 export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<Member[] | null> => {
+    const supabase = createSupabaseClient();
     if (!rawMembers || rawMembers.length === 0) {
         return [];
     }
@@ -342,6 +353,7 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
 
 
 export const getEventConfig = async (): Promise<EventConfig | null> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('event_config')
         .select('*')
@@ -361,6 +373,7 @@ export const getEventConfig = async (): Promise<EventConfig | null> => {
 };
 
 export const updateEventConfig = async (dates: { pre_reg_start_date: string, event_date: string }): Promise<EventConfig> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('event_config')
         .update({
@@ -387,6 +400,7 @@ export const addAttendanceLog = async (log: {
     method: 'QR' | 'Face';
     timestamp: Date;
 }) => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_logs')
         .insert({
@@ -416,6 +430,7 @@ type GetAttendanceLogsOptions = {
 }
 
 export const getAttendanceLogs = async (options: GetAttendanceLogsOptions = {}): Promise<{ logs: AttendanceLog[], count: number }> => {
+    const supabase = createSupabaseClient();
     const { pageIndex = 0, pageSize = 0, memberNameFilter, startDate, endDate } = options;
 
     let query = supabase
@@ -450,6 +465,7 @@ export const getAttendanceLogs = async (options: GetAttendanceLogsOptions = {}):
 };
 
 export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
+    const supabase = createSupabaseClient();
     const { error } = await supabase.from('attendance_logs').delete().eq('id', id);
     if (error) {
         console.error('Error deleting attendance log:', error);
@@ -460,6 +476,7 @@ export const deleteAttendanceLog = async (id: string): Promise<boolean> => {
 
 // New Comer Functions
 export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 10, fullNameFilter: string = ''): Promise<{ firstTimers: FirstTimer[], count: number }> => {
+    const supabase = createSupabaseClient();
     let query = supabase
         .from('first_timers')
         .select('*', { count: 'exact' });
@@ -485,6 +502,7 @@ export const getFirstTimers = async (pageIndex: number = 0, pageSize: number = 1
 };
 
 export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('first_timers')
         .insert({
@@ -503,6 +521,7 @@ export const addFirstTimer = async (formData: FirstTimerFormValues): Promise<Fir
 };
 
 export const updateFirstTimer = async (id: string, formData: FirstTimerFormValues): Promise<FirstTimer> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('first_timers')
         .update({
@@ -523,6 +542,7 @@ export const updateFirstTimer = async (id: string, formData: FirstTimerFormValue
 };
 
 export const deleteFirstTimer = async (id: string) => {
+    const supabase = createSupabaseClient();
     const { error } = await supabase.from('first_timers').delete().eq('id', id);
 
     if (error) {
@@ -540,6 +560,7 @@ export const addFirstTimerAttendanceLog = async (log: {
     method: 'QR';
     timestamp: Date;
 }) => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('attendance_log_1sttimer')
         .insert({
@@ -570,6 +591,7 @@ type GetFirstTimerAttendanceLogsOptions = {
 }
 
 export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendanceLogsOptions = {}): Promise<{ logs: NewComerAttendanceLog[], count: number }> => {
+    const supabase = createSupabaseClient();
     const { pageIndex = 0, pageSize = 0, nameFilter, startDate, endDate, firstTimerIds } = options;
 
     if (firstTimerIds && firstTimerIds.length === 0) {
@@ -611,6 +633,7 @@ export const getFirstTimerAttendanceLogs = async (options: GetFirstTimerAttendan
 };
 
 export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean> => {
+    const supabase = createSupabaseClient();
     const { error } = await supabase.from('attendance_log_1sttimer').delete().eq('id', id);
     if (error) {
         console.error('Error deleting new comer attendance log:', error);
@@ -621,6 +644,7 @@ export const deleteFirstTimerAttendanceLog = async (id: string): Promise<boolean
 
 
 export const promoteFirstTimerToMember = async (firstTimer: FirstTimer): Promise<Member> => {
+    const supabase = createSupabaseClient();
     // 1. Check if a member with the same fullName already exists to prevent duplicates.
     const { data: existingMembers, error: fetchError } = await supabase
         .from('members')
@@ -694,6 +718,7 @@ type GetUsersOptions = {
 }
 
 export const getUsers = async (options: GetUsersOptions = {}): Promise<{ users: User[], count: number }> => {
+    const supabase = createSupabaseClient();
     const { pageIndex = 0, pageSize = 0, usernameFilter } = options;
     
     let query = supabase
@@ -720,6 +745,7 @@ export const getUsers = async (options: GetUsersOptions = {}): Promise<{ users: 
 };
 
 export const loginUser = async (username: string, password?: string): Promise<User | null> => {
+    const supabase = createSupabaseClient();
     if (!password) return null;
     
     const { data, error } = await supabase
@@ -747,6 +773,7 @@ export const loginUser = async (username: string, password?: string): Promise<Us
 };
 
 export const getUserByUsername = async (username: string): Promise<User | null> => {
+    const supabase = createSupabaseClient();
     const { data, error } = await supabase
         .from('user_qrface')
         .select('*')
@@ -764,6 +791,7 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 };
 
 export const addUser = async (formData: UserFormValues): Promise<User> => {
+    const supabase = createSupabaseClient();
     const newUserId = uuidv4();
 
     const { data, error } = await supabase
@@ -789,6 +817,7 @@ export const addUser = async (formData: UserFormValues): Promise<User> => {
 };
 
 export const updateUser = async (id: string, formData: UserFormValues): Promise<User> => {
+    const supabase = createSupabaseClient();
     const updateData: Partial<UserFormValues> = {
         full_name: formData.full_name,
         username: formData.username,
@@ -818,6 +847,7 @@ export const updateUser = async (id: string, formData: UserFormValues): Promise<
 };
 
 export const deleteUser = async (id: string): Promise<boolean> => {
+    const supabase = createSupabaseClient();
     const { error } = await supabase.from('user_qrface').delete().eq('id', id);
 
     if (error) {
@@ -828,8 +858,4 @@ export const deleteUser = async (id: string): Promise<boolean> => {
     return true;
 };
 
-
-// Export the initialized client
-export { supabase };
-    
     
