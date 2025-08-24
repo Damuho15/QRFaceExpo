@@ -1170,28 +1170,6 @@ export default function CheckInPage() {
         </p>
       </div>
 
-       <div className="border p-4 rounded-md">
-            <h3 className="font-semibold text-lg mb-2">Image Loading Test</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-                This is a test to see if an image from your Supabase bucket can be loaded directly. If you see a picture of a person below, the image loading is working.
-            </p>
-            <Image 
-                src="https://qisldnceqvfcqvkzsvrd.supabase.co/storage/v1/object/public/member-pictures/1722880560780-algen.jpeg"
-                alt="Test image from Supabase bucket"
-                width={200}
-                height={200}
-                className="rounded-md object-cover"
-                onError={(e) => {
-                    console.error("Test image failed to load", e);
-                    toast({
-                        variant: "destructive",
-                        title: "Test Image Failed",
-                        description: "The hardcoded test image could not be loaded from the bucket URL."
-                    })
-                }}
-            />
-        </div>
-
       <Tabs defaultValue="member-qr" className="w-full max-w-2xl mx-auto">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="member-qr">Member QR</TabsTrigger>
