@@ -1,13 +1,15 @@
 import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {googleAI as googleAIPlugin} from '@genkit-ai/googleai';
 import {dotdev} from 'genkit';
 
 // dotdev(); // Do not call in production
 
+const googleAI = googleAIPlugin({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 export const ai = genkit({
   plugins: [
-    googleAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    }),
+    googleAI,
   ],
 });
