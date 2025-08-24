@@ -285,10 +285,8 @@ export const addMembers = async (rawMembers: { [key: string]: any }[]): Promise<
         return [];
     }
     
-    // Since batch adding is a one-time operation, we get all existing members once
-    // to check for duplicates efficiently in memory.
-    const { members: existingMembers } = await getMembers(0, 0, '', '');
-
+    const { members: existingMembers, count } = await getMembers(0, 0, '', '');
+    
     const existingFullNames = new Set(existingMembers.map(m => m.fullName.toLowerCase()));
     
     const validMembersToInsert = rawMembers.map(rawMember => {
