@@ -9,8 +9,8 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { getMembers, convertImageUrlToDataUri } from '@/lib/supabaseClient';
 import { z } from 'genkit';
+import { getRegisteredMembers } from '@/ai/tools/get-registered-members-tool';
 
 const RecognizeFaceInputSchema = z.object({
   imageDataUri: z
@@ -43,59 +43,6 @@ export async function recognizeFace(input: RecognizeFaceInput): Promise<Recogniz
   return recognizeFaceFlow(input);
 }
 
-// Define the Tool for the AI to fetch member data on its own.
-const getRegisteredMembers = ai.defineTool(
-    {
-        name: 'getRegisteredMembers',
-        description: 'Retrieves a list of all registered members, including their full name and profile picture as a data URI, for face recognition comparison.',
-        inputSchema: z.object({}),
-        outputSchema: z.object({
-             members: z.array(z.object({
-                id: z.string(),
-                fullName: z.string(),
-                pictureDataUri: z.string(),
-            })),
-        })
-    },
-    async () => {
-        console.log('Tool: getRegisteredMembers starting...');
-        // Fetch all members, but without a hard limit that could crash the server.
-        // Supabase client might have its own internal limits, which is safer.
-        const { members: allMembersWithPictures } = await getMembers(0, 10000); 
-        const membersWithPictures = allMembersWithPictures.filter(m => m.pictureUrl);
-        
-        if (membersWithPictures.length === 0) {
-            console.log('Tool: No members with pictures found.');
-            return { members: [] };
-        }
-
-        const validMembersForPrompt = [];
-        
-        // This loop processes members one by one, which is more memory-efficient.
-        for (const member of membersWithPictures) {
-            if (member.pictureUrl) {
-                try {
-                    const dataUri = await convertImageUrlToDataUri(member.pictureUrl);
-                    if (dataUri) {
-                        validMembersForPrompt.push({
-                            id: member.id,
-                            fullName: member.fullName,
-                            pictureDataUri: dataUri,
-                        });
-                    }
-                } catch (toolError) {
-                    // Log the error for a specific member but don't crash the whole process
-                    console.error(`Tool: Error converting image for member ${member.id}`, toolError);
-                }
-            }
-        }
-        
-        console.log(`Tool: Successfully processed ${validMembersForPrompt.length} members.`);
-        return { members: validMembersForPrompt };
-    }
-);
-
-
 const prompt = ai.definePrompt({
     name: 'recognizeFacePrompt',
     input: { schema: RecognizeFaceInputSchema },
@@ -112,7 +59,7 @@ Live Image to check:
 
 Instructions for Face Recognition and Confidence Scoring:
 1. Call the 'getRegisteredMembers' tool to get the list of members and their profile pictures.
-2. If the tool returns an empty list, you MUST set 'matchFound' to false, confidence to 0, and the reason to "No registered member photos are available for comparison." Do not proceed.
+2. If the tool returns an empty list or indicates an error, you MUST set 'matchFound' to false, confidence to 0, and the reason to "Could not load member pictures for comparison." Do not proceed.
 3. If the tool returns members, scrutinize the biometric details in the live image and compare it against the profile photo of each registered member. Pay close attention to facial structure, eye spacing, nose shape, and jawline.
 4. If you find a potential match, you must determine a confidence score between 0.0 and 1.0. This is a semantic confidence, not a mathematical one.
 
@@ -136,8 +83,6 @@ const recognizeFaceFlow = ai.defineFlow(
     outputSchema: RecognizeFaceOutputSchema,
   },
   async (input) => {
-    // The flow is now much simpler. It just calls the prompt and lets the AI use the tool.
-    // The AI will handle calling getRegisteredMembers and processing the results.
     const { output } = await prompt(input);
     return output!;
   }
