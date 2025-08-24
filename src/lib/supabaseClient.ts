@@ -826,7 +826,12 @@ export const deleteUser = async (id: string): Promise<boolean> => {
 
 export const convertImageUrlToDataUri = async (url: string): Promise<string | null> => {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        // Add the required authorization header for Supabase Storage
+        Authorization: `Bearer ${supabaseAnonKey}`,
+      },
+    });
     if (!response.ok) {
       console.error(`Failed to fetch image from ${url}. Status: ${response.status}`);
       return null;
@@ -843,3 +848,5 @@ export const convertImageUrlToDataUri = async (url: string): Promise<string | nu
     return null;
   }
 };
+
+    
