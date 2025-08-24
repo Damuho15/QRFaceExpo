@@ -102,19 +102,29 @@ const recognizeFaceFlow = ai.defineFlow(
       return { matchFound: false, confidence: 0, reason: "No members with pictures are available in the database for comparison." };
     }
     
-    // Convert all picture URLs to data URIs
-    const membersWithDataUris = await Promise.all(
-        membersWithPictures.map(async (member) => {
-            const dataUri = await convertImageUrlToDataUri(member.pictureUrl!);
-            return {
-                id: member.id,
-                fullName: member.fullName,
-                pictureDataUri: dataUri,
-            };
-        })
-    );
+    // Process members in batches to avoid overwhelming the server with image fetches.
+    const BATCH_SIZE = 10;
+    const allValidMembers = [];
     
-    const validMembers = membersWithDataUris.filter(m => m.pictureDataUri);
+    for (let i = 0; i < membersWithPictures.length; i += BATCH_SIZE) {
+        const batch = membersWithPictures.slice(i, i + BATCH_SIZE);
+        const dataUriPromises = batch.map(async (member) => {
+            const dataUri = await convertImageUrlToDataUri(member.pictureUrl!);
+            if (dataUri) {
+                return {
+                    id: member.id,
+                    fullName: member.fullName,
+                    pictureDataUri: dataUri,
+                };
+            }
+            return null;
+        });
+
+        const batchResults = await Promise.all(dataUriPromises);
+        allValidMembers.push(...batchResults.filter(m => m !== null));
+    }
+    
+    const validMembers = allValidMembers.filter(Boolean) as { id: string; fullName: string; pictureDataUri: string; }[];
     
     if (validMembers.length === 0) {
         return { matchFound: false, confidence: 0, reason: "Could not load member pictures for comparison." };
