@@ -2,6 +2,14 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/rest/v1/:path*',
+        destination: 'https://qisldnceqvfcqvkzsvrd.supabase.co/rest/v1/:path*',
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
