@@ -111,6 +111,7 @@ const MemberScanTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate }
             description: 'Processing...',
         });
         
+        // This logic is safe because handleScan is only called from within a useEffect (animationFrame)
         const currentScanTime = new Date(); 
 
         const currentRegistrationType = getRegistrationType(currentScanTime, eventDate, preRegStartDate);
@@ -326,6 +327,11 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const resetInput = () => {
         setFileName('');
@@ -382,6 +388,7 @@ const MemberUploadTab = ({ members, onCheckInSuccess, eventDate, preRegStartDate
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isClient) return;
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -981,6 +988,11 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileName, setFileName] = useState('');
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const resetInput = () => {
         setFileName('');
@@ -1020,6 +1032,7 @@ const NewComerUploadTab = ({ firstTimers, onCheckInSuccess, eventDate, preRegSta
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isClient) return;
         const file = event.target.files?.[0];
         if (!file) return;
 
