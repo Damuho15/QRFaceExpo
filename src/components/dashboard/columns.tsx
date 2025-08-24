@@ -38,7 +38,7 @@ const TimestampCell = ({ timestamp }: { timestamp: string | Date }) => {
     setLocalizedTimestamp(new Date(timestamp).toLocaleString());
   }, [timestamp]);
 
-  return <div>{localizedTimestamp}</div>;
+  return <span>{localizedTimestamp}</span>;
 };
 
 export const columns: ColumnDef<AttendanceLog & { attendeeType: 'Member' | 'New Comer' }>[] = [
@@ -152,7 +152,7 @@ export const columns: ColumnDef<AttendanceLog & { attendeeType: 'Member' | 'New 
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the attendance record for {log.member_name} at {new Date(log.timestamp).toLocaleString()}.
+                        This action cannot be undone. This will permanently delete the attendance record for {log.member_name} at <TimestampCell timestamp={log.timestamp} />.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
