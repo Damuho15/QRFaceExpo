@@ -48,7 +48,7 @@ const prompt = ai.definePrompt({
     input: { schema: RecognizeFaceInputSchema },
     output: { schema: RecognizeFaceOutputSchema },
     tools: [getRegisteredMembers],
-    model: 'gemini-pro',
+    model: 'googleai/gemini-1.5-flash-latest',
     prompt: `You are a highly precise AI security agent specializing in face recognition for a secure check-in system. Your most important duty is to PREVENT a false positive (incorrectly matching two different people). It is better to reject a correct match than to accept an incorrect one.
 
 Your task is to determine if the person in the provided live image is a biometric match to any of the registered members' profile photos. You must be extremely critical and look for subtle differences. Do not be fooled by similar hair, glasses, or general appearance.
