@@ -61,8 +61,8 @@ export default function BatchPreviewDialog({ data, children }: BatchPreviewDialo
             Review the {data.length} members to be imported. This is a preview; duplicates will be skipped upon import.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow min-h-0 border rounded-md">
-          <div className="overflow-x-auto">
+        <div className="flex-grow min-h-0 border rounded-md">
+          <ScrollArea className="h-full w-full">
               <Table className="min-w-[1200px]">
                 <TableHeader>
                     <TableRow>
@@ -85,8 +85,8 @@ export default function BatchPreviewDialog({ data, children }: BatchPreviewDialo
                     ))}
                 </TableBody>
               </Table>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
         <DialogFooter className="pt-4 flex-shrink-0">
           <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
         </DialogFooter>
