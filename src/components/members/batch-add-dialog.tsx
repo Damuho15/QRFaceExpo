@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef } from 'react';
@@ -13,16 +12,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Users, Loader2, Download } from 'lucide-react';
+import { Upload, Users, Loader2, Download, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { addMembers, getMembers } from '@/lib/supabaseClient';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Member } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import BatchPreviewDialog from './batch-preview-dialog';
 
 type RawMemberData = {
   [key: string]: string | number | null;
@@ -69,7 +63,7 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // Use cellDates for better parsing
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const json: NewMemberPreview[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: null });
@@ -170,35 +164,12 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
     }
   }, [open]);
 
-  const displayedHeaders = parsedData.length > 0 ? Object.keys(parsedData[0]) : [];
-  
-  const formatDateForDisplay = (date: any) => {
-    if (date instanceof Date) {
-        // add the timezone offset to prevent showing the previous day
-        const offset = date.getTimezoneOffset();
-        const correctedDate = new Date(date.getTime() + offset * 60 * 1000);
-        return format(correctedDate, 'yyyy-MM-dd');
-    }
-    if (typeof date === 'string') {
-        const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) {
-            const offset = parsed.getTimezoneOffset();
-            const correctedDate = new Date(parsed.getTime() + offset * 60 * 1000);
-            return format(correctedDate, 'yyyy-MM-dd');
-        }
-    }
-    return String(date ?? '');
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline"><Users className="mr-2 h-4 w-4" />Batch Add</Button>
       </DialogTrigger>
-      <DialogContent className={cn(
-        "sm:max-w-md",
-        parsedData.length > 0 && "sm:max-w-4xl"
-      )}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Batch Add Members</DialogTitle>
           <DialogDescription>
@@ -210,40 +181,21 @@ export default function BatchAddDialog({ onSuccess }: { onSuccess?: () => void }
                 <div className="flex items-center gap-2">
                     <Input id="excel-upload" type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={handleFileChange} disabled={isSubmitting}/>
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><Upload className="mr-2 h-4 w-4" />Choose File</Button>
-                    {fileName && <p className="text-sm text-muted-foreground truncate max-w-xs">{fileName}</p>}
                 </div>
                 <div className="ml-auto flex-shrink-0">
                     <Button variant="secondary" onClick={downloadTemplate}><Download className="mr-2 h-4 w-4" />Download Template</Button>
                 </div>
             </div>
+            {fileName && <p className="text-sm text-muted-foreground truncate max-w-xs">{fileName}</p>}
+            
             {parsedData.length > 0 && (
-                <div className="space-y-4">
-                    <Label>Preview Members ({parsedData.length})</Label>
-                    <ScrollArea className="h-64 mt-2 w-full rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    {displayedHeaders.map(header => <TableHead key={header}>{header}</TableHead>)}
-                                </TableRow>
-                            </TableHeader>
-                             <TableBody>
-                                {parsedData.map((row, index) => (
-                                    <TableRow key={index}>
-                                        {displayedHeaders.map(header => (
-                                            <TableCell key={`${index}-${header}`}>
-                                                {(header === 'Birthday' || header === 'WeddingAnniversary') 
-                                                    ? formatDateForDisplay(row[header]) 
-                                                    : String(row[header] ?? '')}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-                    <p className="text-xs text-muted-foreground pt-2">
-                        Data is shown as parsed. Final validation happens upon import. Duplicates will be skipped.
-                    </p>
+                <div className="pt-4 text-center">
+                    <BatchPreviewDialog data={parsedData}>
+                        <Button variant="secondary">
+                           <Eye className="mr-2 h-4 w-4" />
+                           Preview {parsedData.length} Members
+                        </Button>
+                    </BatchPreviewDialog>
                 </div>
             )}
         </div>
