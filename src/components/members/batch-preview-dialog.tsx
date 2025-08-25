@@ -11,7 +11,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
@@ -53,39 +52,39 @@ export default function BatchPreviewDialog({ data, children }: BatchPreviewDialo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-4xl w-full h-auto sm:h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Member Import Preview</DialogTitle>
           <DialogDescription>
             Review the {data.length} members to be imported. This is a preview; duplicates will be skipped upon import.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-grow min-h-0 border rounded-md">
-          <ScrollArea className="h-full w-full">
-              <Table className="relative min-w-[1200px]">
-                <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow>
-                        {displayedHeaders.map(header => (
-                            <TableHead key={header} className="whitespace-nowrap">{header}</TableHead>
-                        ))}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.map((row, index) => (
-                        <TableRow key={index}>
-                            {displayedHeaders.map(header => (
-                                <TableCell key={`${index}-${header}`} className="whitespace-nowrap">
-                                    {(header === 'Birthday' || header === 'WeddingAnniversary') 
-                                        ? formatDateForDisplay(row[header]) 
-                                        : String(row[header] ?? '')}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-          </ScrollArea>
+        
+        <div className="flex-1 overflow-auto border rounded-md">
+            <Table className="min-w-[1200px]">
+              <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                      {displayedHeaders.map(header => (
+                          <TableHead key={header} className="whitespace-nowrap">{header}</TableHead>
+                      ))}
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {data.map((row, index) => (
+                      <TableRow key={index} className="odd:bg-muted/50">
+                          {displayedHeaders.map(header => (
+                              <TableCell key={`${index}-${header}`} className="whitespace-nowrap">
+                                  {(header === 'Birthday' || header === 'WeddingAnniversary') 
+                                      ? formatDateForDisplay(row[header]) 
+                                      : String(row[header] ?? '')}
+                              </TableCell>
+                          ))}
+                      </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
         </div>
+
         <DialogFooter className="pt-4 flex-shrink-0">
           <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
         </DialogFooter>
