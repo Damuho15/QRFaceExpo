@@ -11,7 +11,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 
@@ -61,28 +60,26 @@ export default function BatchPreviewDialog({ data, children }: BatchPreviewDialo
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow min-h-0">
-          <ScrollArea className="h-full w-full">
-            <div className="w-full overflow-x-auto">
-              <Table className="min-w-[900px]">
-                  <TableHeader>
-                      <TableRow>
-                          {displayedHeaders.map(header => <TableHead key={header} className="whitespace-nowrap">{header}</TableHead>)}
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {data.map((row, index) => (
-                          <TableRow key={index}>
-                              {displayedHeaders.map(header => (
-                                  <TableCell key={`${index}-${header}`} className="whitespace-nowrap">
-                                      {(header === 'Birthday' || header === 'WeddingAnniversary') 
-                                          ? formatDateForDisplay(row[header]) 
-                                          : String(row[header] ?? '')}
-                                  </TableCell>
-                              ))}
-                          </TableRow>
-                      ))}
-                  </TableBody>
-              </Table>
+          <ScrollArea className="h-full w-full border rounded-md">
+            <div className="min-w-[1200px]">
+              <div className="grid grid-cols-8 sticky top-0 bg-muted z-10 font-semibold">
+                  {displayedHeaders.map(header => (
+                      <div key={header} className="p-4 border-b whitespace-nowrap">{header}</div>
+                  ))}
+              </div>
+              <div className="divide-y divide-border">
+                  {data.map((row, index) => (
+                      <div key={index} className="grid grid-cols-8 items-center">
+                          {displayedHeaders.map(header => (
+                              <div key={`${index}-${header}`} className="p-4 whitespace-nowrap truncate">
+                                  {(header === 'Birthday' || header === 'WeddingAnniversary') 
+                                      ? formatDateForDisplay(row[header]) 
+                                      : String(row[header] ?? '')}
+                              </div>
+                          ))}
+                      </div>
+                  ))}
+              </div>
             </div>
           </ScrollArea>
         </div>
