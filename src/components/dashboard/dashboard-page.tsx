@@ -759,7 +759,7 @@ export default function DashboardPage() {
             if (fetchedEventConfig) {
                 const startDate = parseDateAsUTC(fetchedEventConfig.pre_reg_start_date);
                 const endDate = parseDateAsUTC(fetchedEventConfig.event_date);
-                endDate.setUTCHours(23, 59, 59, 999);
+                endDate.setUTCHours(22, 0, 0, 0); // Event ends at 10 PM
                 
                 const currentLogs = combinedLogs.filter(log => {
                     const logDate = new Date(log.timestamp);

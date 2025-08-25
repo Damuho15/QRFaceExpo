@@ -56,6 +56,10 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
     const actualRegStart = new Date(eventDate);
     actualRegStart.setHours(9, 0, 0, 0); 
     
+    // "Actual" ends at 10pm (22:00) on the event day.
+    const actualRegEnd = new Date(eventDate);
+    actualRegEnd.setHours(22, 0, 0, 0);
+
     // Pre-registration ends 1 millisecond before "Actual" registration begins on the event day.
     const preRegEnd = new Date(actualRegStart.getTime() - 1);
     
@@ -64,8 +68,8 @@ const getRegistrationType = (scanDate: Date, eventDate: Date, preRegStartDate: D
         return 'Pre-registration';
     }
 
-    // Check if the scan is within the "Actual" day window (from 9am onwards).
-    if (scanDateTime >= actualRegStart.getTime()) {
+    // Check if the scan is within the "Actual" day window.
+    if (scanDateTime >= actualRegStart.getTime() && scanDateTime <= actualRegEnd.getTime()) {
         return 'Actual';
     }
 
