@@ -107,7 +107,7 @@ export default function MembersDataTable<TData, TValue>({
             />
         </div>
         {canEdit && (
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+        <div className="flex items-center gap-2 w-full justify-start sm:justify-end flex-wrap">
             <Button 
                 variant="outline" 
                 onClick={() => onGenerateIds(selectedRowIds)}
