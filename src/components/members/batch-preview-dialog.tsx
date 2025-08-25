@@ -62,8 +62,8 @@ export default function BatchPreviewDialog({ data, children }: BatchPreviewDialo
         </DialogHeader>
         <div className="flex-grow min-h-0 border rounded-md">
           <ScrollArea className="h-full w-full">
-              <Table className="min-w-[1200px]">
-                <TableHeader>
+              <Table className="relative min-w-[1200px]">
+                <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
                         {displayedHeaders.map(header => (
                             <TableHead key={header} className="whitespace-nowrap">{header}</TableHead>
